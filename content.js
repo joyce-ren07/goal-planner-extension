@@ -4,6 +4,9 @@
 (function () {
   'use strict';
 
+  const GP_PANEL_WIDTH_PX = 320;
+  const GP_MAIN_MARGIN_TRANSITION = 'margin-right 0.2s ease';
+
   // ── State ──
   let state = {
     goalTitle: '',
@@ -30,6 +33,52 @@
 
     wireEvents();
     renderHomeScreen();
+    setupCalendarPushObserver();
+  }
+
+  /** Main calendar region that natively shrinks when Tasks/Notes opens — push layout, not overlay. */
+  let cachedCalendarMainEl = null;
+  function getCalendarMainEl() {
+    if (cachedCalendarMainEl && document.contains(cachedCalendarMainEl)) return cachedCalendarMainEl;
+    const candidates = [
+      document.querySelector('[role="main"]'),
+      document.querySelector('main'),
+    ].filter(Boolean);
+    for (const el of candidates) {
+      const r = el.getBoundingClientRect();
+      if (r.width >= 280 && r.height >= 200) {
+        cachedCalendarMainEl = el;
+        return el;
+      }
+    }
+    cachedCalendarMainEl = candidates[0] || null;
+    return cachedCalendarMainEl;
+  }
+
+  function setCalendarPushed(open) {
+    const mainEl = getCalendarMainEl();
+    if (!mainEl) return;
+    mainEl.style.transition = GP_MAIN_MARGIN_TRANSITION;
+    mainEl.style.marginRight = open ? `${GP_PANEL_WIDTH_PX}px` : '';
+  }
+
+  let calendarPushDebounce = null;
+  function setupCalendarPushObserver() {
+    const reapply = () => {
+      const panel = document.getElementById('gp-panel');
+      if (panel && panel.classList.contains('open')) setCalendarPushed(true);
+    };
+    const scheduleReapply = () => {
+      if (calendarPushDebounce) clearTimeout(calendarPushDebounce);
+      calendarPushDebounce = setTimeout(() => {
+        calendarPushDebounce = null;
+        if (cachedCalendarMainEl && !document.contains(cachedCalendarMainEl)) cachedCalendarMainEl = null;
+        reapply();
+      }, 120);
+    };
+    const mo = new MutationObserver(scheduleReapply);
+    mo.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', reapply);
   }
 
   function findRailByStructure() {
@@ -205,16 +254,16 @@
         <div class="gp-screen" id="gp-screen-suggestions">
           <div class="gp-field">
             <span class="gp-field-label">Goal Name</span>
-            <div class="gp-input-box" style="background:#e8edf6;border:none;cursor:default;">
-              <span id="gp-confirm-title" style="font-family:'Google Sans',Roboto,sans-serif;font-size:16px;font-weight:500;color:#36363f;"></span>
+            <div class="gp-input-box gp-input-box-static">
+              <span id="gp-confirm-title" class="gp-confirm-title-text"></span>
             </div>
           </div>
           <div class="gp-field" style="margin-top:20px;">
             <span class="gp-field-label">Schedule</span>
             <div class="gp-chip" id="gp-confirm-schedule"></div>
             <div class="gp-chip" id="gp-confirm-ends"></div>
-            <button class="gp-chip editable" id="gp-adjust-btn" style="border:none;cursor:pointer;width:100%;text-align:left;margin-top:2px;">
-              <span style="font-family:'Google Sans',Roboto,sans-serif;font-size:16px;font-weight:500;color:#36363f;">Adjust recurrence</span>
+            <button class="gp-chip editable gp-adjust-recurrence-btn" id="gp-adjust-btn">
+              <span class="gp-adjust-recurrence-label">Adjust recurrence</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#444746" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
           </div>
@@ -281,10 +330,13 @@
   function openPanel() {
     document.getElementById('gp-panel').classList.add('open');
     document.getElementById('gp-sidebar-btn').classList.add('active');
+    setCalendarPushed(true);
+    requestAnimationFrame(() => setCalendarPushed(true));
   }
   function closePanel() {
     document.getElementById('gp-panel').classList.remove('open');
     document.getElementById('gp-sidebar-btn').classList.remove('active');
+    setCalendarPushed(false);
   }
 
   // ── Screen routing ──
