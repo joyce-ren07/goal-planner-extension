@@ -686,18 +686,18 @@
   overflow: hidden;
 }
 
-/* "Goal" badge — full-width block */
+/* "Goal" badge — content-width pill */
 .ext-goal-badge {
-  display: block;
-  width: 100%;
+  display: inline-block;
+  width: auto;
+  align-self: flex-start;
   background: #C0514E;
   color: #fff;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: 6px;
-  padding: 3px 8px;
+  padding: 2px 10px;
   box-sizing: border-box;
-  text-align: left;
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
