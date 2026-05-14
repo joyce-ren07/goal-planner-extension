@@ -1811,7 +1811,7 @@
       chip.querySelector('.ext-goal-root')?.remove();
 
       chip.classList.add('ext-goal-chip');
-      chip.classList.toggle('ext-goal-done', isDone);
+      chip.classList.toggle('ext-goal-completed', isDone);
       chip.dataset.gpChipKey = goalData.chipKey;
       if (isDone) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
@@ -1820,8 +1820,8 @@
       root.className = 'ext-goal-root';
       const initialTime = goalData.time ? escHtml(goalData.time) : '';
       root.innerHTML =
-        '<div class="ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
-        (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
+        '<div class="goal-checkbox ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
+        (isDone ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE) + '</div>' +
         '<div class="ext-goal-text-col">' +
           '<span class="ext-goal-badge">Goal</span>' +
           '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
