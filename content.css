@@ -716,6 +716,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  opacity: 0.8;
 }
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-time {
   color: #C0514E99;
