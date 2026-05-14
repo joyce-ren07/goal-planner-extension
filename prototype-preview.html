@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goal Planner Accordion Preview</title>
+  <link rel="stylesheet" href="content.css" />
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f1f3f4;
+      font-family: 'Google Sans', Roboto, sans-serif;
+    }
+
+    .preview-shell {
+      min-height: 100vh;
+      display: flex;
+      justify-content: flex-end;
+      align-items: stretch;
+    }
+
+    .preview-note {
+      position: fixed;
+      left: 24px;
+      top: 24px;
+      max-width: 320px;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      color: #3c4043;
+      font-size: 13px;
+      line-height: 1.5;
+      box-shadow: 0 1px 2px rgba(60, 64, 67, 0.15);
+    }
+
+    .preview-note strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    #gp-panel {
+      position: relative;
+      top: auto;
+      right: auto;
+      opacity: 1;
+      pointer-events: auto;
+      height: 100vh;
+    }
+
+    #gp-empty-state {
+      display: none;
+    }
+
+    .gp-screen {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-note">
+    <strong>Local accordion preview</strong>
+    This page mirrors the extension home panel. Use the chevrons to open one section at a time.
+  </div>
+
+  <div class="preview-shell">
+    <div id="gp-panel" class="open">
+      <div class="gp-card">
+        <div class="gp-header">
+          <h2>My goals</h2>
+          <div class="gp-header-actions">
+            <button class="gp-icon-btn" type="button" aria-label="New goal">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button class="gp-icon-btn" type="button" aria-label="Close">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="gp-divider"></div>
+
+        <div class="gp-screen active" id="gp-screen-home">
+          <div class="gp-tasks-accordion" id="gp-tasks-accordion">
+            <section class="gp-task-folder" data-folder="today">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Due Today (3)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Today tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="gp-task-folder" data-folder="tomorrow">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Due Tomorrow (1)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Tomorrow tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short"></span></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="gp-task-folder" data-folder="later">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Due Later (2)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Later tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="gp-task-folder" data-folder="completed">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Completed (15)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Completed tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--muted"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short gp-task-skeleton--muted"></span></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const root = document.getElementById('gp-tasks-accordion');
+      if (!root) return;
+
+      root.querySelectorAll('.gp-task-folder').forEach((folder) => {
+        const toggle = folder.querySelector('.gp-task-folder-toggle');
+        if (!toggle) return;
+
+        toggle.addEventListener('click', () => {
+          const isOpen = folder.classList.contains('open');
+
+          root.querySelectorAll('.gp-task-folder.open').forEach((openFolder) => {
+            if (openFolder === folder) return;
+            openFolder.classList.remove('open');
+            const openToggle = openFolder.querySelector('.gp-task-folder-toggle');
+            if (openToggle) openToggle.setAttribute('aria-expanded', 'false');
+          });
+
+          if (isOpen) {
+            folder.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+            return;
+          }
+
+          folder.classList.add('open');
+          toggle.setAttribute('aria-expanded', 'true');
+        });
+      });
+
+      const expanded = new URLSearchParams(window.location.search).get('expanded');
+      if (expanded) {
+        const folder = root.querySelector(`.gp-task-folder[data-folder="${expanded}"]`);
+        const toggle = folder && folder.querySelector('.gp-task-folder-toggle');
+        if (folder && toggle) {
+          folder.classList.add('open');
+          toggle.setAttribute('aria-expanded', 'true');
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

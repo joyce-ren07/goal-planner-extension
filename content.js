@@ -127,6 +127,66 @@
 
         <!-- ── SCREEN 1: Empty / home ── -->
         <div class="gp-screen active" id="gp-screen-home">
+          <div class="gp-tasks-accordion" id="gp-tasks-accordion">
+            <section class="gp-task-folder" data-folder="today">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Due Today (3)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Today tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                </div>
+              </div>
+            </section>
+            <section class="gp-task-folder" data-folder="tomorrow">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Due Tomorrow (1)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Tomorrow tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short"></span></div>
+                </div>
+              </div>
+            </section>
+            <section class="gp-task-folder" data-folder="later">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Due Later (2)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Later tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton"></span></div>
+                </div>
+              </div>
+            </section>
+            <section class="gp-task-folder" data-folder="completed">
+              <div class="gp-task-folder-header">
+                <span class="gp-task-folder-label">Completed (15)</span>
+                <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Completed tasks">
+                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="gp-task-folder-panel">
+                <div class="gp-task-folder-panel-inner">
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--muted"></span></div>
+                  <div class="gp-task-item"><span class="gp-task-skeleton gp-task-skeleton--short gp-task-skeleton--muted"></span></div>
+                </div>
+              </div>
+            </section>
+          </div>
           <div class="gp-empty-body" id="gp-empty-state">
             <div class="gp-illustration">
               <svg viewBox="0 0 177 147" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -320,6 +380,39 @@
     // Screen 3 — adjust back / confirm add
     document.getElementById('gp-adjust-btn').addEventListener('click', () => { showScreen('form'); openRecurrence(); });
     document.getElementById('gp-confirm-add').addEventListener('click', confirmAddToCalendar);
+
+    initTasksAccordion();
+  }
+
+  function initTasksAccordion() {
+    const root = document.getElementById('gp-tasks-accordion');
+    if (!root || root.dataset.wired === 'true') return;
+    root.dataset.wired = 'true';
+
+    root.querySelectorAll('.gp-task-folder').forEach(folder => {
+      const toggle = folder.querySelector('.gp-task-folder-toggle');
+      if (!toggle) return;
+
+      toggle.addEventListener('click', () => {
+        const isOpen = folder.classList.contains('open');
+
+        root.querySelectorAll('.gp-task-folder.open').forEach(openFolder => {
+          if (openFolder === folder) return;
+          openFolder.classList.remove('open');
+          const openToggle = openFolder.querySelector('.gp-task-folder-toggle');
+          if (openToggle) openToggle.setAttribute('aria-expanded', 'false');
+        });
+
+        if (isOpen) {
+          folder.classList.remove('open');
+          toggle.setAttribute('aria-expanded', 'false');
+          return;
+        }
+
+        folder.classList.add('open');
+        toggle.setAttribute('aria-expanded', 'true');
+      });
+    });
   }
 
   // ── Panel toggle ──

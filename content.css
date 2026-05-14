@@ -341,3 +341,112 @@
   text-align: center; line-height: 18px; margin-top: 8px;
 }
 .gp-toast.visible { display: block; }
+
+/* ── Tasks accordion (My Tasks panel) ── */
+.gp-tasks-accordion {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin: 0 -4px 8px;
+}
+
+.gp-task-folder {
+  background: #fff;
+  border-top: 1px solid #e2e3e1;
+}
+
+.gp-task-folder:first-child {
+  border-top: none;
+}
+
+.gp-task-folder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  transition: background 0.2s ease;
+}
+
+.gp-task-folder.open .gp-task-folder-header {
+  background: #f8f9fa;
+}
+
+.gp-task-folder-label {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #49454f;
+}
+
+.gp-task-folder-toggle {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #444746;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.gp-task-folder-toggle:hover {
+  background: #f0f4f9;
+}
+
+.gp-task-folder-chevron {
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.gp-task-folder.open .gp-task-folder-chevron {
+  transform: rotate(180deg);
+}
+
+.gp-task-folder-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease;
+}
+
+.gp-task-folder.open .gp-task-folder-panel {
+  grid-template-rows: 1fr;
+}
+
+.gp-task-folder-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.gp-task-item {
+  padding: 0 20px 10px;
+}
+
+.gp-task-item:last-child {
+  padding-bottom: 14px;
+}
+
+.gp-task-skeleton {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 8px;
+  background: #e8eaed;
+}
+
+.gp-task-skeleton--short {
+  width: 68%;
+}
+
+.gp-task-skeleton--muted {
+  background: #eceff1;
+}
