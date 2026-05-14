@@ -645,8 +645,11 @@
      an explicit pixel value — causing the chip to grow to fit its content and
      appear to extend infinitely below the event's end time.
      position:relative is also NOT overridden — GCal uses position:absolute on
-     [data-eventchip] with all four edges pinned; forcing relative breaks that. */
-  overflow: hidden !important;
+     [data-eventchip] with all four edges pinned; forcing relative breaks that.
+     overflow is NOT set here — GCal places resize handles as children of this
+     element and the ~8 px drag zone often overlaps the chip boundary. Clipping
+     here would hide those handles and suppress their pointer events. Content
+     clipping is handled by .ext-goal-chip-inner instead. */
   box-sizing: border-box !important;
   transition: opacity 0.1s ease !important;
 }
