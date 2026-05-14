@@ -1788,36 +1788,45 @@
   //
   function injectGoalChipContent(chip, goalData, isDone) {
     // Idempotent: remove only our decoration root; never clear native chip children.
-    chip.querySelector('.ext-goal-root')?.remove();
+    // Suppress the per-chip MutationObserver during intentional reinjection so
+    // removing/re-adding .ext-goal-root does not schedule restoreChip (which
+    // would race storage and clear completion — see GoalInteractionController).
+    chip._gpDecorLock = true;
+    try {
+      chip.querySelector('.ext-goal-root')?.remove();
 
-    chip.classList.add('ext-goal-chip');
-    chip.classList.toggle('ext-goal-done', isDone);
-    chip.dataset.gpChipKey = goalData.chipKey;
-    if (isDone) chip.dataset.goalCompleted = 'true';
-    else delete chip.dataset.goalCompleted;
+      chip.classList.add('ext-goal-chip');
+      chip.classList.toggle('ext-goal-done', isDone);
+      chip.dataset.gpChipKey = goalData.chipKey;
+      if (isDone) chip.dataset.goalCompleted = 'true';
+      else delete chip.dataset.goalCompleted;
 
-    const root = document.createElement('div');
-    root.className = 'ext-goal-root';
-    const initialTime = goalData.time ? escHtml(goalData.time) : '';
-    root.innerHTML =
-      '<div class="ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
-      (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
-      '<div class="ext-goal-text-col">' +
-        '<span class="ext-goal-badge">Goal</span>' +
-        '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
-        '<span class="ext-goal-time">' + initialTime + '</span>' +
-      '</div>';
+      const root = document.createElement('div');
+      root.className = 'ext-goal-root';
+      const initialTime = goalData.time ? escHtml(goalData.time) : '';
+      root.innerHTML =
+        '<div class="ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
+        (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
+        '<div class="ext-goal-text-col">' +
+          '<span class="ext-goal-badge">Goal</span>' +
+          '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
+          '<span class="ext-goal-time">' + initialTime + '</span>' +
+        '</div>';
 
-    // Append last — GCal's original children (resize handles etc.) remain in
-    // the child list before ours and keep their native event listeners.
-    chip.appendChild(root);
+      // Append last — GCal's original children (resize handles etc.) remain in
+      // the child list before ours and keep their native event listeners.
+      chip.appendChild(root);
 
-    boundChipHeight(chip);
+      boundChipHeight(chip);
 
-    const ec = chip.closest('[data-eventid]');
-    requestAnimationFrame(() => {
-      syncExtGoalTimeFromContainer(chip, ec);
-    });
+      const ec = chip.closest('[data-eventid]');
+      requestAnimationFrame(() => {
+        syncExtGoalTimeFromContainer(chip, ec);
+      });
+    } finally {
+      // Clear after mutation observer microtasks run (macrotask > microtask).
+      setTimeout(() => { chip._gpDecorLock = false; }, 0);
+    }
   }
 
   // ── Attach resize watchers to detect GCal drag-resize and update displayed duration ──
