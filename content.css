@@ -770,5 +770,6 @@
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-time {
   color: #e79992;
+  font-size: 12px;
   opacity: 1;
 }
