@@ -20,6 +20,12 @@
   --m3-on-course-cogs-container: #00832d;
   --m3-course-ps-container: #fff4d5;
   --m3-on-course-ps-container: #eab627;
+  --m3-course-mgt-container: #fce4dd;
+  --m3-on-course-mgt-container: #f4511e;
+  --m3-kanban-column-surface: #e8edf6;
+  --m3-elevation-1:
+    0 1px 2px color-mix(in srgb, var(--m3-on-surface) 30%, transparent),
+    0 1px 3px 1px color-mix(in srgb, var(--m3-on-surface) 15%, transparent);
   --m3-chip-planned-container: #ebeff2;
   --m3-chip-planned-outline: #94989c;
   --m3-chip-planned-on-container: #616161;
@@ -148,13 +154,232 @@
   box-shadow: inset 0 -1px 0 var(--m3-outline-variant);
 }
 
+.mytasks-sidebar .gp-header-leading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
 .mytasks-sidebar .gp-header-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 24px;
   font-weight: 500;
   line-height: 28px;
   color: var(--m3-headline-on-surface);
   margin: 0;
+}
+
+.mytasks-native-tasks-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-height: 320px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.mytasks-native-tasks-nav {
+  flex: 0 0 260px;
+  width: 260px;
+  min-width: 260px;
+  max-width: 260px;
+  overflow: hidden;
+  height: 100%;
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+.mytasks-native-tasks-nav iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.mytasks-kanban {
+  --m3-surface: #ffffff;
+  --m3-on-surface: #1d1b20;
+  --m3-on-surface-variant: #49454f;
+  --m3-primary: #0b56cf;
+  --m3-subtitle-on-surface: #6f747b;
+  --m3-course-psych-container: #c5ecff;
+  --m3-on-course-psych-container: #049be5;
+  --m3-course-cogs-container: #d7ebe0;
+  --m3-on-course-cogs-container: #00832d;
+  --m3-course-ps-container: #fff4d5;
+  --m3-on-course-ps-container: #eab627;
+  --m3-course-mgt-container: #fce4dd;
+  --m3-on-course-mgt-container: #f4511e;
+  --m3-kanban-column-surface: #e8edf6;
+  --m3-elevation-1:
+    0 1px 2px color-mix(in srgb, var(--m3-on-surface) 30%, transparent),
+    0 1px 3px 1px color-mix(in srgb, var(--m3-on-surface) 15%, transparent);
+  --m3-radius-md: 12px;
+  --m3-radius-lg: 16px;
+  --m3-radius-sm: 8px;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 320px;
+  height: 100%;
+  font-family: 'Google Sans', Roboto, sans-serif;
+}
+
+.mytasks-kanban__board {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  min-height: 280px;
+  height: 100%;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+.mytasks-kanban__column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 260px;
+  width: 260px;
+  min-height: 0;
+  padding: 16px;
+  border-radius: var(--m3-radius-lg);
+  background: var(--m3-kanban-column-surface);
+  box-sizing: border-box;
+}
+
+.mytasks-kanban__column-title {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  text-transform: uppercase;
+  color: var(--m3-on-surface-variant);
+  flex-shrink: 0;
+}
+
+.mytasks-kanban__column-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 48px;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 2px solid transparent;
+  border-radius: calc(var(--m3-radius-lg) - 4px);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.mytasks-kanban__column-cards.is-drop-target {
+  border-color: var(--m3-primary);
+  background: color-mix(in srgb, var(--m3-primary) 8%, transparent);
+}
+
+.mytasks-kanban__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--m3-radius-md);
+  background: var(--m3-surface);
+  box-shadow: var(--m3-elevation-1);
+  cursor: grab;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.mytasks-kanban__card:active {
+  cursor: grabbing;
+}
+
+.mytasks-kanban__card.is-dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.mytasks-kanban__card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mytasks-kanban__card-title {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0.5px;
+  color: var(--m3-on-surface);
+}
+
+.mytasks-kanban__card-subtitle {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  color: var(--m3-subtitle-on-surface);
+}
+
+.mytasks-kanban__card-meta {
+  display: flex;
+  align-items: center;
+}
+
+.mytasks-kanban__course-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: var(--m3-radius-sm);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+
+.mytasks-kanban__course-chip--psych {
+  background: var(--m3-course-psych-container);
+  color: var(--m3-on-course-psych-container);
+}
+
+.mytasks-kanban__course-chip--cogs {
+  background: var(--m3-course-cogs-container);
+  color: var(--m3-on-course-cogs-container);
+}
+
+.mytasks-kanban__course-chip--ps {
+  background: var(--m3-course-ps-container);
+  color: var(--m3-on-course-ps-container);
+}
+
+.mytasks-kanban__course-chip--mgt {
+  background: var(--m3-course-mgt-container);
+  color: var(--m3-on-course-mgt-container);
 }
 
 .mytasks-sidebar .gp-icon-btn {

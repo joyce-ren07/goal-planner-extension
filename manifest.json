@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Open a Material Design task sidebar inside Google Calendar.",
   "host_permissions": ["https://calendar.google.com/*"],
-  "permissions": ["scripting"],
+  "permissions": ["scripting", "storage"],
   "background": {
     "service_worker": "background.js"
   },
