@@ -2010,19 +2010,12 @@
           restoreTimeout = setTimeout(() => restoreChip(chip, goalData), 16);
         }).observe(chip, { childList: true, subtree: true });
 
-        // Hide GCal sibling elements that bleed through the chip boundary,
-        // but NEVER hide resize handles — visibility:hidden suppresses pointer
-        // events, which would silently break native drag-to-resize.
-        if (chip.parentElement) {
-          Array.from(chip.parentElement.children).forEach(sib => {
-            if (sib === chip) return;
-            // Preserve any element that is or contains a resize handle
-            if (/resize/i.test(sib.className || '') ||
-                sib.hasAttribute('data-resizehandle') ||
-                sib.querySelector('[class*="resize"], [data-resizehandle]')) return;
-            sib.style.visibility = 'hidden';
-          });
-        }
+        // Sibling elements within [data-eventid] are NOT touched.
+        // The prior code applied visibility:hidden to siblings that didn't match
+        // [class*="resize"] — but GCal's class names are minified so that guard
+        // never fired, causing resize handles to be hidden along with everything
+        // else.  With the additive overlay approach our visual content covers
+        // GCal's original chip content, so no sibling manipulation is needed.
       });
     });
   }
