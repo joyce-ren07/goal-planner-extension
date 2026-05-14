@@ -50,6 +50,33 @@
   // ── Original suggestions (before any preferred-time override) ──
   let _originalSuggestions = [];
 
+  // ── Grid metrics cache — shared by ghost-event renderer and resize handler ──
+  let _gridMetricsCache = null;
+  let _gridMetricsCacheTime = 0;
+
+  /**
+   * Returns { pxPerHour } measured from the live hour-label positions.
+   * Reuses findCalendarScrollContainer + findHourAbsolutePositions so the
+   * same constants drive both ghost-event sizing and resize duration math.
+   * Result is cached for 5 s to avoid repeated DOM traversal during a drag.
+   */
+  function getGridMetrics() {
+    const now = Date.now();
+    if (_gridMetricsCache && now - _gridMetricsCacheTime < 5000) return _gridMetricsCache;
+    const scrollCont = findCalendarScrollContainer();
+    if (!scrollCont) return null;
+    const hourPositions = findHourAbsolutePositions(scrollCont);
+    if (hourPositions.length < 2) return null;
+    hourPositions.sort((a, b) => a.hour - b.hour);
+    const first = hourPositions[0];
+    const last  = hourPositions[hourPositions.length - 1];
+    const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
+    if (pxPerHour <= 0) return null;
+    _gridMetricsCache = { pxPerHour };
+    _gridMetricsCacheTime = now;
+    return _gridMetricsCache;
+  }
+
   // ── Ghost events: remove all from DOM and tear down scroll listener ──
   function removeGhostEvents() {
     document.querySelectorAll('.goal-ghost-event').forEach(el => el.remove());
