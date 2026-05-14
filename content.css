@@ -626,9 +626,9 @@
 .gp-btn-danger:hover { background: rgba(197,34,31,0.08); }
 
 /* ─────────────────────────────────────────
-   Goal session chip — ALL extension visuals scoped under .ext-goal-root only.
-   The native [data-eventchip] keeps GCal border-radius / shell; we do not override
-   border-radius or box-shadow on the chip element itself.
+   Goal session chip — scoped under .ext-goal-root only.
+   Typography + rhythm: shared for incomplete & completed (matches GCal event scale).
+   .ext-goal-completed: color, borders, background, title strikethrough ONLY.
 ───────────────────────────────────────── */
 
 [data-eventchip].ext-goal-chip {
@@ -638,7 +638,7 @@
   isolation: isolate;
 }
 
-/* Solid overlay fully masks native chip text; z-index applied only on this root. */
+/* Solid overlay; leading padding aligns checkbox row with native chip inset (after left accent). */
 [data-eventchip].ext-goal-chip .ext-goal-root {
   position: absolute;
   inset: 0;
@@ -648,7 +648,7 @@
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  padding: 4px 6px 4px 0px;
+  padding: 4px 8px 4px 8px;
   gap: 8px;
   overflow: hidden;
   pointer-events: none;
@@ -662,22 +662,20 @@
   opacity: 1;
 }
 
-/* Resize feedback: outline only — no translucent root (prevents native bleed-through). */
+/* Resize feedback: outline only — no translucent root. */
 [data-eventchip].ext-goal-chip.ext-goal-resizing .ext-goal-root {
   opacity: 1;
   outline: 2px solid #1a73e8;
   outline-offset: -2px;
 }
 
-/* Completed — Figma 1068:7020: solid-light-red + solid-completed-task (monochrome pink/coral) */
+/* State: palette only — same border width as incomplete (no horizontal shift on toggle). */
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root {
   background: #ffe5e2;
   border-top-color: #e79992;
   border-right-color: #e79992;
   border-bottom-color: #e79992;
   border-left-color: #e79992;
-  border-left-width: 5px;
-  opacity: 1;
 }
 
 [data-eventchip].ext-goal-chip .ext-goal-root .goal-checkbox,
@@ -686,7 +684,7 @@
   height: 18px;
   flex-shrink: 0;
   align-self: flex-start;
-  margin-top: 3px;
+  margin: 2px 0 0 0;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -702,14 +700,6 @@
   display: block;
 }
 
-[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .goal-checkbox,
-[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-check-circle {
-  border: none;
-  background: transparent;
-  width: 18px;
-  height: 18px;
-}
-
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-text-col {
   display: flex;
   flex-direction: column;
@@ -720,29 +710,32 @@
   padding-bottom: 2px;
 }
 
+/* Badge: one type scale for both states; completed changes fill only. */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-badge {
   display: block;
   width: 100%;
   box-sizing: border-box;
   background: #d3564b;
   color: #fff;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 500;
+  line-height: 16px;
+  letter-spacing: normal;
   border-radius: 6px;
   padding: 3px 8px;
-  font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-badge {
   background: #e79992;
-  font-size: 14px;
 }
 
-[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
-  color: #d3564b;
-  font-size: 13px;
+/* Title & time: identical font metrics in both states (GCal-like 13px / 11px event copy). */
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title,
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
+  font-family: inherit;
   font-weight: 400;
-  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  letter-spacing: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -750,26 +743,25 @@
   align-self: flex-start;
 }
 
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
+  font-size: 13px;
+  line-height: 16px;
+  color: #d3564b;
+}
+
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
+  font-size: 11px;
+  line-height: 14px;
+  color: #d3564b;
+  opacity: 1;
+}
+
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-title {
   color: #e79992;
-  font-size: 12px;
-  font-weight: 500;
   text-decoration: line-through;
   text-decoration-color: #e79992;
 }
 
-[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
-  color: #d3564b;
-  font-size: 11px;
-  font-weight: 400;
-  font-family: 'Google Sans', Roboto, Arial, sans-serif;
-  white-space: nowrap;
-  opacity: 0.9;
-  align-self: flex-start;
-}
-
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-time {
   color: #e79992;
-  font-size: 12px;
-  opacity: 1;
 }
