@@ -2057,9 +2057,7 @@
         if (chip.querySelector('.ext-goal-root')) {
           boundChipHeight(chip);
           const isDone = !!doneMap[chip.dataset.gpChipKey];
-          chip.classList.toggle('ext-goal-done', isDone);
-          const c = chip.querySelector('.ext-check-circle');
-          if (c) c.innerHTML = isDone ? SVG_CHECK : SVG_CIRCLE;
+          GoalInteractionController.applyCompletionVisual(chip, isDone);
           const ec = chip.closest('[data-eventid]');
           requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip, ec));
           return;
