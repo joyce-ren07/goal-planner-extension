@@ -1959,9 +1959,7 @@
     chrome.storage.local.get(['gp_chip_done'], d => {
       const doneMap = d.gp_chip_done || {};
       const isDone = !!doneMap[goalData.chipKey];
-      chip.classList.toggle('ext-goal-done', isDone);
-      const circleEl = chip.querySelector('.ext-check-circle');
-      if (circleEl) circleEl.innerHTML = isDone ? SVG_CHECK : SVG_CIRCLE;
+      GoalInteractionController.applyCompletionVisual(chip, isDone);
       const ec = chip.closest('[data-eventid]');
       syncExtGoalTimeFromContainer(chip, ec);
     });
