@@ -25,11 +25,22 @@
     completed: 'Completed',
   };
   const KANBAN_STORAGE_KEY = 'gpKanbanBoardState';
+  const FORCE_CLEAR_KANBAN_MARKER = 'gpForceClearKanbanBoard';
   const KANBAN_COLUMN_DEFS = [
     { id: 'todo', label: 'TO-DO' },
     { id: 'progress', label: 'IN PROGRESS' },
     { id: 'done', label: 'DONE' },
   ];
+  const COLUMN_STATUS_MAP = {
+    todo: 'planned',
+    progress: 'progress',
+    done: 'done',
+  };
+  const STATUS_COLUMN_MAP = {
+    planned: 'todo',
+    progress: 'progress',
+    done: 'done',
+  };
   const KANBAN_CHIP_COLORS = {
     PSYC101: 'blue',
     MGT103: 'red',
@@ -81,70 +92,10 @@
               <polyline points="9 6 15 12 9 18"></polyline>
             </svg>
           </button>
-          <span class="gp-task-folder-label">Due Today (2)</span>
+          <span class="gp-task-folder-label">Due Today (0)</span>
         </div>
         <div class="gp-task-folder-panel">
-          <div class="gp-task-folder-panel-inner">
-            <article class="gp-task-row" data-due-date="2026-05-21">
-              <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
-                <span class="gp-task-checkbox-icon" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
-                  </svg>
-                </span>
-              </button>
-              <div class="gp-task-body">
-                <div class="gp-task-text">
-                  <p class="gp-task-title">Project Outline</p>
-                  <p class="gp-task-subtitle">Due Thurs, May 21</p>
-                </div>
-                <div class="gp-task-meta">
-                  <span class="gp-course-chip gp-course-chip--psych">PSYC101</span>
-                  <div class="gp-filter-chip gp-filter-chip--planned" data-status="planned" role="group" aria-label="Status: Planned">
-                    <span class="gp-filter-chip-dot" aria-hidden="true"></span>
-                    <span class="gp-filter-chip-label">Planned</span>
-                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
-                      <span class="gp-filter-chip-trailing" aria-hidden="true">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            <article class="gp-task-row" data-due-date="2026-05-21">
-              <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
-                <span class="gp-task-checkbox-icon" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
-                  </svg>
-                </span>
-              </button>
-              <div class="gp-task-body">
-                <div class="gp-task-text">
-                  <p class="gp-task-title">Project Outline</p>
-                  <p class="gp-task-subtitle">Due Thurs, May 21</p>
-                </div>
-                <div class="gp-task-meta">
-                  <span class="gp-course-chip gp-course-chip--cogs">COGS14B</span>
-                  <div class="gp-filter-chip gp-filter-chip--progress" data-status="progress" role="group" aria-label="Status: In progress">
-                    <span class="gp-filter-chip-dot" aria-hidden="true"></span>
-                    <span class="gp-filter-chip-label">In progress</span>
-                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
-                      <span class="gp-filter-chip-trailing" aria-hidden="true">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
+          <div class="gp-task-folder-panel-inner"></div>
         </div>
       </section>
 
@@ -155,40 +106,10 @@
               <polyline points="9 6 15 12 9 18"></polyline>
             </svg>
           </button>
-          <span class="gp-task-folder-label">Due Tomorrow (1)</span>
+          <span class="gp-task-folder-label">Due Tomorrow (0)</span>
         </div>
         <div class="gp-task-folder-panel">
-          <div class="gp-task-folder-panel-inner">
-            <article class="gp-task-row" data-due-date="2026-05-21">
-              <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
-                <span class="gp-task-checkbox-icon" aria-hidden="true">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
-                  </svg>
-                </span>
-              </button>
-              <div class="gp-task-body">
-                <div class="gp-task-text">
-                  <p class="gp-task-title">Project Outline</p>
-                  <p class="gp-task-subtitle">Due Thurs, May 21</p>
-                </div>
-                <div class="gp-task-meta">
-                  <span class="gp-course-chip gp-course-chip--ps">PS</span>
-                  <div class="gp-filter-chip gp-filter-chip--progress" data-status="progress" role="group" aria-label="Status: In progress">
-                    <span class="gp-filter-chip-dot" aria-hidden="true"></span>
-                    <span class="gp-filter-chip-label">In progress</span>
-                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
-                      <span class="gp-filter-chip-trailing" aria-hidden="true">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
+          <div class="gp-task-folder-panel-inner"></div>
         </div>
       </section>
 
@@ -616,36 +537,18 @@
   }
 
   function restoreTaskFromCompleted(chip) {
-    const row = chip.closest('.gp-task-row');
-    const completedFolder = row?.closest('.gp-task-folder');
-    const accordion = row?.closest('#gp-tasks-accordion');
-    if (!row || !accordion || completedFolder?.dataset.folder !== 'completed') return;
+    void syncSidebarTaskStatus(chip, chip?.dataset.status || 'planned');
+  }
 
-    const targetFolderKey = getDeadlineFolderKey(getTaskDueDate(row));
-    const targetFolder = accordion.querySelector(`[data-folder="${targetFolderKey}"]`);
-    if (!targetFolder) return;
+  async function syncSidebarTaskStatus(chip, statusKey) {
+    const row = chip?.closest('.gp-task-row');
+    const taskId = row?.dataset.taskId;
+    const columnId = STATUS_COLUMN_MAP[statusKey];
+    if (!taskId || !columnId) return;
 
-    const checkbox = row.querySelector('.gp-task-checkbox');
-    if (checkbox) {
-      checkbox.disabled = false;
-      setCheckboxUncheckedVisual(checkbox);
-    }
-
-    row.classList.remove('gp-task-row--completed', 'gp-task-row--departing');
-    row.dataset.completing = 'false';
-
-    const targetInner = targetFolder.querySelector('.gp-task-folder-panel-inner');
-    if (targetInner) {
-      targetInner.appendChild(row);
-    }
-
-    syncFolderCounts(accordion);
-
-    targetFolder.classList.add('open');
-    const targetToggle = targetFolder.querySelector('.gp-task-folder-toggle');
-    if (targetToggle) {
-      targetToggle.setAttribute('aria-expanded', 'true');
-    }
+    const state = await loadKanbanState();
+    if (!moveTaskInState(state, taskId, columnId)) return;
+    await saveKanbanState(state);
   }
 
   function applyTaskStatus(chip, statusKey, options = {}) {
@@ -774,8 +677,12 @@
 
       const chip = activeChip;
       const statusKey = item.dataset.status;
+      const folderKey = chip.closest('.gp-task-row')?.closest('.gp-task-folder')?.dataset.folder;
       closeStatusMenu();
       applyTaskStatus(chip, statusKey);
+      if (statusKey !== 'done' && folderKey !== 'completed') {
+        void syncSidebarTaskStatus(chip, statusKey);
+      }
     });
 
     accordion.addEventListener('click', (event) => {
@@ -1014,6 +921,14 @@
 
       completedFolder.classList.remove('gp-task-folder--receiving');
       checkbox.disabled = false;
+
+      const taskId = row.dataset.taskId;
+      if (taskId) {
+        void loadKanbanState().then((state) => {
+          if (!moveTaskInState(state, taskId, 'done')) return state;
+          return saveKanbanState(state);
+        });
+      }
     };
 
     let finished = false;
@@ -1044,11 +959,12 @@
     });
   }
 
-  function createDefaultKanbanCard(id, chip) {
+  function createDefaultKanbanCard(id, chip, dueDate = '2026-05-21') {
     return {
       id,
       title: 'Project Outline',
-      due: 'Due Thurs, May 21',
+      dueDate,
+      due: formatKanbanDueLabel(dueDate),
       chip,
       chipColor: KANBAN_CHIP_COLORS[chip] || 'blue',
       starred: false,
@@ -1065,13 +981,34 @@
       || 'blue';
   }
 
+  function formatDueDateIso(date) {
+    if (!date || Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function getTaskDueDateFromCard(card) {
+    if (card?.dueDate) {
+      const parsed = new Date(`${card.dueDate}T12:00:00`);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+
+    return parseTaskDueDate(card?.due);
+  }
+
   function normalizeKanbanCard(card, fallbackId) {
     const chip = card?.chip || card?.course || 'PSYC101';
+    const dueDate = card?.dueDate
+      || formatDueDateIso(parseTaskDueDate(card?.due))
+      || '2026-05-21';
 
     return {
       id: card?.id || fallbackId,
       title: card?.title || 'Project Outline',
-      due: card?.due || 'Due Thurs, May 21',
+      dueDate,
+      due: card?.due || formatKanbanDueLabel(dueDate),
       chip,
       chipColor: resolveKanbanChipColor(chip, card?.chipColor, card?.courseKey),
       starred: Boolean(card?.starred),
@@ -1135,6 +1072,223 @@
     };
   }
 
+  function findTaskColumnId(state, taskId) {
+    for (const { id } of KANBAN_COLUMN_DEFS) {
+      if ((state.columns[id] || []).some((card) => card.id === taskId)) {
+        return id;
+      }
+    }
+
+    return null;
+  }
+
+  function moveTaskInState(state, taskId, targetColumnId) {
+    const sourceColumnId = findTaskColumnId(state, taskId);
+    if (!sourceColumnId || sourceColumnId === targetColumnId) return false;
+
+    const sourceColumn = state.columns[sourceColumnId] || [];
+    const taskIndex = sourceColumn.findIndex((card) => card.id === taskId);
+    if (taskIndex < 0) return false;
+
+    const [task] = sourceColumn.splice(taskIndex, 1);
+    state.columns[sourceColumnId] = sourceColumn;
+    state.columns[targetColumnId] = [...(state.columns[targetColumnId] || []), task];
+    return true;
+  }
+
+  function getSidebarCourseChipClass(chip) {
+    switch (chip) {
+      case 'PSYC101':
+        return 'gp-course-chip--psych';
+      case 'COGS14B':
+        return 'gp-course-chip--cogs';
+      case 'PS':
+        return 'gp-course-chip--ps';
+      case 'MGT103':
+        return 'gp-course-chip--mgt';
+      default:
+        return '';
+    }
+  }
+
+  function renderSidebarTaskRow(task, columnId) {
+    const statusKey = COLUMN_STATUS_MAP[columnId] || 'planned';
+    const status = TASK_STATUSES[statusKey];
+    const isCompleted = columnId === 'done';
+    const dueDate = getTaskDueDateFromCard(task);
+
+    const row = document.createElement('article');
+    row.className = 'gp-task-row';
+    if (isCompleted) {
+      row.classList.add('gp-task-row--completed');
+    }
+    row.dataset.taskId = task.id;
+    if (task.dueDate) {
+      row.dataset.dueDate = task.dueDate;
+    } else if (dueDate) {
+      row.dataset.dueDate = formatDueDateIso(dueDate);
+    }
+
+    const checkbox = document.createElement('button');
+    checkbox.type = 'button';
+    checkbox.className = 'gp-task-checkbox';
+    checkbox.setAttribute('aria-label', `Mark ${task.title} complete`);
+
+    const checkboxIcon = document.createElement('span');
+    checkboxIcon.className = 'gp-task-checkbox-icon';
+    checkboxIcon.setAttribute('aria-hidden', 'true');
+    checkboxIcon.innerHTML = isCompleted
+      ? `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="currentColor"></circle>
+          <path d="M8.5 12.2 10.8 14.5 15.5 9.8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>`
+      : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+        </svg>`;
+    checkbox.appendChild(checkboxIcon);
+    if (isCompleted) {
+      checkbox.classList.add('gp-task-checkbox--checked');
+    }
+
+    const body = document.createElement('div');
+    body.className = 'gp-task-body';
+
+    const text = document.createElement('div');
+    text.className = 'gp-task-text';
+
+    const title = document.createElement('p');
+    title.className = 'gp-task-title';
+    title.textContent = task.title;
+
+    const subtitle = document.createElement('p');
+    subtitle.className = 'gp-task-subtitle';
+    subtitle.textContent = task.due;
+
+    text.appendChild(title);
+    text.appendChild(subtitle);
+
+    const meta = document.createElement('div');
+    meta.className = 'gp-task-meta';
+
+    const courseChip = document.createElement('span');
+    const courseChipClass = getSidebarCourseChipClass(task.chip);
+    courseChip.className = courseChipClass
+      ? `gp-course-chip ${courseChipClass}`
+      : 'gp-course-chip';
+    courseChip.textContent = task.chip;
+
+    const statusChip = document.createElement('div');
+    statusChip.className = `gp-filter-chip ${status.className}`;
+    statusChip.dataset.status = statusKey;
+    statusChip.setAttribute('role', 'group');
+    statusChip.setAttribute('aria-label', `Status: ${status.label}`);
+
+    const statusDot = document.createElement('span');
+    statusDot.className = 'gp-filter-chip-dot';
+    statusDot.setAttribute('aria-hidden', 'true');
+
+    const statusLabel = document.createElement('span');
+    statusLabel.className = 'gp-filter-chip-label';
+    statusLabel.textContent = status.label;
+
+    const statusMenuBtn = document.createElement('button');
+    statusMenuBtn.type = 'button';
+    statusMenuBtn.className = 'gp-filter-chip-menu-btn';
+    statusMenuBtn.setAttribute('aria-haspopup', 'menu');
+    statusMenuBtn.setAttribute('aria-controls', 'gp-status-menu');
+    statusMenuBtn.setAttribute('aria-expanded', 'false');
+    statusMenuBtn.setAttribute('aria-label', `Change task status: ${status.label}`);
+    statusMenuBtn.innerHTML = `<span class="gp-filter-chip-trailing" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </span>`;
+
+    statusChip.appendChild(statusDot);
+    statusChip.appendChild(statusLabel);
+    statusChip.appendChild(statusMenuBtn);
+    meta.appendChild(courseChip);
+    meta.appendChild(statusChip);
+    body.appendChild(text);
+    body.appendChild(meta);
+    row.appendChild(checkbox);
+    row.appendChild(body);
+
+    return row;
+  }
+
+  function renderSidebarTasks(panel, state) {
+    const accordion = panel?.querySelector('#gp-tasks-accordion');
+    if (!accordion) return;
+
+    const buckets = {
+      today: [],
+      tomorrow: [],
+      later: [],
+      completed: [],
+    };
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      if (state.filters.activeList !== 'all' && state.filters.activeList !== id) {
+        return;
+      }
+
+      getCardsForColumn(state, id).forEach((task) => {
+        if (id === 'done') {
+          buckets.completed.push({ task, columnId: id });
+          return;
+        }
+
+        const folderKey = getDeadlineFolderKey(getTaskDueDateFromCard(task));
+        buckets[folderKey].push({ task, columnId: id });
+      });
+    });
+
+    ['today', 'tomorrow', 'later', 'completed'].forEach((folderKey) => {
+      const folder = accordion.querySelector(`[data-folder="${folderKey}"]`);
+      const inner = folder?.querySelector('.gp-task-folder-panel-inner');
+      if (!inner) return;
+
+      inner.innerHTML = '';
+      buckets[folderKey].forEach(({ task, columnId }) => {
+        inner.appendChild(renderSidebarTaskRow(task, columnId));
+      });
+    });
+
+    syncFolderCounts(accordion);
+  }
+
+  function isKanbanDragActive() {
+    return document.body.classList.contains('mytasks-kanban-dragging')
+      || Boolean(document.querySelector('.mk-card.is-dragging'));
+  }
+
+  function refreshLinkedTaskViews(state) {
+    const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
+    const panel = document.getElementById('gp-panel');
+    if (panel) {
+      renderSidebarTasks(panel, normalized);
+    }
+
+    if (isKanbanDragActive()) return;
+
+    const root = getActiveKanbanRoot();
+    if (!root) return;
+
+    renderKanbanBoard(root, normalized);
+    const board = root.querySelector('.mytasks-kanban__board');
+    if (!board) return;
+
+    board.dataset.dndWired = 'false';
+    wireKanbanDragAndDrop(board);
+  }
+
+  async function syncTaskViewsFromStorage() {
+    const state = await loadKanbanState();
+    refreshLinkedTaskViews(state);
+    return state;
+  }
+
   function readSidebarStorage(keys) {
     return new Promise((resolve) => {
       if (!chrome?.storage?.local) {
@@ -1172,6 +1326,7 @@
     await writeSidebarStorage({
       [KANBAN_STORAGE_KEY]: kanbanStateCache,
     });
+    refreshLinkedTaskViews(kanbanStateCache);
     return kanbanStateCache;
   }
 
@@ -1182,6 +1337,9 @@
     card.dataset.cardId = task.id;
     card.dataset.chipColor = task.chipColor || resolveKanbanChipColor(task.chip, task.chipColor, task.courseKey);
     card.dataset.starred = task.starred ? 'true' : 'false';
+    if (task.dueDate) {
+      card.dataset.dueDate = task.dueDate;
+    }
 
     const header = document.createElement('div');
     header.className = 'mk-card-header';
@@ -1230,6 +1388,7 @@
         ? [...container.querySelectorAll('.mk-card:not(.is-dragging)')].map((cardEl) => ({
             id: cardEl.dataset.cardId,
             title: cardEl.querySelector('.mk-card-title')?.textContent || 'Project Outline',
+            dueDate: cardEl.dataset.dueDate || undefined,
             due: cardEl.querySelector('.mk-card-due')?.textContent || 'Due Thurs, May 21',
             chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
             chipColor: cardEl.dataset.chipColor || 'blue',
@@ -1239,6 +1398,51 @@
     });
 
     return { columns };
+  }
+
+  function mergeSerializedKanbanColumns(board, state) {
+    const serialized = serializeKanbanBoard(board).columns;
+    const columns = {};
+    const assignedIds = new Set();
+    const existingById = new Map();
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      (state.columns[id] || []).forEach((card) => {
+        existingById.set(card.id, { card, columnId: id });
+      });
+    });
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      const container = board.querySelector(`.mk-column-cards[data-column-id="${id}"]`);
+      if (!container) {
+        columns[id] = [...(state.columns[id] || [])];
+        return;
+      }
+
+      const next = [];
+      (serialized[id] || []).forEach((cardData) => {
+        if (!cardData.id) return;
+
+        const existing = existingById.get(cardData.id);
+        assignedIds.add(cardData.id);
+        next.push(existing
+          ? {
+            ...existing.card,
+            ...cardData,
+            dueDate: cardData.dueDate || existing.card.dueDate,
+          }
+          : normalizeKanbanCard(cardData, cardData.id));
+      });
+
+      (state.columns[id] || []).forEach((card) => {
+        if (assignedIds.has(card.id)) return;
+        next.push(card);
+      });
+
+      columns[id] = next;
+    });
+
+    return columns;
   }
 
   function getVisibleKanbanColumns(state) {
@@ -1426,6 +1630,7 @@
     const card = {
       id: `task-${Date.now()}`,
       title,
+      dueDate,
       due: formatKanbanDueLabel(dueDate),
       chip: course,
       chipColor: KANBAN_CHIP_COLORS[course] || 'blue',
@@ -1434,10 +1639,6 @@
 
     state.columns[columnId] = [...(state.columns[columnId] || []), card];
     await saveKanbanState(state);
-    renderKanbanBoard(root, kanbanStateCache);
-    const board = root.querySelector('.mytasks-kanban__board');
-    board.dataset.dndWired = 'false';
-    wireKanbanDragAndDrop(board);
     closeCreateTaskModal(root);
   }
 
@@ -1455,10 +1656,6 @@
 
     if (!changed) return;
     await saveKanbanState(state);
-    renderKanbanBoard(root, kanbanStateCache);
-    const board = root.querySelector('.mytasks-kanban__board');
-    board.dataset.dndWired = 'false';
-    wireKanbanDragAndDrop(board);
   }
 
   function getActiveKanbanRoot() {
@@ -1481,10 +1678,6 @@
       state.filters.activeList = 'all';
     }
     await saveKanbanState(state);
-    renderKanbanBoard(root, kanbanStateCache);
-    const board = root.querySelector('.mytasks-kanban__board');
-    board.dataset.dndWired = 'false';
-    wireKanbanDragAndDrop(board);
   }
 
   async function setKanbanActiveList(root, activeList) {
@@ -1494,10 +1687,6 @@
       state.filters.starredOnly = false;
     }
     await saveKanbanState(state);
-    renderKanbanBoard(root, kanbanStateCache);
-    const board = root.querySelector('.mytasks-kanban__board');
-    board.dataset.dndWired = 'false';
-    wireKanbanDragAndDrop(board);
   }
 
   function wireKanbanInteractions(root) {
@@ -1542,9 +1731,10 @@
   }
 
   async function persistKanbanBoard(board) {
+    const baseState = kanbanStateCache || getDefaultKanbanState();
     const nextState = {
-      ...(kanbanStateCache || getDefaultKanbanState()),
-      columns: serializeKanbanBoard(board).columns,
+      ...baseState,
+      columns: mergeSerializedKanbanColumns(board, baseState),
     };
     await saveKanbanState(nextState);
   }
@@ -1888,14 +2078,8 @@
       : root?.closest('.mytasks-kanban');
     if (!kanbanRoot) return;
 
-    const state = await loadKanbanState();
-    const board = kanbanRoot.querySelector('.mytasks-kanban__board');
-    if (!board) return;
-
-    board.dataset.dndWired = 'false';
-    renderKanbanBoard(kanbanRoot, state);
-    wireKanbanDragAndDrop(board);
     wireKanbanInteractions(kanbanRoot);
+    await syncTaskViewsFromStorage();
   }
 
   function getElementLabel(el) {
@@ -2269,15 +2453,8 @@
       if (area !== 'local' || !changes[KANBAN_STORAGE_KEY]) return;
 
       kanbanStateCache = normalizeKanbanState(changes[KANBAN_STORAGE_KEY].newValue);
-      const root = activeNativeTasksHost?.querySelector(':scope > .mytasks-kanban')
-        || document.querySelector('.mytasks-native-tasks-layout > .mytasks-kanban');
-      if (!root || root.querySelector('.mk-card.is-dragging')) return;
-
-      renderKanbanBoard(root, kanbanStateCache);
-      const board = root.querySelector('.mytasks-kanban__board');
-      if (!board) return;
-      board.dataset.dndWired = 'false';
-      wireKanbanDragAndDrop(board);
+      if (isKanbanDragActive()) return;
+      refreshLinkedTaskViews(kanbanStateCache);
     });
   }
 
@@ -2607,6 +2784,7 @@
 
     if (existing) {
       wireSidebarEvents(existing);
+      void syncTaskViewsFromStorage();
       return existing;
     }
 
@@ -2620,12 +2798,14 @@
     const mountTarget = document.body || document.documentElement;
     mountTarget.appendChild(panel);
     wireSidebarEvents(panel);
+    void syncTaskViewsFromStorage();
     setupCalendarPushObserver();
     return panel;
   }
 
   function openPanel() {
     const panel = mountSidebar();
+    void syncTaskViewsFromStorage();
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     setCalendarPushed(true);
@@ -2656,6 +2836,30 @@
     }
 
     return openPanel();
+  }
+
+  async function maybeClearKanbanBoardStorageOnce() {
+    const stored = await readSidebarStorage([FORCE_CLEAR_KANBAN_MARKER]);
+    if (!stored[FORCE_CLEAR_KANBAN_MARKER]) return;
+
+    await new Promise((resolve) => {
+      if (!chrome?.storage?.local) {
+        resolve();
+        return;
+      }
+
+      chrome.storage.local.remove([KANBAN_STORAGE_KEY, FORCE_CLEAR_KANBAN_MARKER], () => {
+        resolve();
+      });
+    });
+  }
+
+  async function bootstrapCalendarTasksUi() {
+    await maybeClearKanbanBoardStorageOnce();
+    setupNativeTasksFrameBridge();
+    mountSidebar();
+    setupRailObserver();
+    setupNativeTasksKanbanObserver();
   }
 
   function handleToggleRequest() {
@@ -2695,8 +2899,5 @@
     return true;
   });
 
-  setupNativeTasksFrameBridge();
-  mountSidebar();
-  setupRailObserver();
-  setupNativeTasksKanbanObserver();
+  void bootstrapCalendarTasksUi();
 })();

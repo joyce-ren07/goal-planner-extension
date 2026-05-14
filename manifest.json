@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "My Tasks for Google Calendar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Open a Material Design task sidebar inside Google Calendar.",
   "host_permissions": ["https://calendar.google.com/*", "https://tasks.google.com/*"],
   "permissions": ["scripting", "storage"],

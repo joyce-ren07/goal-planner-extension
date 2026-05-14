@@ -930,6 +930,11 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   color: var(--m3-on-course-ps-container);
 }
 
+.mytasks-sidebar .gp-course-chip--mgt {
+  background: var(--m3-course-mgt-container);
+  color: var(--m3-on-course-mgt-container);
+}
+
 .mytasks-sidebar .gp-filter-chip {
   position: relative;
   display: inline-flex;
