@@ -639,11 +639,14 @@
   border-left: 4px solid #C0514E !important;
   border-radius: 8px !important;
   width: 100% !important;
-  height: 100% !important;
-  /* Clip content to GCal's allocated event height — prevents visual overflow that
-     made goal sessions appear to expand infinitely below their end time. */
+  /* height is set explicitly via chip.style.height by boundChipHeight() in JS.
+     CSS height:100% is NOT used here because it degrades to height:auto when
+     [data-eventid]'s height is determined by positioning constraints rather than
+     an explicit pixel value — causing the chip to grow to fit its content and
+     appear to extend infinitely below the event's end time.
+     position:relative is also NOT overridden — GCal uses position:absolute on
+     [data-eventchip] with all four edges pinned; forcing relative breaks that. */
   overflow: hidden !important;
-  position: relative !important;
   box-sizing: border-box !important;
   transition: opacity 0.1s ease !important;
 }
