@@ -1808,7 +1808,7 @@
         const goal = goals.find(g => chip.textContent.includes(g.title));
         const chipKey = eid || (goal ? goal.id + ':' + chip.textContent.trim().slice(0, 40) : 'tx:' + chip.textContent.trim().slice(0, 50));
 
-        const goalData = { title, time, chipKey };
+        const goalData = { title, time, chipKey, id: goal ? goal.id : null };
         const isDone = !!doneMap[chipKey];
 
         injectGoalChipContent(chip, goalData, isDone);
