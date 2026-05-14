@@ -2102,7 +2102,21 @@
 
         // Per-chip observer: restore injection if GCal's renderer wipes our structure
         let restoreTimeout = null;
-        new MutationObserver(() => {
+        new MutationObserver((mutations) => {
+          for (const m of mutations) {
+            if (m.type !== 'childList') continue;
+            m.removedNodes.forEach((node) => {
+              if (node.nodeType !== 1) return;
+              if (
+                node.classList?.contains('ext-goal-root') ||
+                node.querySelector?.('.ext-goal-root')
+              ) {
+                console.warn(
+                  '[GoalPlanner] Extension decoration (.ext-goal-root) removed by external DOM mutation; will restore.'
+                );
+              }
+            });
+          }
           clearTimeout(restoreTimeout);
           restoreTimeout = setTimeout(() => restoreChip(chip, goalData), 16);
         }).observe(chip, { childList: true, subtree: true });
