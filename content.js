@@ -1701,7 +1701,8 @@
     /** Apply completed visuals only (extension subtree); chip native children untouched. */
     applyCompletionVisual(chip, isDone) {
       chip.classList.toggle('ext-goal-done', !!isDone);
-      chip.dataset.goalCompleted = isDone ? 'true' : '';
+      if (isDone) chip.dataset.goalCompleted = 'true';
+      else delete chip.dataset.goalCompleted;
       const circle = chip.querySelector('.ext-check-circle');
       if (circle) circle.innerHTML = isDone ? SVG_CHECK : SVG_CIRCLE;
     },
