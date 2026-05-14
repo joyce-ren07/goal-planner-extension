@@ -650,7 +650,7 @@
   opacity: 0.65 !important;
 }
 
-/* Circular checkbox */
+/* Circular checkbox — both states use SVG; no CSS border needed */
 .ext-check-circle {
   width: 18px;
   height: 18px;
@@ -661,11 +661,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  border: 2px solid #C0514E;
+  border: none;
   background: transparent;
-  font-family: 'Google Sans', Roboto, Arial, sans-serif;
-  transition: border-color 0.1s ease, background 0.1s ease, opacity 0.1s ease;
+  transition: opacity 0.1s ease;
 }
 
 /* Done circle — SVG draws its own circle; remove CSS border/fill */
