@@ -726,6 +726,10 @@
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-badge {
+  background: #80868b;
+}
+
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
   color: #d3564b;
   font-size: 13px;
@@ -738,9 +742,10 @@
   align-self: flex-start;
 }
 
-[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root .ext-goal-title {
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-title {
+  color: #5f6368;
   text-decoration: line-through;
-  text-decoration-color: currentColor;
+  text-decoration-color: #5f6368;
 }
 
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
@@ -749,6 +754,11 @@
   font-weight: 400;
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
   white-space: nowrap;
-  opacity: 0.85;
+  opacity: 0.9;
   align-self: flex-start;
+}
+
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-time {
+  color: #5f6368;
+  opacity: 1;
 }
