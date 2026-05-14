@@ -1697,20 +1697,27 @@
   }
 
   // ── Write inner DOM structure into a chip element ──
+  //
+  // ADDITIVE INJECTION — we never call innerHTML = '' or remove any GCal child.
+  //
+  // Root cause of prior resize failure:
+  //   The old approach tried to save GCal resize handles via
+  //   querySelectorAll('[class*="resize"]') before clearing innerHTML.
+  //   GCal uses minified class names (e.g. "pMmPse", "YXgurf") — none contain
+  //   the literal string "resize".  The selector returned zero matches every
+  //   time, so chip.innerHTML = '' destroyed every handle and its native
+  //   mousedown listener.  The sibling-hiding code had the identical selector
+  //   bug, so any handles at the [data-eventid] level were also visibility:hidden.
+  //
+  // Fix: inject our content as an absolutely-positioned overlay (pointer-events:none).
+  //   GCal's entire child list — resize handles, drag layers, all of it — is
+  //   left completely untouched.  Mouse events that don't land on our checkbox
+  //   fall through the overlay to GCal's native elements below.
+  //
   function injectGoalChipContent(chip, goalData, isDone) {
-    // GCal attaches native mousedown listeners to its resize handle nodes at
-    // render time.  We MUST detach them before clearing innerHTML and reattach
-    // them afterward — clones will not work because the listeners live on the
-    // original node objects and cannot be transferred.
-    // Selector mirrors the guard in attachChipClickListener so we preserve any
-    // element that GCal uses as a drag-resize target.
-    const resizeHandles = [];
-    chip.querySelectorAll('[class*="resize"], [data-resizehandle]').forEach(el => {
-      chip.removeChild(el);   // detach (keeps the node alive with its listeners)
-      resizeHandles.push(el);
-    });
+    // Idempotent: remove only our previously-injected overlay, nothing else.
+    chip.querySelector('.ext-goal-chip-inner')?.remove();
 
-    chip.innerHTML = '';
     chip.classList.add('ext-goal-chip');
     chip.classList.toggle('ext-goal-done', isDone);
     chip.dataset.gpChipKey = goalData.chipKey;
@@ -1724,18 +1731,13 @@
         '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
         (goalData.time ? '<span class="ext-goal-time">' + escHtml(goalData.time) + '</span>' : '') +
       '</div>';
+
+    // Append last — GCal's original children (resize handles etc.) remain in
+    // the child list before ours and keep their native event listeners.
     chip.appendChild(inner);
 
-    // Re-attach the original resize handles AFTER our content so they sit
-    // at the end of the chip's child list with their native listeners intact.
-    resizeHandles.forEach(h => chip.appendChild(h));
-
-    // Stamp the explicit pixel height from the event container so the chip
-    // never expands beyond its duration-based bounds (see boundChipHeight).
     boundChipHeight(chip);
 
-    // Show/hide the time line based on available height — re-checked in rAF
-    // after boundChipHeight has resolved the container measurement.
     requestAnimationFrame(() => {
       const h = chip.getBoundingClientRect().height;
       const timeEl = chip.querySelector('.ext-goal-time');
