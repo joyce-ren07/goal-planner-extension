@@ -712,13 +712,13 @@
 /* Event time */
 .ext-goal-time {
   color: #C0514E;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   font-family: 'Google Sans', Roboto, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-time {
   color: #C0514E99;
