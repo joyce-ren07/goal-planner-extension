@@ -1660,7 +1660,7 @@
     inner.className = 'ext-goal-chip-inner';
     inner.style.cssText = 'display:flex;flex-direction:row;align-items:flex-start;gap:8px';
     inner.innerHTML =
-      '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
+      '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
       '<div class="ext-goal-text-col">' +
         '<span class="ext-goal-badge">Goal</span>' +
         '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
