@@ -1813,6 +1813,7 @@
 
         injectGoalChipContent(chip, goalData, isDone);
         attachChipClickListener(chip, goalData);
+        attachChipResizeObserver(chip, goalData);
 
         // Per-chip observer: restore injection if GCal's renderer wipes our structure
         let restoreTimeout = null;
