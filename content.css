@@ -701,7 +701,7 @@
   color: #C0514E;
   font-size: 13px;
   font-weight: 500;
-  font-family: 'Google Sans', Roboto, sans-serif;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -709,7 +709,7 @@
 }
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-title {
   text-decoration: line-through;
-  text-decoration-color: #C0514E99;
+  text-decoration-color: currentColor;
 }
 
 /* Event time */
@@ -717,12 +717,9 @@
   color: #C0514E;
   font-size: 12px;
   font-weight: 400;
-  font-family: 'Google Sans', Roboto, sans-serif;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0.75;
-}
-[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-time {
-  color: #C0514E99;
 }
