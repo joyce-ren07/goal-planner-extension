@@ -43,6 +43,200 @@
   let pendingDeleteId = null;
   let ctxMenuGoalId = null;
 
+  // ── Ghost event state ──
+  let _ghostScrollEl = null;
+  let _ghostScrollHandler = null;
+
+  // ── Ghost events: remove all from DOM and tear down scroll listener ──
+  function removeGhostEvents() {
+    document.querySelectorAll('.goal-ghost-event').forEach(el => el.remove());
+    if (_ghostScrollEl && _ghostScrollHandler) {
+      _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
+      _ghostScrollEl = null;
+      _ghostScrollHandler = null;
+    }
+  }
+
+  // ── Ghost events: find the scrollable time-grid container ──
+  function findCalendarScrollContainer() {
+    for (const sel of ['.FtZfle', '.M7Vc1b', '.ZCaJde']) {
+      const el = document.querySelector(sel);
+      if (el && !el.closest('#gp-panel') && el.scrollHeight > el.clientHeight + 50) return el;
+    }
+    for (const el of document.querySelectorAll('div')) {
+      if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay')) continue;
+      const s = window.getComputedStyle(el);
+      if (s.overflowY !== 'auto' && s.overflowY !== 'scroll' &&
+          s.overflow !== 'auto' && s.overflow !== 'scroll') continue;
+      const r = el.getBoundingClientRect();
+      if (r.height < 300 || el.scrollHeight <= el.clientHeight + 50) continue;
+      if (/\b\d{1,2}\s*(AM|PM)\b/.test(el.textContent)) return el;
+    }
+    return null;
+  }
+
+  // ── Ghost events: locate hour-label elements and compute their absolute Y
+  //    position within the scroll container ──
+  function findHourAbsolutePositions(scrollContainer) {
+    const result = [];
+    const seen = new Set();
+    const pattern = /^(\d{1,2})\s*(AM|PM)$/;
+    const contRect = scrollContainer.getBoundingClientRect();
+
+    function processNode(node, requireVisible) {
+      const text = node.textContent.trim();
+      const m = text.match(pattern);
+      if (!m) return;
+      const parent = node.parentElement;
+      if (!parent || parent.closest('#gp-panel, #gp-recurrence-overlay')) return;
+      const rect = parent.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return;
+      if (requireVisible && (rect.top < 0 || rect.top > window.innerHeight)) return;
+      const h = parseInt(m[1]);
+      const ampm = m[2].toUpperCase();
+      const hour24 = ampm === 'AM' ? (h === 12 ? 0 : h) : (h === 12 ? 12 : h + 12);
+      if (seen.has(hour24)) return;
+      seen.add(hour24);
+      // Absolute Y within the scroll container (survives scrolling)
+      const absY = rect.top - contRect.top + scrollContainer.scrollTop + rect.height / 2;
+      result.push({ hour: hour24, absY });
+    }
+
+    let walker = document.createTreeWalker(scrollContainer, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = walker.nextNode())) processNode(n, false);
+
+    // Fallback: some GCal builds keep the time column outside the scroll container
+    if (result.length < 2) {
+      walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      while ((n = walker.nextNode())) processNode(n, true);
+    }
+    return result;
+  }
+
+  // ── Ghost events: map day-of-week column headers to viewport x-positions ──
+  function findDayColumnPositions() {
+    const columns = [];
+    const seen = new Set();
+    const monthMap = {
+      january:0, jan:0, february:1, feb:1, march:2, mar:2,
+      april:3, apr:3, may:4, june:5, jun:5, july:6, jul:6,
+      august:7, aug:7, september:8, sep:8, sept:8,
+      october:9, oct:9, november:10, nov:10, december:11, dec:11,
+    };
+
+    document.querySelectorAll('[role="columnheader"]').forEach(el => {
+      if (el.closest('#gp-panel, #gp-recurrence-overlay')) return;
+      const label = (el.getAttribute('aria-label') || '').toLowerCase();
+      // Match "Sunday, April 19, 2026" or "Apr 19"
+      const m = label.match(/\w+day,?\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?/) ||
+                label.match(/^(\w{3,})\s+(\d{1,2}),?\s*(\d{4})?/);
+      if (!m) return;
+      const month = monthMap[m[1].toLowerCase()];
+      if (month === undefined) return;
+      const day = parseInt(m[2]);
+      const year = m[3] ? parseInt(m[3]) : new Date().getFullYear();
+      const key = `${year}-${month}-${day}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 10) return;
+      columns.push({ date: new Date(year, month, day), left: rect.left, width: rect.width });
+    });
+
+    // Fallback: data-datekey="20260420" attribute used by some GCal builds
+    if (!columns.length) {
+      document.querySelectorAll('[data-datekey]').forEach(el => {
+        if (el.closest('#gp-panel')) return;
+        const key = el.getAttribute('data-datekey');
+        if (!/^\d{8}$/.test(key)) return;
+        const y = parseInt(key.slice(0, 4)), mo = parseInt(key.slice(4, 6)) - 1, d = parseInt(key.slice(6, 8));
+        const dk = `${y}-${mo}-${d}`;
+        if (seen.has(dk)) return;
+        seen.add(dk);
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 10) return;
+        columns.push({ date: new Date(y, mo, d), left: rect.left, width: rect.width });
+      });
+    }
+    return columns;
+  }
+
+  // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
+  function renderGhostEvents() {
+    removeGhostEvents();
+    if (!state.suggestions || !state.suggestions.length) return;
+
+    const scrollCont = findCalendarScrollContainer();
+    if (!scrollCont) return;
+
+    const hourPositions = findHourAbsolutePositions(scrollCont);
+    if (hourPositions.length < 2) return;
+
+    hourPositions.sort((a, b) => a.hour - b.hour);
+    const first = hourPositions[0];
+    const last  = hourPositions[hourPositions.length - 1];
+    const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
+    if (pxPerHour <= 0) return;
+    const absYAtHour0 = first.absY - first.hour * pxPerHour;
+
+    const dayColumns = findDayColumnPositions();
+    const goalLabel = (state.goalTitle || '').length > 18
+      ? state.goalTitle.slice(0, 17) + '…'
+      : (state.goalTitle || '');
+
+    const contRect = scrollCont.getBoundingClientRect();
+    const ghostData = [];
+
+    for (const session of state.suggestions) {
+      const start = new Date(session.isoStart);
+      const end   = new Date(session.isoEnd);
+
+      const col = dayColumns.find(c =>
+        c.date.getFullYear() === start.getFullYear() &&
+        c.date.getMonth()    === start.getMonth()    &&
+        c.date.getDate()     === start.getDate()
+      );
+      if (!col) continue; // date not visible in current view
+
+      const startMins   = start.getHours() * 60 + start.getMinutes();
+      const durationMin = (end - start) / 60000;
+      const absTop  = absYAtHour0 + (startMins / 60) * pxPerHour;
+      const height  = Math.max(20, (durationMin / 60) * pxPerHour);
+      const left    = col.left + 2;
+      const width   = Math.max(10, col.width - 4);
+      const fixedTop = contRect.top + absTop - scrollCont.scrollTop;
+
+      const ghost = document.createElement('div');
+      ghost.className = 'goal-ghost-event';
+      ghost.style.cssText =
+        `left:${left}px;top:${fixedTop}px;width:${width}px;height:${height}px;`;
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'goal-ghost-event-name';
+      nameEl.textContent = goalLabel;
+      ghost.appendChild(nameEl);
+      document.body.appendChild(ghost);
+      ghostData.push({ el: ghost, absTop, left, width, height });
+    }
+
+    if (!ghostData.length) return;
+
+    // Reposition ghosts on every scroll tick using rAF to avoid jank
+    let _raf = null;
+    _ghostScrollEl = scrollCont;
+    _ghostScrollHandler = () => {
+      if (_raf) return;
+      _raf = requestAnimationFrame(() => {
+        _raf = null;
+        const ct = scrollCont.getBoundingClientRect().top;
+        const st = scrollCont.scrollTop;
+        for (const g of ghostData) g.el.style.top = (ct + g.absTop - st) + 'px';
+      });
+    };
+    scrollCont.addEventListener('scroll', _ghostScrollHandler, { passive: true });
+  }
+
   // ── Inject once ──
   function inject() {
     if (document.getElementById('gp-panel')) return;
@@ -61,23 +255,28 @@
     document.body.appendChild(stdTimeDd);
     migrateGoals();
 
-    // Try immediate insertion at the TOP of GCal's icon strip.
-    // If the strip hasn't rendered yet, fall back to a fixed wrapper so the button
-    // is always visible. The MutationObserver will move it into the real strip once
-    // GCal renders it, and will re-insert on every subsequent navigation.
-    if (!insertRailBtn(btn)) {
-      const wrap = document.createElement('div');
-      wrap.id = 'gp-rail-fallback';
-      wrap.style.cssText = 'position:fixed;right:8px;top:120px;z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;';
-      wrap.appendChild(btn);
-      document.body.appendChild(wrap);
-    }
-    setupRailBtnObserver(btn);
+    // Always mount the button as a fixed-position element at the body level so it
+    // lives OUTSIDE GCal's stacking context. This guarantees pointer-events are never
+    // intercepted by GCal's own overlays/backdrops. positionRailFallback() then
+    // aligns it visually with the native icon rail.
+    const wrap = document.createElement('div');
+    wrap.id = 'gp-rail-fallback';
+    wrap.style.cssText = 'position:fixed;right:0;top:65px;z-index:10000;display:flex;flex-direction:column;align-items:center;padding:4px 0;pointer-events:none;';
+    wrap.appendChild(btn);
+    document.body.appendChild(wrap);
+    positionRailFallback();
+    setupRailFallbackPositioner();
 
     wireEvents();
     renderHomeScreen();
     setupCalendarPushObserver();
     setupNativeSidebarObserver();
+
+    // Re-render ghost events on window resize (column widths change)
+    window.addEventListener('resize', () => {
+      const screen = document.getElementById('gp-screen-suggestions');
+      if (screen && screen.classList.contains('active')) renderGhostEvents();
+    });
   }
 
   /** Main calendar region that natively shrinks when Tasks/Notes opens — push layout, not overlay. */
@@ -157,7 +356,22 @@
   }
 
   function findRailByStructure() {
-    // Narrow fixed/sticky strip on the far right with ≥1 child — same heuristic as before.
+    // Primary: find a known GCal sidebar icon and walk up to its narrow container.
+    // GCal renders Tasks, Keep, Contacts etc. with these aria-labels.
+    const knownLabels = ['Tasks', 'Keep', 'Contacts', 'Reminders', 'Google Keep'];
+    for (const label of knownLabels) {
+      const btn = document.querySelector(`[aria-label="${label}"]`);
+      if (!btn) continue;
+      let el = btn.parentElement;
+      while (el && el !== document.body) {
+        const r = el.getBoundingClientRect();
+        // Rail container is narrow (20–80 px wide) and reasonably tall
+        if (r.width > 20 && r.width < 80 && r.height > 80) return el;
+        el = el.parentElement;
+      }
+    }
+
+    // Fallback: narrow fixed/sticky strip on the far right with ≥1 child.
     return [...document.querySelectorAll('*')].find(el => {
       const s = window.getComputedStyle(el);
       const r = el.getBoundingClientRect();
@@ -166,32 +380,33 @@
     }) || null;
   }
 
-  // ── Rail button insertion ──
-  // Inserts our icon at the TOP of the strip immediately, with a MutationObserver
-  // that re-inserts it whenever GCal re-renders the strip (e.g. on navigation).
-  let _railBtnObserver = null;
-  let _railBtnTimer    = null;
+  // ── Rail button positioning ──
+  // The button is always mounted as a fixed-position child of document.body so it is
+  // outside GCal's stacking context (preventing click interception by GCal backdrops).
+  // positionRailFallback() measures the live rail bounding rect and aligns the wrapper.
+  let _railPositionTimer = null;
 
-  function insertRailBtn(btn) {
+  function positionRailFallback() {
+    const wrap = document.getElementById('gp-rail-fallback');
+    if (!wrap) return;
     const rail = findRailByStructure();
-    if (!rail) return false;
-    if (rail.firstElementChild === btn) return true; // already in correct position
-    rail.insertBefore(btn, rail.firstElementChild);  // move/insert at TOP
-    // Clean up the fallback wrapper if it's now empty
-    const fallback = document.getElementById('gp-rail-fallback');
-    if (fallback && !fallback.contains(btn)) fallback.remove();
-    return true;
+    if (rail) {
+      const r = rail.getBoundingClientRect();
+      const rightPx = window.innerWidth - r.right;
+      wrap.style.cssText = `position:fixed;right:${rightPx}px;top:${r.top + 4}px;width:${r.width}px;z-index:10000;display:flex;flex-direction:column;align-items:center;padding:4px 0;pointer-events:none;`;
+    } else {
+      const hdrH = getGCalHeaderBottom();
+      wrap.style.cssText = `position:fixed;right:0;top:${hdrH}px;z-index:10000;display:flex;flex-direction:column;align-items:center;padding:4px 0;pointer-events:none;`;
+    }
   }
 
-  function setupRailBtnObserver(btn) {
-    function schedule() {
-      clearTimeout(_railBtnTimer);
-      _railBtnTimer = setTimeout(() => insertRailBtn(btn), 200);
-    }
-
-    if (_railBtnObserver) _railBtnObserver.disconnect();
-    _railBtnObserver = new MutationObserver(schedule);
-    _railBtnObserver.observe(document.body, { childList: true, subtree: true });
+  function setupRailFallbackPositioner() {
+    const schedule = () => {
+      clearTimeout(_railPositionTimer);
+      _railPositionTimer = setTimeout(positionRailFallback, 200);
+    };
+    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', positionRailFallback);
   }
 
   // ── Rail button ──
@@ -205,6 +420,8 @@
       <circle cx="12" cy="12" r="1.5" fill="#444746" stroke="none"/>
       <line x1="12" y1="3" x2="12" y2="1"/>
     </svg>`;
+    // Attach the listener directly on the element so it survives being moved in the DOM.
+    btn.addEventListener('click', () => togglePanel());
     return btn;
   }
 
@@ -467,8 +684,7 @@
 
   // ── Wire all events ──
   function wireEvents() {
-    // Rail btn
-    document.getElementById('gp-sidebar-btn').addEventListener('click', togglePanel);
+    // Rail btn click is wired in createRailBtn() to survive DOM moves.
     document.getElementById('gp-close-btn').addEventListener('click', closePanel);
     document.getElementById('gp-set-goal-btn').addEventListener('click', () => { resetEditMode(); showScreen('form'); });
 
@@ -567,9 +783,12 @@
     const railW   = getGCalRailWidth();
     panel.style.top   = headerH + 'px';
     panel.style.right = railW   + 'px';
-    // Keep the hidden transform in sync with the measured rail width
+    // Prime the starting position with the live rail width, then clear the inline
+    // style so the CSS .open rule (transform: translateX(0)) can take effect.
     if (!panel.classList.contains('open')) {
       panel.style.transform = `translateX(calc(100% + ${railW}px))`;
+      void panel.offsetWidth; // force reflow — commits start position before transition
+      panel.style.transform = '';
     }
 
     panel.classList.add('open');
@@ -583,6 +802,7 @@
     setCalendarPushed(false);
     closeCtxMenu();
     resetEditMode();
+    removeGhostEvents();
   }
 
   // ── Screen routing ──
@@ -590,7 +810,8 @@
     ['home','form','suggestions'].forEach(s => {
       document.getElementById(`gp-screen-${s}`).classList.toggle('active', s === name);
     });
-    if (name === 'home') renderHomeScreen();
+    if (name === 'home') { renderHomeScreen(); removeGhostEvents(); }
+    if (name === 'form') removeGhostEvents();
   }
 
   // ── Home screen ──
@@ -1072,13 +1293,12 @@
 
   function renderSuggestions() {
     const list = document.getElementById('gp-suggestions-list');
-    const title = state.goalTitle || '';
-    const label = title.length > 22 ? title.slice(0, 21) + '…' : title;
     list.innerHTML = state.suggestions.map(s => `
       <div class="gp-session-card">
-        <p class="gp-session-name">${label}</p>
+        <p class="gp-session-name">${s.date}</p>
         <p class="gp-session-time">${s.startTime} – ${s.endTime}</p>
       </div>`).join('');
+    renderGhostEvents();
   }
 
   // ── Standardize session time ──
@@ -1440,7 +1660,15 @@
 
   let lastUrl = location.href;
   new MutationObserver(() => {
-    if (location.href !== lastUrl) { lastUrl = location.href; setTimeout(inject, 1000); }
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      setTimeout(inject, 1000);
+      // Re-render ghost events after GCal week/month navigation
+      setTimeout(() => {
+        const screen = document.getElementById('gp-screen-suggestions');
+        if (screen && screen.classList.contains('active')) renderGhostEvents();
+      }, 1200);
+    }
   }).observe(document.body, { childList: true, subtree: true });
 
 })();
