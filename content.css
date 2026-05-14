@@ -700,6 +700,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 120px;
 }
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-title {
   text-decoration: line-through;
