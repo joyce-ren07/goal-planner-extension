@@ -1675,6 +1675,27 @@
     renderHomeScreen();
   }
 
+  // ── Bound the chip's rendered height to match its GCal event container ──
+  //
+  // The chip element ([data-eventchip]) lives inside [data-eventid], which GCal
+  // sizes to the event's duration via inline styles (the same container the
+  // ResizeObserver in attachChipResizeObserver already watches).  We read that
+  // container's rendered height and stamp it directly onto the chip as an inline
+  // height so no CSS percentage-height resolution is needed.
+  //
+  // requestAnimationFrame guarantees the measurement runs after the browser has
+  // resolved GCal's layout for that frame, so getBoundingClientRect().height is
+  // always the final computed value, not a transitional or zero value.
+  //
+  function boundChipHeight(chip) {
+    const container = chip.closest('[data-eventid]');
+    if (!container) return;
+    requestAnimationFrame(() => {
+      const h = container.getBoundingClientRect().height;
+      if (h > 0) chip.style.height = h + 'px';
+    });
+  }
+
   // ── Write inner DOM structure into a chip element ──
   function injectGoalChipContent(chip, goalData, isDone) {
     chip.innerHTML = '';
