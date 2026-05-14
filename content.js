@@ -1621,7 +1621,7 @@
     chrome.storage.local.get(['gp_chip_done'], async (data) => {
       const doneMap = data.gp_chip_done || {};
       const goals   = await getGoals();
-      const SVG_CHECK = '<svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,5 4,7.5 8,2.5" stroke="white" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const SVG_CHECK = '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#C0514E" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       document.querySelectorAll('[data-eventchip]').forEach(chip => {
