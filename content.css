@@ -632,17 +632,17 @@
 ───────────────────────────────────────── */
 
 [data-eventchip].ext-goal-chip {
-  /* Marker class only + bounded height from JS. No borders/radius here — avoids
-     fighting GCal’s native event chrome. */
   width: 100% !important;
   box-sizing: border-box !important;
+  position: relative;
+  isolation: isolate;
 }
 
-/* Single decoration layer: additive, absolute, pointer-events:none except .ext-check-circle */
+/* Solid overlay fully masks native chip text; z-index applied only on this root. */
 [data-eventchip].ext-goal-chip .ext-goal-root {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 5;
   border-radius: inherit;
   box-sizing: border-box;
   display: flex;
@@ -653,28 +653,33 @@
   overflow: hidden;
   pointer-events: none;
 
-  /* Figma: --(lofi-light-red #ffd7d3), --darker-coral #d3564b */
   background: #ffd7d3;
   border-top: 1.5px solid #d3564b;
   border-right: 1.5px solid #d3564b;
   border-bottom: 1.5px solid #d3564b;
   border-left: 4px solid #d3564b;
 
-  transition: opacity 0.1s ease;
+  opacity: 1;
 }
 
-/* Visual feedback while GCal's native resize handle is being dragged */
+/* Resize feedback: outline only — no translucent root (prevents native bleed-through). */
 [data-eventchip].ext-goal-chip.ext-goal-resizing .ext-goal-root {
-  opacity: 0.78;
-  outline: 2px solid #d3564b;
+  opacity: 1;
+  outline: 2px solid #1a73e8;
   outline-offset: -2px;
 }
 
-/* Complete state — Figma FullscreenCalEvent opacity 65% on chip body */
-[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root {
-  opacity: 0.65;
+/* Completed — solid muted surface (not opacity-blended). */
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root {
+  background: #e8eaed;
+  border-top-color: #dadce0;
+  border-right-color: #dadce0;
+  border-bottom-color: #dadce0;
+  border-left-color: #80868b;
+  opacity: 1;
 }
 
+[data-eventchip].ext-goal-chip .ext-goal-root .goal-checkbox,
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-check-circle {
   width: 18px;
   height: 18px;
@@ -687,16 +692,17 @@
   justify-content: center;
   border: none;
   background: transparent;
-  transition: opacity 0.1s ease;
   pointer-events: auto;
 }
 
+[data-eventchip].ext-goal-chip .ext-goal-root .goal-checkbox svg,
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-check-circle svg {
-  pointer-events: auto;
+  pointer-events: none;
   display: block;
 }
 
-[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root .ext-check-circle {
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .goal-checkbox,
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-check-circle {
   border: none;
   background: transparent;
   width: 18px;
