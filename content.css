@@ -638,11 +638,22 @@
   border-bottom: 1.5px solid #E88B8B !important;
   border-left: 4px solid #C0514E !important;
   border-radius: 8px !important;
-  padding: 6px 8px 6px 8px !important;
-  min-height: 56px !important;
-  overflow: hidden !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
   box-sizing: border-box !important;
   transition: opacity 0.1s ease !important;
+}
+
+.ext-goal-chip-inner {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 4px 6px 4px 0px;
+  gap: 8px;
 }
 
 /* Complete state — opacity dims the whole chip uniformly */
