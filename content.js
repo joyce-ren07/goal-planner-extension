@@ -2022,12 +2022,14 @@
         // Dedup guard — inner structure already injected; sync done state and
         // re-bound the chip height in case GCal reflowed (e.g. window resize,
         // navigation, panel open/close changes column widths).
-        if (chip.querySelector('.ext-goal-chip-inner')) {
+        if (chip.querySelector('.ext-goal-root')) {
           boundChipHeight(chip);
           const isDone = !!doneMap[chip.dataset.gpChipKey];
           chip.classList.toggle('ext-goal-done', isDone);
           const c = chip.querySelector('.ext-check-circle');
-          if (c) c.innerHTML = isDone ? SVG_CHECK : '';
+          if (c) c.innerHTML = isDone ? SVG_CHECK : SVG_CIRCLE;
+          const ec = chip.closest('[data-eventid]');
+          requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip, ec));
           return;
         }
 
