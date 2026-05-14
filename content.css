@@ -752,6 +752,7 @@
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-title {
   color: #e79992;
+  font-size: 12px;
   font-weight: 500;
   text-decoration: line-through;
   text-decoration-color: #e79992;
