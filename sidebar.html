@@ -47,15 +47,17 @@
                 </div>
                 <div class="gp-task-meta">
                   <span class="gp-course-chip gp-course-chip--psych">PSYC101</span>
-                  <button type="button" class="gp-filter-chip gp-filter-chip--planned" aria-label="Status: Planned">
+                  <div class="gp-filter-chip gp-filter-chip--planned" data-status="planned" role="group" aria-label="Status: Planned">
                     <span class="gp-filter-chip-dot" aria-hidden="true"></span>
                     <span class="gp-filter-chip-label">Planned</span>
-                    <span class="gp-filter-chip-trailing" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </span>
-                  </button>
+                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
+                      <span class="gp-filter-chip-trailing" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -75,15 +77,17 @@
                 </div>
                 <div class="gp-task-meta">
                   <span class="gp-course-chip gp-course-chip--cogs">COGS14B</span>
-                  <button type="button" class="gp-filter-chip gp-filter-chip--progress" aria-label="Status: In progress">
+                  <div class="gp-filter-chip gp-filter-chip--progress" data-status="progress" role="group" aria-label="Status: In progress">
                     <span class="gp-filter-chip-dot" aria-hidden="true"></span>
                     <span class="gp-filter-chip-label">In progress</span>
-                    <span class="gp-filter-chip-trailing" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </span>
-                  </button>
+                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
+                      <span class="gp-filter-chip-trailing" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -133,5 +137,35 @@
         </div>
       </section>
     </div>
+  </div>
+
+  <div id="gp-status-menu" class="gp-status-menu" role="menu" aria-label="Task status" hidden>
+    <button type="button" class="gp-status-menu-item" role="menuitemradio" data-status="planned" aria-checked="false">
+      <span class="gp-status-menu-dot gp-status-menu-dot--planned" aria-hidden="true"></span>
+      <span class="gp-status-menu-label">Planned</span>
+      <span class="gp-status-menu-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+    </button>
+    <button type="button" class="gp-status-menu-item" role="menuitemradio" data-status="progress" aria-checked="false">
+      <span class="gp-status-menu-dot gp-status-menu-dot--progress" aria-hidden="true"></span>
+      <span class="gp-status-menu-label">In progress</span>
+      <span class="gp-status-menu-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+    </button>
+    <button type="button" class="gp-status-menu-item" role="menuitemradio" data-status="done" aria-checked="false">
+      <span class="gp-status-menu-dot gp-status-menu-dot--done" aria-hidden="true"></span>
+      <span class="gp-status-menu-label">Done</span>
+      <span class="gp-status-menu-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+    </button>
   </div>
 </div>

@@ -26,6 +26,11 @@
   --m3-chip-progress-outline: #7aa9f6;
   --m3-chip-progress-on-container: #185abc;
   --m3-chip-progress-dot: #185abc;
+  --m3-chip-done-container: #d3e9db;
+  --m3-chip-done-outline: #4aa569;
+  --m3-chip-done-on-container: #04782c;
+  --m3-chip-done-dot: #04782c;
+  --m3-menu-surface: #f9fafd;
   --m3-state-hover: 0.08;
   --m3-state-pressed: 0.12;
   --m3-state-focused: 0.12;
@@ -55,6 +60,7 @@
 #gp-panel.mytasks-sidebar.open {
   pointer-events: auto;
   transform: translate3d(0, 0, 0);
+  overflow: visible;
 }
 
 #gp-sidebar-rail {
@@ -443,11 +449,10 @@
   align-items: center;
   justify-content: center;
   min-height: 32px;
-  padding: 4px 8px 4px 12px;
+  padding: 4px 4px 4px 12px;
   border-radius: var(--m3-radius-lg);
   border: 1px solid transparent;
   background: transparent;
-  cursor: pointer;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -455,7 +460,23 @@
   letter-spacing: 0.1px;
 }
 
-.mytasks-sidebar .gp-filter-chip::before {
+.mytasks-sidebar .gp-filter-chip-menu-btn {
+  position: relative;
+  min-width: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--m3-radius-full);
+  cursor: pointer;
+}
+
+.mytasks-sidebar .gp-filter-chip-menu-btn::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -465,11 +486,11 @@
   transition: opacity 0.2s ease;
 }
 
-.mytasks-sidebar .gp-filter-chip:hover::before {
+.mytasks-sidebar .gp-filter-chip-menu-btn:hover::before {
   opacity: var(--m3-state-hover);
 }
 
-.mytasks-sidebar .gp-filter-chip:active::before {
+.mytasks-sidebar .gp-filter-chip-menu-btn:active::before {
   opacity: var(--m3-state-pressed);
 }
 
@@ -483,6 +504,12 @@
   background: var(--m3-chip-progress-container);
   border-color: var(--m3-chip-progress-outline);
   color: var(--m3-chip-progress-on-container);
+}
+
+.mytasks-sidebar .gp-filter-chip--done {
+  background: var(--m3-chip-done-container);
+  border-color: var(--m3-chip-done-outline);
+  color: var(--m3-chip-done-on-container);
 }
 
 .mytasks-sidebar .gp-filter-chip-dot {
@@ -501,6 +528,10 @@
 
 .mytasks-sidebar .gp-filter-chip--progress .gp-filter-chip-dot {
   background: var(--m3-chip-progress-dot);
+}
+
+.mytasks-sidebar .gp-filter-chip--done .gp-filter-chip-dot {
+  background: var(--m3-chip-done-dot);
 }
 
 .mytasks-sidebar .gp-filter-chip-label,
@@ -606,4 +637,115 @@
     opacity: 0;
     transform: translate3d(var(--gp-confetti-x), var(--gp-confetti-y), 0) rotate(var(--gp-confetti-rotation));
   }
+}
+
+.mytasks-sidebar .gp-status-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  width: 208px;
+  box-sizing: border-box;
+  display: none;
+  flex-direction: column;
+  padding: 2px 0;
+  border-radius: var(--m3-radius-lg);
+  background: var(--m3-surface-container-lowest);
+  box-shadow:
+    0 1px 3px color-mix(in srgb, var(--m3-on-surface) 30%, transparent),
+    0 4px 8px 3px color-mix(in srgb, var(--m3-on-surface) 15%, transparent);
+  pointer-events: none;
+}
+
+.mytasks-sidebar .gp-status-menu[hidden] {
+  display: none !important;
+}
+
+.mytasks-sidebar .gp-status-menu.gp-status-menu--open {
+  display: flex;
+  pointer-events: auto;
+}
+
+.mytasks-sidebar .gp-status-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 12px;
+  border: none;
+  border-radius: var(--m3-radius-xs);
+  background: transparent;
+  color: var(--m3-headline-on-surface);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mytasks-sidebar .gp-status-menu-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--m3-on-surface);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mytasks-sidebar .gp-status-menu-item:hover::before {
+  opacity: var(--m3-state-hover);
+}
+
+.mytasks-sidebar .gp-status-menu-item:active::before {
+  opacity: var(--m3-state-pressed);
+}
+
+.mytasks-sidebar .gp-status-menu-dot,
+.mytasks-sidebar .gp-status-menu-label,
+.mytasks-sidebar .gp-status-menu-check {
+  position: relative;
+  z-index: 1;
+}
+
+.mytasks-sidebar .gp-status-menu-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--m3-radius-full);
+  flex-shrink: 0;
+}
+
+.mytasks-sidebar .gp-status-menu-dot--planned {
+  background: var(--m3-chip-planned-dot);
+}
+
+.mytasks-sidebar .gp-status-menu-dot--progress {
+  background: var(--m3-chip-progress-dot);
+}
+
+.mytasks-sidebar .gp-status-menu-dot--done {
+  background: var(--m3-chip-done-dot);
+}
+
+.mytasks-sidebar .gp-status-menu-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.mytasks-sidebar .gp-status-menu-check {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--m3-primary);
+}
+
+.mytasks-sidebar .gp-status-menu-item[aria-checked='true'] .gp-status-menu-check {
+  display: inline-flex;
 }

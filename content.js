@@ -4,6 +4,20 @@
   const PANEL_WIDTH_PX = 341;
   const MAIN_MARGIN_TRANSITION = 'margin-right 0.2s ease';
   const TASK_COMPLETE_ANIM_MS = 1200;
+  const TASK_STATUSES = {
+    planned: {
+      label: 'Planned',
+      className: 'gp-filter-chip--planned',
+    },
+    progress: {
+      label: 'In progress',
+      className: 'gp-filter-chip--progress',
+    },
+    done: {
+      label: 'Done',
+      className: 'gp-filter-chip--done',
+    },
+  };
   const SIDEBAR_MARKUP = `
 <div id="gp-panel" class="mytasks-sidebar" aria-hidden="true">
   <div class="gp-card" id="gp-card">
@@ -54,15 +68,17 @@
                 </div>
                 <div class="gp-task-meta">
                   <span class="gp-course-chip gp-course-chip--psych">PSYC101</span>
-                  <button type="button" class="gp-filter-chip gp-filter-chip--planned" aria-label="Status: Planned">
+                  <div class="gp-filter-chip gp-filter-chip--planned" data-status="planned" role="group" aria-label="Status: Planned">
                     <span class="gp-filter-chip-dot" aria-hidden="true"></span>
                     <span class="gp-filter-chip-label">Planned</span>
-                    <span class="gp-filter-chip-trailing" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </span>
-                  </button>
+                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
+                      <span class="gp-filter-chip-trailing" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -82,15 +98,17 @@
                 </div>
                 <div class="gp-task-meta">
                   <span class="gp-course-chip gp-course-chip--cogs">COGS14B</span>
-                  <button type="button" class="gp-filter-chip gp-filter-chip--progress" aria-label="Status: In progress">
+                  <div class="gp-filter-chip gp-filter-chip--progress" data-status="progress" role="group" aria-label="Status: In progress">
                     <span class="gp-filter-chip-dot" aria-hidden="true"></span>
                     <span class="gp-filter-chip-label">In progress</span>
-                    <span class="gp-filter-chip-trailing" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </span>
-                  </button>
+                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
+                      <span class="gp-filter-chip-trailing" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </article>
@@ -141,12 +159,43 @@
       </section>
     </div>
   </div>
+
+  <div id="gp-status-menu" class="gp-status-menu" role="menu" aria-label="Task status" hidden>
+    <button type="button" class="gp-status-menu-item" role="menuitemradio" data-status="planned" aria-checked="false">
+      <span class="gp-status-menu-dot gp-status-menu-dot--planned" aria-hidden="true"></span>
+      <span class="gp-status-menu-label">Planned</span>
+      <span class="gp-status-menu-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+    </button>
+    <button type="button" class="gp-status-menu-item" role="menuitemradio" data-status="progress" aria-checked="false">
+      <span class="gp-status-menu-dot gp-status-menu-dot--progress" aria-hidden="true"></span>
+      <span class="gp-status-menu-label">In progress</span>
+      <span class="gp-status-menu-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+    </button>
+    <button type="button" class="gp-status-menu-item" role="menuitemradio" data-status="done" aria-checked="false">
+      <span class="gp-status-menu-dot gp-status-menu-dot--done" aria-hidden="true"></span>
+      <span class="gp-status-menu-label">Done</span>
+      <span class="gp-status-menu-check" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </span>
+    </button>
+  </div>
 </div>
 `.trim();
 
   let cachedCalendarMainEl = null;
   let calendarPushDebounce = null;
   let railMountDebounce = null;
+  let closeTaskStatusMenu = null;
 
   const SIDE_APP_LABEL_RE = /\b(keep|tasks|contacts|maps|side panel|add-ons|jamboard)\b/i;
 
@@ -410,6 +459,149 @@
     window.addEventListener('resize', reapply);
   }
 
+  function applyTaskStatus(chip, statusKey, options = {}) {
+    const status = TASK_STATUSES[statusKey];
+    if (!chip || !status) return;
+
+    chip.dataset.status = statusKey;
+    chip.classList.remove(
+      'gp-filter-chip--planned',
+      'gp-filter-chip--progress',
+      'gp-filter-chip--done',
+    );
+    chip.classList.add(status.className);
+
+    const label = chip.querySelector('.gp-filter-chip-label');
+    if (label) {
+      label.textContent = status.label;
+    }
+
+    chip.setAttribute('aria-label', `Status: ${status.label}`);
+
+    const menuBtn = chip.querySelector('.gp-filter-chip-menu-btn');
+    if (menuBtn) {
+      menuBtn.setAttribute('aria-label', `Change task status: ${status.label}`);
+    }
+
+    if (statusKey === 'done' && !options.skipComplete) {
+      const row = chip.closest('.gp-task-row');
+      const folder = row?.closest('.gp-task-folder');
+      const checkbox = row?.querySelector('.gp-task-checkbox');
+      if (row && folder?.dataset.folder !== 'completed' && checkbox) {
+        completeTask(checkbox);
+      }
+    }
+  }
+
+  function positionStatusMenu(trigger, menu, panel) {
+    const triggerRect = trigger.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const menuWidth = menu.offsetWidth || 208;
+    const maxLeft = Math.max(8, panelRect.width - menuWidth - 8);
+    let left = triggerRect.right - panelRect.left - menuWidth;
+    left = Math.max(8, Math.min(left, maxLeft));
+
+    menu.style.top = `${triggerRect.bottom - panelRect.top + 4}px`;
+    menu.style.left = `${left}px`;
+  }
+
+  function initTaskStatusMenus(panel) {
+    const menu = panel.querySelector('#gp-status-menu');
+    const accordion = panel.querySelector('#gp-tasks-accordion');
+    if (!menu || !accordion || menu.dataset.wired === 'true') return;
+
+    menu.dataset.wired = 'true';
+    let activeTrigger = null;
+    let activeChip = null;
+
+    const closeStatusMenu = () => {
+      if (activeTrigger) {
+        activeTrigger.setAttribute('aria-expanded', 'false');
+      }
+
+      activeTrigger = null;
+      activeChip = null;
+      menu.classList.remove('gp-status-menu--open');
+      menu.hidden = true;
+      menu.setAttribute('aria-hidden', 'true');
+    };
+
+    const isStatusMenuOpen = () => menu.classList.contains('gp-status-menu--open');
+
+    const openStatusMenu = (trigger) => {
+      const chip = trigger?.closest('.gp-filter-chip');
+      if (!chip || trigger.disabled || chip.closest('.gp-task-row--departing')) return;
+
+      if (activeTrigger === trigger && isStatusMenuOpen()) {
+        closeStatusMenu();
+        return;
+      }
+
+      if (activeTrigger) {
+        activeTrigger.setAttribute('aria-expanded', 'false');
+      }
+
+      activeTrigger = trigger;
+      activeChip = chip;
+      const currentStatus = chip.dataset.status || 'planned';
+
+      menu.querySelectorAll('.gp-status-menu-item').forEach((item) => {
+        const selected = item.dataset.status === currentStatus;
+        item.setAttribute('aria-checked', selected ? 'true' : 'false');
+      });
+
+      menu.hidden = false;
+      menu.setAttribute('aria-hidden', 'false');
+      menu.classList.add('gp-status-menu--open');
+      trigger.setAttribute('aria-expanded', 'true');
+
+      requestAnimationFrame(() => {
+        positionStatusMenu(trigger, menu, panel);
+      });
+    };
+
+    menu.addEventListener('pointerdown', (event) => {
+      const item = event.target.closest('.gp-status-menu-item');
+      if (!item || !activeChip) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const chip = activeChip;
+      const statusKey = item.dataset.status;
+      closeStatusMenu();
+      applyTaskStatus(chip, statusKey);
+    });
+
+    accordion.addEventListener('click', (event) => {
+      const trigger = event.target.closest('.gp-filter-chip-menu-btn');
+      if (!trigger || !accordion.contains(trigger)) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      openStatusMenu(trigger);
+    });
+
+    panel.addEventListener('pointerdown', (event) => {
+      if (!isStatusMenuOpen()) return;
+      if (menu.contains(event.target) || event.target.closest('.gp-filter-chip-menu-btn')) return;
+      closeStatusMenu();
+    });
+
+    panel.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeStatusMenu();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (!activeTrigger || !isStatusMenuOpen()) return;
+      positionStatusMenu(activeTrigger, menu, panel);
+    });
+
+    closeTaskStatusMenu = closeStatusMenu;
+  }
+
   function adjustFolderCount(folder, delta) {
     const label = folder?.querySelector('.gp-task-folder-label');
     if (!label) return;
@@ -502,6 +694,15 @@
     row.dataset.completing = 'true';
     checkbox.disabled = true;
     setCheckboxCheckedVisual(checkbox);
+
+    const statusChip = row.querySelector('.gp-filter-chip');
+    if (statusChip) {
+      applyTaskStatus(statusChip, 'done', { skipComplete: true });
+    }
+
+    if (closeTaskStatusMenu) {
+      closeTaskStatusMenu();
+    }
 
     const rowRect = row.getBoundingClientRect();
     const targetRect = completedFolder.querySelector('.gp-task-folder-header')?.getBoundingClientRect();
@@ -624,12 +825,16 @@
     }
 
     initTasksAccordion(panel.querySelector('#gp-tasks-accordion'));
+    initTaskStatusMenus(panel);
     initTaskCompletion(panel.querySelector('#gp-tasks-accordion'));
   }
 
   function mountSidebar() {
     const existing = document.getElementById('gp-panel');
-    if (existing) return existing;
+    if (existing) {
+      wireSidebarEvents(existing);
+      return existing;
+    }
 
     const template = document.createElement('template');
     template.innerHTML = SIDEBAR_MARKUP;
