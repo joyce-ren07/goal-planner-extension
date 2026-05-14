@@ -635,8 +635,8 @@
   background: #FADADD !important;
   border: 1.5px solid #E88B8B !important;
   border-radius: 8px !important;
-  padding: 6px 10px !important;
-  min-height: 52px !important;
+  padding: 8px 10px !important;
+  min-height: 56px !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
 }
