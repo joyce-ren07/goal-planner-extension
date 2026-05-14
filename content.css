@@ -735,6 +735,7 @@
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-badge {
   background: #e79992;
+  font-size: 14px;
 }
 
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
