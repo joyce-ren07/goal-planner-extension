@@ -1672,7 +1672,7 @@
         chip.innerHTML = '';
         const inner = document.createElement('div');
         inner.className = 'ext-goal-chip-inner';
-        inner.style.cssText = 'display:flex;flex-direction:row;align-items:center;gap:10px';
+        inner.style.cssText = 'display:flex;flex-direction:row;align-items:flex-start;gap:8px';
         inner.innerHTML =
           '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
           '<div class="ext-goal-text-col">' +
