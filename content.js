@@ -1911,7 +1911,7 @@
 
   // ── Re-inject if GCal wiped our structure; re-sync done state if present ──
   function restoreChip(chip, goalData) {
-    if (!chip.querySelector('.ext-goal-chip-inner')) {
+    if (!chip.querySelector('.ext-goal-root')) {
       chrome.storage.local.get(['gp_chip_done'], d => {
         const doneMap = d.gp_chip_done || {};
         const isDone = !!doneMap[goalData.chipKey];
@@ -1925,14 +1925,11 @@
     chrome.storage.local.get(['gp_chip_done'], d => {
       const doneMap = d.gp_chip_done || {};
       const isDone = !!doneMap[goalData.chipKey];
-      if (isDone && !chip.classList.contains('ext-goal-done')) {
-        chip.classList.add('ext-goal-done');
-        const circleEl = chip.querySelector('.ext-check-circle');
-        if (circleEl) circleEl.innerHTML = SVG_CHECK;
-      }
-      const chipHeight = chip.getBoundingClientRect().height;
-      const timeEl = chip.querySelector('.ext-goal-time');
-      if (timeEl) timeEl.style.display = chipHeight < 42 ? 'none' : 'block';
+      chip.classList.toggle('ext-goal-done', isDone);
+      const circleEl = chip.querySelector('.ext-check-circle');
+      if (circleEl) circleEl.innerHTML = isDone ? SVG_CHECK : SVG_CIRCLE;
+      const ec = chip.closest('[data-eventid]');
+      syncExtGoalTimeFromContainer(chip, ec);
     });
   }
 
