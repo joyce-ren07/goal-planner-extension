@@ -30,12 +30,26 @@
     { id: 'progress', label: 'IN PROGRESS' },
     { id: 'done', label: 'DONE' },
   ];
-  const KANBAN_COURSE_KEYS = {
-    PSYC101: 'psych',
-    MGT103: 'mgt',
-    COGS14B: 'cogs',
-    PS: 'ps',
+  const KANBAN_CHIP_COLORS = {
+    PSYC101: 'blue',
+    MGT103: 'red',
+    COGS14B: 'green',
+    PS: 'yellow',
   };
+  const KANBAN_LEGACY_CHIP_COLORS = {
+    psych: 'blue',
+    mgt: 'red',
+    cogs: 'green',
+    ps: 'yellow',
+  };
+  const KANBAN_COURSE_OPTIONS = ['PSYC101', 'MGT103', 'COGS14B', 'PS'];
+  const MYTASKS_MESSAGE_SOURCE = 'mytasks-kanban-extension';
+  const KANBAN_LIST_MATCHERS = [
+    { id: 'all', pattern: /^\s*my tasks?\s*$/i },
+    { id: 'todo', pattern: /\bto[\s-]*do\b/i },
+    { id: 'progress', pattern: /\bin progress\b/i },
+    { id: 'done', pattern: /^\s*done\s*$/i },
+  ];
   const SIDEBAR_MARKUP = `
 <div id="gp-panel" class="mytasks-sidebar" aria-hidden="true">
   <div class="gp-card" id="gp-card">
@@ -246,7 +260,10 @@
   let nativeTasksKanbanDebounce = null;
   let nativeTasksObserver = null;
   let nativeTasksSyncInFlight = false;
+  let nativeTasksResizeObserver = null;
   let activeNativeTasksHost = null;
+  let kanbanStateCache = null;
+  let kanbanStorageListenerWired = false;
   let closeTaskStatusMenu = null;
 
   const SIDE_APP_LABEL_RE = /\b(keep|tasks|contacts|maps|side panel|add-ons|jamboard)\b/i;
@@ -462,18 +479,15 @@
       return cachedCalendarMainEl;
     }
 
-    const candidates = [
-      document.querySelector('[role="main"]'),
-      document.querySelector('main'),
-    ].filter(Boolean);
-
-    for (const el of candidates) {
-      const rect = el.getBoundingClientRect();
-      if (rect.width >= 280 && rect.height >= 200) {
-        cachedCalendarMainEl = el;
-        return el;
-      }
-    }
+    const candidates = [...document.querySelectorAll('[role="main"], main')]
+      .filter((el) => !el.closest('.mytasks-sidebar, .mytasks-native-tasks-layout, #gp-panel'))
+      .filter((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width >= 280 && rect.height >= 200;
+      })
+      .sort((left, right) => (
+        (right.clientWidth * right.clientHeight) - (left.clientWidth * left.clientHeight)
+      ));
 
     cachedCalendarMainEl = candidates[0] || null;
     return cachedCalendarMainEl;
@@ -1030,13 +1044,37 @@
     });
   }
 
-  function createDefaultKanbanCard(id, course) {
+  function createDefaultKanbanCard(id, chip) {
     return {
       id,
       title: 'Project Outline',
       due: 'Due Thurs, May 21',
-      course,
-      courseKey: KANBAN_COURSE_KEYS[course] || 'psych',
+      chip,
+      chipColor: KANBAN_CHIP_COLORS[chip] || 'blue',
+      starred: false,
+    };
+  }
+
+  function resolveKanbanChipColor(chip, chipColor, legacyCourseKey) {
+    if (chipColor && ['blue', 'red', 'green', 'yellow'].includes(chipColor)) {
+      return chipColor;
+    }
+
+    return KANBAN_CHIP_COLORS[chip]
+      || KANBAN_LEGACY_CHIP_COLORS[legacyCourseKey]
+      || 'blue';
+  }
+
+  function normalizeKanbanCard(card, fallbackId) {
+    const chip = card?.chip || card?.course || 'PSYC101';
+
+    return {
+      id: card?.id || fallbackId,
+      title: card?.title || 'Project Outline',
+      due: card?.due || 'Due Thurs, May 21',
+      chip,
+      chipColor: resolveKanbanChipColor(chip, card?.chipColor, card?.courseKey),
+      starred: Boolean(card?.starred),
     };
   }
 
@@ -1062,6 +1100,38 @@
           createDefaultKanbanCard('done-3', 'COGS14B'),
         ],
       },
+      filters: {
+        starredOnly: false,
+        activeList: 'all',
+      },
+    };
+  }
+
+  function normalizeKanbanFilters(filters) {
+    const activeList = KANBAN_COLUMN_DEFS.some(({ id }) => id === filters?.activeList) || filters?.activeList === 'all'
+      ? (filters?.activeList || 'all')
+      : 'all';
+
+    return {
+      starredOnly: Boolean(filters?.starredOnly),
+      activeList,
+    };
+  }
+
+  function normalizeKanbanState(state) {
+    const defaults = getDefaultKanbanState();
+    const columns = {};
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      const savedCards = Array.isArray(state?.columns?.[id]) ? state.columns[id] : null;
+      columns[id] = savedCards
+        ? savedCards.map((card, index) => normalizeKanbanCard(card, `${id}-${index + 1}`))
+        : defaults.columns[id];
+    });
+
+    return {
+      columns,
+      filters: normalizeKanbanFilters(state?.filters || defaults.filters),
     };
   }
 
@@ -1091,64 +1161,79 @@
     });
   }
 
-  function normalizeKanbanState(state) {
-    const defaults = getDefaultKanbanState();
-    const columns = {};
-
-    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
-      const savedCards = Array.isArray(state?.columns?.[id]) ? state.columns[id] : null;
-      columns[id] = savedCards
-        ? savedCards.map((card, index) => ({
-            id: card.id || `${id}-${index + 1}`,
-            title: card.title || 'Project Outline',
-            due: card.due || 'Due Thurs, May 21',
-            course: card.course || 'PSYC101',
-            courseKey: card.courseKey || KANBAN_COURSE_KEYS[card.course] || 'psych',
-          }))
-        : defaults.columns[id];
-    });
-
-    return { columns };
+  async function loadKanbanState() {
+    const stored = await readSidebarStorage([KANBAN_STORAGE_KEY]);
+    kanbanStateCache = normalizeKanbanState(stored[KANBAN_STORAGE_KEY]);
+    return kanbanStateCache;
   }
 
-  function createKanbanCardElement(card) {
-    const article = document.createElement('article');
-    article.className = 'mytasks-kanban__card';
-    article.draggable = true;
-    article.dataset.cardId = card.id;
-    article.dataset.courseKey = card.courseKey;
-    article.innerHTML = `
-      <div class="mytasks-kanban__card-text">
-        <p class="mytasks-kanban__card-title"></p>
-        <p class="mytasks-kanban__card-subtitle"></p>
-      </div>
-      <div class="mytasks-kanban__card-meta">
-        <span class="mytasks-kanban__course-chip"></span>
-      </div>
-    `;
+  async function saveKanbanState(state) {
+    kanbanStateCache = normalizeKanbanState(state);
+    await writeSidebarStorage({
+      [KANBAN_STORAGE_KEY]: kanbanStateCache,
+    });
+    return kanbanStateCache;
+  }
 
-    article.querySelector('.mytasks-kanban__card-title').textContent = card.title;
-    article.querySelector('.mytasks-kanban__card-subtitle').textContent = card.due;
+  function renderCard(task) {
+    const card = document.createElement('div');
+    card.className = 'mk-card';
+    card.draggable = false;
+    card.dataset.cardId = task.id;
+    card.dataset.chipColor = task.chipColor || resolveKanbanChipColor(task.chip, task.chipColor, task.courseKey);
+    card.dataset.starred = task.starred ? 'true' : 'false';
 
-    const chip = article.querySelector('.mytasks-kanban__course-chip');
-    chip.textContent = card.course;
-    chip.classList.add(`mytasks-kanban__course-chip--${card.courseKey}`);
+    const header = document.createElement('div');
+    header.className = 'mk-card-header';
 
-    return article;
+    const title = document.createElement('span');
+    title.className = 'mk-card-title';
+    title.textContent = task.title;
+
+    const starBtn = document.createElement('button');
+    starBtn.type = 'button';
+    starBtn.className = 'mk-star-btn';
+    starBtn.draggable = false;
+    starBtn.setAttribute('aria-label', 'Star task');
+    starBtn.setAttribute('aria-pressed', task.starred ? 'true' : 'false');
+    starBtn.textContent = task.starred ? '★' : '☆';
+    starBtn.classList.toggle('is-starred', Boolean(task.starred));
+
+    header.appendChild(title);
+    header.appendChild(starBtn);
+
+    const due = document.createElement('span');
+    due.className = 'mk-card-due';
+    due.textContent = task.due;
+
+    const footer = document.createElement('div');
+    footer.className = 'mk-card-footer';
+
+    const chip = document.createElement('span');
+    chip.className = `mk-chip mk-chip--${card.dataset.chipColor}`;
+    chip.textContent = task.chip;
+
+    footer.appendChild(chip);
+    card.appendChild(header);
+    card.appendChild(due);
+    card.appendChild(footer);
+
+    return card;
   }
 
   function serializeKanbanBoard(board) {
     const columns = {};
 
     KANBAN_COLUMN_DEFS.forEach(({ id }) => {
-      const container = board.querySelector(`[data-column-id="${id}"]`);
+      const container = board.querySelector(`.mk-column-cards[data-column-id="${id}"]`);
       columns[id] = container
-        ? [...container.querySelectorAll('.mytasks-kanban__card')].map((card) => ({
-            id: card.dataset.cardId,
-            title: card.querySelector('.mytasks-kanban__card-title')?.textContent || 'Project Outline',
-            due: card.querySelector('.mytasks-kanban__card-subtitle')?.textContent || 'Due Thurs, May 21',
-            course: card.querySelector('.mytasks-kanban__course-chip')?.textContent || 'PSYC101',
-            courseKey: card.dataset.courseKey || KANBAN_COURSE_KEYS[card.querySelector('.mytasks-kanban__course-chip')?.textContent] || 'psych',
+        ? [...container.querySelectorAll('.mk-card:not(.is-dragging)')].map((cardEl) => ({
+            id: cardEl.dataset.cardId,
+            title: cardEl.querySelector('.mk-card-title')?.textContent || 'Project Outline',
+            due: cardEl.querySelector('.mk-card-due')?.textContent || 'Due Thurs, May 21',
+            chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
+            chipColor: cardEl.dataset.chipColor || 'blue',
+            starred: cardEl.dataset.starred === 'true',
           }))
         : [];
     });
@@ -1156,134 +1241,647 @@
     return { columns };
   }
 
-  function renderKanbanBoard(board, state) {
+  function getVisibleKanbanColumns(state) {
+    if (state.filters.activeList === 'all') {
+      return KANBAN_COLUMN_DEFS;
+    }
+
+    return KANBAN_COLUMN_DEFS.filter(({ id }) => id === state.filters.activeList);
+  }
+
+  function getCardsForColumn(state, columnId) {
+    const cards = state.columns[columnId] || [];
+    if (!state.filters.starredOnly) return cards;
+    return cards.filter((card) => card.starred);
+  }
+
+  function updateKanbanToolbar(toolbar, state) {
+    if (!toolbar) return;
+
+    const showStarred = state.filters.starredOnly;
+    const showViewAll = state.filters.activeList !== 'all';
+    const hasIndicator = showStarred || showViewAll;
+
+    toolbar.hidden = !hasIndicator;
+    toolbar.classList.toggle('is-visible', hasIndicator);
+
+    const starredIndicator = toolbar.querySelector('.mytasks-kanban__filter-indicator--starred');
+    const viewAllBtn = toolbar.querySelector('.mytasks-kanban__view-all-btn');
+
+    if (starredIndicator) {
+      starredIndicator.hidden = !showStarred;
+    }
+
+    if (viewAllBtn) {
+      viewAllBtn.hidden = !showViewAll;
+    }
+  }
+
+  function renderKanbanBoard(root, state) {
+    const board = root?.querySelector('.mytasks-kanban__board');
     if (!board) return;
 
+    const visibleColumns = getVisibleKanbanColumns(state);
+    board.classList.toggle('mytasks-kanban__board--single-column', state.filters.activeList !== 'all');
     board.innerHTML = '';
 
-    KANBAN_COLUMN_DEFS.forEach(({ id, label }) => {
-      const column = document.createElement('section');
-      column.className = 'mytasks-kanban__column';
+    visibleColumns.forEach(({ id, label }) => {
+      const column = document.createElement('div');
+      column.className = 'mk-column';
       column.dataset.columnId = id;
 
       const title = document.createElement('h3');
-      title.className = 'mytasks-kanban__column-title';
+      title.className = 'mk-column-header';
       title.textContent = label;
 
       const cards = document.createElement('div');
-      cards.className = 'mytasks-kanban__column-cards';
+      cards.className = 'mk-column-cards';
       cards.dataset.columnId = id;
 
-      (state.columns[id] || []).forEach((card) => {
-        cards.appendChild(createKanbanCardElement(card));
+      getCardsForColumn(state, id).forEach((card) => {
+        cards.appendChild(renderCard(card));
       });
 
       column.appendChild(title);
       column.appendChild(cards);
       board.appendChild(column);
     });
+
+    updateKanbanToolbar(root.querySelector('.mytasks-kanban__toolbar'), state);
   }
 
-  function getKanbanInsertBefore(container, clientY) {
-    const cards = [...container.querySelectorAll('.mytasks-kanban__card:not(.is-dragging)')];
-    let insertBefore = null;
+  function createKanbanShell() {
+    const root = document.createElement('div');
+    root.className = 'mytasks-kanban';
 
-    cards.forEach((card) => {
-      const rect = card.getBoundingClientRect();
-      const midpoint = rect.top + rect.height / 2;
-      if (clientY < midpoint) {
-        if (!insertBefore || rect.top < insertBefore.getBoundingClientRect().top) {
-          insertBefore = card;
+    const toolbar = document.createElement('div');
+    toolbar.className = 'mytasks-kanban__toolbar';
+    toolbar.hidden = true;
+    toolbar.innerHTML = `
+      <div class="mytasks-kanban__filter-indicator mytasks-kanban__filter-indicator--starred" hidden>
+        <span class="mytasks-kanban__filter-indicator-label">Showing starred tasks only</span>
+        <button type="button" class="mytasks-kanban__filter-clear-btn" data-filter-clear="starred" aria-label="Clear starred filter">×</button>
+      </div>
+      <button type="button" class="mytasks-kanban__view-all-btn" hidden>View all</button>
+    `;
+
+    const board = document.createElement('div');
+    board.className = 'mytasks-kanban__board';
+    board.setAttribute('aria-label', 'Kanban board');
+
+    const modal = document.createElement('div');
+    modal.className = 'mytasks-kanban__modal';
+    modal.hidden = true;
+    modal.innerHTML = `
+      <div class="mytasks-kanban__modal-scrim" data-modal-dismiss="true"></div>
+      <div class="mytasks-kanban__modal-dialog" role="dialog" aria-modal="true" aria-labelledby="mytasks-kanban-modal-title">
+        <h2 class="mytasks-kanban__modal-title" id="mytasks-kanban-modal-title">Create task</h2>
+        <form class="mytasks-kanban__modal-form">
+          <label class="mytasks-kanban__field">
+            <span class="mytasks-kanban__field-label">Task title</span>
+            <input class="mytasks-kanban__field-input" name="title" type="text" required autocomplete="off">
+          </label>
+          <label class="mytasks-kanban__field">
+            <span class="mytasks-kanban__field-label">Due date</span>
+            <input class="mytasks-kanban__field-input" name="dueDate" type="date" required>
+          </label>
+          <label class="mytasks-kanban__field">
+            <span class="mytasks-kanban__field-label">Course tag</span>
+            <select class="mytasks-kanban__field-input" name="course">
+              <option value="PSYC101">PSYC101</option>
+              <option value="MGT103">MGT103</option>
+              <option value="COGS14B">COGS14B</option>
+              <option value="PS">PS</option>
+            </select>
+          </label>
+          <label class="mytasks-kanban__field">
+            <span class="mytasks-kanban__field-label">Column</span>
+            <select class="mytasks-kanban__field-input" name="column">
+              <option value="todo">TO-DO</option>
+              <option value="progress">IN PROGRESS</option>
+              <option value="done">DONE</option>
+            </select>
+          </label>
+          <div class="mytasks-kanban__modal-actions">
+            <button type="button" class="mytasks-kanban__btn mytasks-kanban__btn--text" data-modal-dismiss="true">Cancel</button>
+            <button type="submit" class="mytasks-kanban__btn mytasks-kanban__btn--filled">Create</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    root.appendChild(toolbar);
+    root.appendChild(board);
+    root.appendChild(modal);
+    return root;
+  }
+
+  function formatKanbanDueLabel(value) {
+    if (!value) return 'Due date not set';
+    const date = new Date(`${value}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return 'Due date not set';
+    return `Due ${date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`;
+  }
+
+  function getDefaultCreateColumnId(state) {
+    if (state.filters.activeList !== 'all') return state.filters.activeList;
+    return 'todo';
+  }
+
+  function openCreateTaskModal(root, preferredColumnId) {
+    const modal = root.querySelector('.mytasks-kanban__modal');
+    const form = modal?.querySelector('.mytasks-kanban__modal-form');
+    if (!modal || !form) return;
+
+    const state = kanbanStateCache || getDefaultKanbanState();
+    const columnField = form.querySelector('[name="column"]');
+    if (columnField) {
+      columnField.value = preferredColumnId || getDefaultCreateColumnId(state);
+    }
+
+    modal.hidden = false;
+    root.classList.add('is-modal-open');
+    form.querySelector('[name="title"]')?.focus();
+  }
+
+  function closeCreateTaskModal(root) {
+    const modal = root.querySelector('.mytasks-kanban__modal');
+    const form = modal?.querySelector('.mytasks-kanban__modal-form');
+    if (!modal || !form) return;
+
+    form.reset();
+    modal.hidden = true;
+    root.classList.remove('is-modal-open');
+  }
+
+  async function submitCreateTaskModal(root, form) {
+    const title = form.querySelector('[name="title"]')?.value.trim();
+    const dueDate = form.querySelector('[name="dueDate"]')?.value;
+    const course = form.querySelector('[name="course"]')?.value || 'PSYC101';
+    const columnId = form.querySelector('[name="column"]')?.value || 'todo';
+
+    if (!title || !dueDate) return;
+
+    const state = await loadKanbanState();
+    const card = {
+      id: `task-${Date.now()}`,
+      title,
+      due: formatKanbanDueLabel(dueDate),
+      chip: course,
+      chipColor: KANBAN_CHIP_COLORS[course] || 'blue',
+      starred: false,
+    };
+
+    state.columns[columnId] = [...(state.columns[columnId] || []), card];
+    await saveKanbanState(state);
+    renderKanbanBoard(root, kanbanStateCache);
+    const board = root.querySelector('.mytasks-kanban__board');
+    board.dataset.dndWired = 'false';
+    wireKanbanDragAndDrop(board);
+    closeCreateTaskModal(root);
+  }
+
+  async function toggleKanbanCardStar(root, cardId) {
+    const state = await loadKanbanState();
+    let changed = false;
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      state.columns[id] = (state.columns[id] || []).map((card) => {
+        if (card.id !== cardId) return card;
+        changed = true;
+        return { ...card, starred: !card.starred };
+      });
+    });
+
+    if (!changed) return;
+    await saveKanbanState(state);
+    renderKanbanBoard(root, kanbanStateCache);
+    const board = root.querySelector('.mytasks-kanban__board');
+    board.dataset.dndWired = 'false';
+    wireKanbanDragAndDrop(board);
+  }
+
+  function getActiveKanbanRoot() {
+    return activeNativeTasksHost?.querySelector(':scope > .mytasks-kanban')
+      || document.querySelector('.mytasks-native-tasks-layout > .mytasks-kanban');
+  }
+
+  function isStarredNavLabel(label) {
+    return /\bstarred\b/i.test(label) && !/\bunstarred\b/i.test(label);
+  }
+
+  function isAllTasksNavLabel(label) {
+    return /\ball tasks?\b/i.test(label);
+  }
+
+  async function setKanbanStarredFilter(root, starredOnly) {
+    const state = await loadKanbanState();
+    state.filters.starredOnly = Boolean(starredOnly);
+    if (starredOnly) {
+      state.filters.activeList = 'all';
+    }
+    await saveKanbanState(state);
+    renderKanbanBoard(root, kanbanStateCache);
+    const board = root.querySelector('.mytasks-kanban__board');
+    board.dataset.dndWired = 'false';
+    wireKanbanDragAndDrop(board);
+  }
+
+  async function setKanbanActiveList(root, activeList) {
+    const state = await loadKanbanState();
+    state.filters.activeList = activeList;
+    if (activeList === 'all') {
+      state.filters.starredOnly = false;
+    }
+    await saveKanbanState(state);
+    renderKanbanBoard(root, kanbanStateCache);
+    const board = root.querySelector('.mytasks-kanban__board');
+    board.dataset.dndWired = 'false';
+    wireKanbanDragAndDrop(board);
+  }
+
+  function wireKanbanInteractions(root) {
+    if (!root || root.dataset.interactionsWired === 'true') return;
+    root.dataset.interactionsWired = 'true';
+
+    root.addEventListener('click', (event) => {
+      const starBtn = event.target.closest('.mk-star-btn');
+      if (starBtn && root.contains(starBtn)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const card = starBtn.closest('.mk-card');
+        if (card?.dataset.cardId) {
+          toggleKanbanCardStar(root, card.dataset.cardId);
         }
+        return;
+      }
+
+      if (event.target.closest('[data-filter-clear="starred"]')) {
+        event.preventDefault();
+        setKanbanStarredFilter(root, false);
+        return;
+      }
+
+      if (event.target.closest('.mytasks-kanban__view-all-btn')) {
+        event.preventDefault();
+        setKanbanActiveList(root, 'all');
+        return;
+      }
+
+      if (event.target.closest('[data-modal-dismiss="true"]')) {
+        event.preventDefault();
+        closeCreateTaskModal(root);
       }
     });
 
-    return insertBefore;
+    const form = root.querySelector('.mytasks-kanban__modal-form');
+    form?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitCreateTaskModal(root, form);
+    });
   }
 
-  function persistKanbanBoard(board) {
-    return writeSidebarStorage({
-      [KANBAN_STORAGE_KEY]: serializeKanbanBoard(board),
-    });
+  async function persistKanbanBoard(board) {
+    const nextState = {
+      ...(kanbanStateCache || getDefaultKanbanState()),
+      columns: serializeKanbanBoard(board).columns,
+    };
+    await saveKanbanState(nextState);
   }
 
   function wireKanbanDragAndDrop(board) {
     if (!board || board.dataset.dndWired === 'true') return;
     board.dataset.dndWired = 'true';
 
+    const DRAG_THRESHOLD_PX = 6;
+
     let draggedCard = null;
+    let dragGhost = null;
+    let dragClone = null;
+    let pendingCard = null;
+    let dragActive = false;
+    let activePointerId = null;
+    let pointerX = 0;
+    let pointerY = 0;
+    let startX = 0;
+    let startY = 0;
+    let cloneOffsetX = 0;
+    let cloneOffsetY = 0;
+    let hoveredColumn = null;
+    let activeDropColumn = null;
+    let originContainer = null;
+    let originNextSibling = null;
 
-    board.addEventListener('dragstart', (event) => {
-      const card = event.target.closest('.mytasks-kanban__card');
-      if (!card || !board.contains(card)) return;
+    function getColumnCards(container) {
+      return [...container.querySelectorAll('.mk-card')];
+    }
 
-      draggedCard = card;
-      card.classList.add('is-dragging');
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', card.dataset.cardId || '');
-    });
-
-    board.addEventListener('dragover', (event) => {
-      const container = event.target.closest('.mytasks-kanban__column-cards');
-      if (!container || !board.contains(container)) return;
-
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'move';
-      board.querySelectorAll('.mytasks-kanban__column-cards.is-drop-target').forEach((column) => {
-        if (column !== container) {
-          column.classList.remove('is-drop-target');
+    function getGhostInsertBefore(container, clientY) {
+      const cards = getColumnCards(container);
+      for (let index = 0; index < cards.length; index += 1) {
+        const card = cards[index];
+        const rect = card.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        if (midpoint > clientY) {
+          return card;
         }
+      }
+      return null;
+    }
+
+    function isGhostInPosition(container, insertBefore) {
+      if (!dragGhost || dragGhost.parentElement !== container) return false;
+      if (!insertBefore) return dragGhost === container.lastElementChild;
+      return dragGhost.nextElementSibling === insertBefore;
+    }
+
+    function recordCardTops(scope) {
+      const tops = new Map();
+      scope.querySelectorAll('.mk-card').forEach((card) => {
+        tops.set(card, card.getBoundingClientRect().top);
       });
-      container.classList.add('is-drop-target');
+      return tops;
+    }
 
-      if (!draggedCard) return;
+    function playFlip(scope, beforeTops) {
+      const animations = [];
+      scope.querySelectorAll('.mk-card').forEach((card) => {
+        const firstTop = beforeTops.get(card);
+        if (firstTop === undefined) return;
+        const lastTop = card.getBoundingClientRect().top;
+        const delta = firstTop - lastTop;
+        if (Math.abs(delta) < 0.5) return;
+        animations.push({ card, delta });
+      });
 
-      const insertBefore = getKanbanInsertBefore(container, event.clientY);
+      if (!animations.length) return;
+
+      animations.forEach(({ card, delta }) => {
+        card.style.transition = 'none';
+        card.style.transform = `translateY(${delta}px)`;
+      });
+
+      requestAnimationFrame(() => {
+        animations.forEach(({ card }) => {
+          card.style.transition = '';
+          card.style.transform = '';
+        });
+      });
+    }
+
+    function createDragGhost(height) {
+      const ghost = document.createElement('div');
+      ghost.className = 'mk-ghost';
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.style.height = `${height}px`;
+      return ghost;
+    }
+
+    function createDragClone(card, rect) {
+      const clone = card.cloneNode(true);
+      clone.classList.remove('is-dragging', 'is-drop-snap');
+      clone.classList.add('mk-drag-clone');
+      clone.style.width = `${rect.width}px`;
+      clone.style.left = `${rect.left}px`;
+      clone.style.top = `${rect.top}px`;
+      document.body.appendChild(clone);
+      return clone;
+    }
+
+    function updateDragClonePosition() {
+      if (!dragClone) return;
+      dragClone.style.left = `${pointerX - cloneOffsetX}px`;
+      dragClone.style.top = `${pointerY - cloneOffsetY}px`;
+    }
+
+    function clearDropTargets() {
+      board.querySelectorAll('.mk-column-cards.is-drop-target').forEach((column) => {
+        column.classList.remove('is-drop-target');
+      });
+    }
+
+    function placeDragGhost(container, clientY) {
+      if (!dragGhost || !container) return;
+
+      const insertBefore = getGhostInsertBefore(container, clientY);
+      if (isGhostInPosition(container, insertBefore)) return;
+
+      const beforeTops = recordCardTops(board);
+      if (dragGhost.parentElement && dragGhost.parentElement !== container) {
+        dragGhost.remove();
+      }
+
       if (insertBefore) {
-        container.insertBefore(draggedCard, insertBefore);
+        container.insertBefore(dragGhost, insertBefore);
       } else {
-        container.appendChild(draggedCard);
-      }
-    });
-
-    board.addEventListener('dragleave', (event) => {
-      const container = event.target.closest('.mytasks-kanban__column-cards');
-      if (!container || !board.contains(container)) return;
-
-      const related = event.relatedTarget;
-      if (related && container.contains(related)) return;
-      container.classList.remove('is-drop-target');
-    });
-
-    board.addEventListener('drop', (event) => {
-      const container = event.target.closest('.mytasks-kanban__column-cards');
-      if (!container || !board.contains(container)) return;
-
-      event.preventDefault();
-      container.classList.remove('is-drop-target');
-      persistKanbanBoard(board);
-    });
-
-    board.addEventListener('dragend', () => {
-      if (draggedCard) {
-        draggedCard.classList.remove('is-dragging');
+        container.appendChild(dragGhost);
       }
 
+      playFlip(board, beforeTops);
+    }
+
+    function getDropColumnAt(clientX, clientY) {
+      const target = document.elementFromPoint(clientX, clientY);
+      const container = target?.closest('.mk-column-cards');
+      if (container && board.contains(container)) return container;
+      if (hoveredColumn && board.contains(hoveredColumn)) return hoveredColumn;
+      if (activeDropColumn && board.contains(activeDropColumn)) return activeDropColumn;
+      return null;
+    }
+
+    function finishDraggedCardSnap() {
+      if (!draggedCard) return;
+      draggedCard.classList.remove('is-dragging');
+      draggedCard.classList.add('is-drop-snap');
+      window.setTimeout(() => {
+        draggedCard?.classList.remove('is-drop-snap');
+      }, 150);
+    }
+
+    function resetDragState() {
       draggedCard = null;
-      board.querySelectorAll('.mytasks-kanban__column-cards.is-drop-target').forEach((container) => {
-        container.classList.remove('is-drop-target');
-      });
-    });
+      dragGhost = null;
+      dragClone = null;
+      pendingCard = null;
+      dragActive = false;
+      activePointerId = null;
+      hoveredColumn = null;
+      activeDropColumn = null;
+      originContainer = null;
+      originNextSibling = null;
+      document.body.classList.remove('mytasks-kanban-dragging');
+    }
+
+    function detachPointerListeners() {
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('pointercancel', onPointerUp);
+    }
+
+    function beginDrag(card, event) {
+      dragActive = true;
+      draggedCard = card;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+
+      const rect = card.getBoundingClientRect();
+      cloneOffsetX = event.clientX - rect.left + 8;
+      cloneOffsetY = event.clientY - rect.top + 8;
+
+      originContainer = card.parentElement;
+      originNextSibling = card.nextSibling;
+
+      dragGhost = createDragGhost(rect.height);
+      dragClone = createDragClone(card, rect);
+      updateDragClonePosition();
+
+      if (!originContainer?.classList.contains('mk-column-cards')) {
+        cancelDrag();
+        return;
+      }
+
+      originContainer.replaceChild(dragGhost, card);
+      card.classList.add('is-dragging');
+
+      hoveredColumn = originContainer;
+      activeDropColumn = originContainer;
+      document.body.classList.add('mytasks-kanban-dragging');
+    }
+
+    function commitDrag() {
+      if (!draggedCard || !dragGhost?.parentElement) {
+        cancelDrag();
+        return;
+      }
+
+      const beforeTops = recordCardTops(board);
+      dragGhost.replaceWith(draggedCard);
+      playFlip(board, beforeTops);
+
+      if (dragClone) {
+        dragClone.remove();
+        dragClone = null;
+      }
+
+      clearDropTargets();
+      finishDraggedCardSnap();
+      persistKanbanBoard(board);
+      resetDragState();
+    }
+
+    function cancelDrag() {
+      const beforeTops = recordCardTops(board);
+
+      if (dragGhost?.parentElement && draggedCard) {
+        dragGhost.replaceWith(draggedCard);
+      } else if (originContainer && draggedCard) {
+        if (originNextSibling && originNextSibling.parentElement === originContainer) {
+          originContainer.insertBefore(draggedCard, originNextSibling);
+        } else {
+          originContainer.appendChild(draggedCard);
+        }
+      }
+
+      if (draggedCard) {
+        draggedCard.classList.remove('is-dragging', 'is-drop-snap');
+      }
+
+      if (dragClone) {
+        dragClone.remove();
+        dragClone = null;
+      }
+
+      clearDropTargets();
+      playFlip(board, beforeTops);
+      resetDragState();
+    }
+
+    function onPointerMove(event) {
+      if (event.pointerId !== activePointerId) return;
+
+      if (!dragActive) {
+        if (!pendingCard) return;
+        const distance = Math.hypot(event.clientX - startX, event.clientY - startY);
+        if (distance < DRAG_THRESHOLD_PX) return;
+        event.preventDefault();
+        beginDrag(pendingCard, event);
+        pendingCard = null;
+      } else {
+        event.preventDefault();
+      }
+
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      updateDragClonePosition();
+
+      const container = getDropColumnAt(pointerX, pointerY);
+      if (!container) {
+        clearDropTargets();
+        return;
+      }
+
+      hoveredColumn = container;
+      activeDropColumn = container;
+      clearDropTargets();
+      container.classList.add('is-drop-target');
+      placeDragGhost(container, pointerY);
+    }
+
+    function onPointerUp(event) {
+      if (event.pointerId !== activePointerId) return;
+
+      detachPointerListeners();
+
+      if (!dragActive) {
+        pendingCard = null;
+        activePointerId = null;
+        return;
+      }
+
+      const container = getDropColumnAt(pointerX, pointerY) || activeDropColumn;
+      if (container && dragGhost?.parentElement) {
+        commitDrag();
+      } else {
+        cancelDrag();
+      }
+
+      activePointerId = null;
+    }
+
+    function onPointerDown(event) {
+      if (event.button !== 0) return;
+
+      const card = event.target.closest('.mk-card');
+      if (!card || !board.contains(card)) return;
+      if (event.target.closest('.mk-star-btn')) return;
+
+      pendingCard = card;
+      activePointerId = event.pointerId;
+      startX = event.clientX;
+      startY = event.clientY;
+
+      document.addEventListener('pointermove', onPointerMove, { passive: false });
+      document.addEventListener('pointerup', onPointerUp);
+      document.addEventListener('pointercancel', onPointerUp);
+    }
+
+    board.addEventListener('pointerdown', onPointerDown);
   }
 
-  async function loadKanbanBoard(board) {
+  async function loadKanbanBoard(root) {
+    const kanbanRoot = root?.classList?.contains('mytasks-kanban')
+      ? root
+      : root?.closest('.mytasks-kanban');
+    if (!kanbanRoot) return;
+
+    const state = await loadKanbanState();
+    const board = kanbanRoot.querySelector('.mytasks-kanban__board');
     if (!board) return;
 
-    const stored = await readSidebarStorage([KANBAN_STORAGE_KEY]);
-    const state = normalizeKanbanState(stored[KANBAN_STORAGE_KEY]);
     board.dataset.dndWired = 'false';
-    renderKanbanBoard(board, state);
+    renderKanbanBoard(kanbanRoot, state);
     wireKanbanDragAndDrop(board);
+    wireKanbanInteractions(kanbanRoot);
   }
 
   function getElementLabel(el) {
@@ -1364,6 +1962,9 @@
   function isTasksSurfaceVisible(el) {
     if (!el || !isVisibleElement(el)) return false;
     if (el.closest('#gp-panel, .mytasks-sidebar')) return false;
+
+    const calendarMain = getCalendarMainEl();
+    if (calendarMain && (el === calendarMain || el.contains(calendarMain))) return false;
 
     const rect = el.getBoundingClientRect();
     if (rect.width < 180 || rect.height < 120) return false;
@@ -1481,6 +2082,12 @@
     return mutations.some((mutation) => {
       if (isNativeTasksManagedElement(mutation.target)) return false;
 
+      if (mutation.type === 'attributes'
+        && mutation.target instanceof Element
+        && mutation.target.hasAttribute('data-mytasks-native-hidden')) {
+        return false;
+      }
+
       if (mutation.type === 'childList') {
         const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
         if (changedNodes.some((node) => isNativeTasksManagedElement(node))) return false;
@@ -1588,33 +2195,126 @@
     return bestChild;
   }
 
+  function restoreNativeTaskListSurfaces(scope) {
+    const root = scope || document;
+    root.querySelectorAll('[data-mytasks-native-hidden]').forEach((el) => {
+      el.removeAttribute('data-mytasks-native-hidden');
+      el.style.removeProperty('display');
+    });
+  }
+
+  function hideNativeTaskListSurfaces(panel, host) {
+    if (!host) return;
+
+    const calendarMain = getCalendarMainEl();
+
+    host.querySelectorAll(':scope > *').forEach((child) => {
+      if (!(child instanceof Element)) return;
+      if (child.classList.contains('mytasks-kanban') || child.classList.contains('mytasks-native-tasks-nav')) return;
+      if (calendarMain && (child === calendarMain || child.contains(calendarMain))) return;
+
+      child.setAttribute('data-mytasks-native-hidden', 'true');
+      child.style.setProperty('display', 'none', 'important');
+    });
+
+    if (!panel || !panel.contains(host)) return;
+
+    panel.querySelectorAll('iframe[src*="tasks.google"], iframe[src*="tasks"]').forEach((iframe) => {
+      if (host.contains(iframe)) return;
+      iframe.setAttribute('data-mytasks-native-hidden', 'true');
+      iframe.style.setProperty('display', 'none', 'important');
+    });
+  }
+
+  function syncKanbanHostSize(host) {
+    const kanban = host?.querySelector(':scope > .mytasks-kanban');
+    if (!host || !kanban) return;
+
+    const rect = host.getBoundingClientRect();
+    if (!rect.height) return;
+
+    kanban.style.height = `${rect.height}px`;
+    kanban.style.minHeight = `${rect.height}px`;
+  }
+
+  function observeNativeTasksHost(host) {
+    if (!host || nativeTasksResizeObserver) return;
+
+    nativeTasksResizeObserver = new ResizeObserver(() => {
+      syncKanbanHostSize(host);
+    });
+    nativeTasksResizeObserver.observe(host);
+    syncKanbanHostSize(host);
+  }
+
+  function setupKanbanStorageListener() {
+    if (kanbanStorageListenerWired || !chrome?.storage?.onChanged) return;
+    kanbanStorageListenerWired = true;
+
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local' || !changes[KANBAN_STORAGE_KEY]) return;
+
+      kanbanStateCache = normalizeKanbanState(changes[KANBAN_STORAGE_KEY].newValue);
+      const root = activeNativeTasksHost?.querySelector(':scope > .mytasks-kanban')
+        || document.querySelector('.mytasks-native-tasks-layout > .mytasks-kanban');
+      if (!root || root.querySelector('.mk-card.is-dragging')) return;
+
+      renderKanbanBoard(root, kanbanStateCache);
+      const board = root.querySelector('.mytasks-kanban__board');
+      if (!board) return;
+      board.dataset.dndWired = 'false';
+      wireKanbanDragAndDrop(board);
+    });
+  }
+
+  function handleNativeTasksFrameMessage(event) {
+    if (!event?.data || event.data.source !== MYTASKS_MESSAGE_SOURCE) return;
+    if (!/\.google\.com$/.test(event.origin || '')) return;
+
+    const root = getActiveKanbanRoot();
+    if (!root) return;
+
+    if (event.data.type === 'MYTASKS_NATIVE_CREATE') {
+      openCreateTaskModal(root, event.data.columnId);
+      return;
+    }
+
+    if (event.data.type === 'MYTASKS_NATIVE_STARRED') {
+      const starredOnly = event.data.active === undefined ? true : Boolean(event.data.active);
+      setKanbanStarredFilter(root, starredOnly);
+      return;
+    }
+
+    if (event.data.type === 'MYTASKS_NATIVE_LIST') {
+      setKanbanActiveList(root, event.data.listId || 'all');
+    }
+  }
+
+  function setupNativeTasksFrameBridge() {
+    window.addEventListener('message', handleNativeTasksFrameMessage);
+    setupKanbanStorageListener();
+  }
+
   async function injectKanbanIntoNativeTasksPanel(host) {
     if (!host || host.closest('#gp-panel, .mytasks-sidebar')) return;
 
     ensureNativeTasksLayout(host);
     ensureNativeTasksNavShell(host);
+    hideNativeTaskListSurfaces(findVisibleGoogleTasksPanel(), host);
 
     const existingRoot = host.querySelector(':scope > .mytasks-kanban');
     if (existingRoot) {
-      const board = existingRoot.querySelector('.mytasks-kanban__board');
-      if (board && !board.children.length) {
-        await loadKanbanBoard(board);
-      }
+      await loadKanbanBoard(existingRoot);
+      observeNativeTasksHost(host);
       activeNativeTasksHost = host;
       return;
     }
 
-    const root = document.createElement('div');
-    root.className = 'mytasks-kanban';
-
-    const board = document.createElement('div');
-    board.className = 'mytasks-kanban__board';
-    board.setAttribute('aria-label', 'Kanban board');
-
-    root.appendChild(board);
+    const root = createKanbanShell();
     host.appendChild(root);
     activeNativeTasksHost = host;
-    await loadKanbanBoard(board);
+    await loadKanbanBoard(root);
+    observeNativeTasksHost(host);
   }
 
   async function syncNativeTasksKanban() {
@@ -1623,6 +2323,11 @@
     const panel = findVisibleGoogleTasksPanel();
     if (!panel) {
       activeNativeTasksHost = null;
+      restoreNativeTaskListSurfaces(document);
+      if (nativeTasksResizeObserver) {
+        nativeTasksResizeObserver.disconnect();
+        nativeTasksResizeObserver = null;
+      }
       return;
     }
 
@@ -1633,7 +2338,11 @@
     const host = findTasksInjectHost(panel);
     if (!host) return;
 
+    hideNativeTaskListSurfaces(panel, host);
+
     if (isNativeTasksLayoutStable(host)) {
+      ensureNativeTasksNavShell(host);
+      syncKanbanHostSize(host);
       activeNativeTasksHost = host;
       return;
     }
@@ -1643,6 +2352,8 @@
 
     try {
       await injectKanbanIntoNativeTasksPanel(host);
+    } catch (error) {
+      console.error('My Tasks kanban sync failed.', error);
     } finally {
       nativeTasksSyncInFlight = false;
       nativeTasksObserver?.observe(document.documentElement, nativeTasksObserverConfig);
@@ -1685,6 +2396,157 @@
     }, true);
 
     scheduleNativeTasksKanbanSync();
+  }
+
+  function isNativeTasksEmbedFrame() {
+    return window.location.hostname.includes('tasks.google.com') && window !== window.top;
+  }
+
+  function isCalendarTopFrame() {
+    return window.location.hostname.includes('calendar.google.com') && window === window.top;
+  }
+
+  function initNativeTasksEmbedFrame() {
+    if (window.__gpTasksEmbedReady) return;
+    window.__gpTasksEmbedReady = true;
+
+    const postToParent = (payload) => {
+      window.parent.postMessage({
+        source: MYTASKS_MESSAGE_SOURCE,
+        ...payload,
+      }, '*');
+    };
+
+    let lastPostedStarredFilter = null;
+
+    const postStarredFilterState = (active) => {
+      if (lastPostedStarredFilter === active) return;
+      lastPostedStarredFilter = active;
+      postToParent({ type: 'MYTASKS_NATIVE_STARRED', active });
+    };
+
+    const getControlLabel = (el) => {
+      if (!(el instanceof Element)) return '';
+      return `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.textContent || ''}`.replace(/\s+/g, ' ').trim();
+    };
+
+    const isNavControlSelected = (control) => (
+      control.getAttribute('aria-selected') === 'true'
+      || control.getAttribute('aria-current') === 'true'
+      || control.getAttribute('aria-pressed') === 'true'
+    );
+
+    const syncEmbedNavSelection = () => {
+      let starredSelected = false;
+      let allTasksSelected = false;
+
+      document.querySelectorAll('[data-mytasks-embed-nav="true"]').forEach((control) => {
+        if (!isNavControlSelected(control)) return;
+
+        const label = getControlLabel(control);
+        if (isStarredNavLabel(label)) {
+          starredSelected = true;
+          return;
+        }
+
+        if (isAllTasksNavLabel(label)) {
+          allTasksSelected = true;
+        }
+      });
+
+      if (starredSelected) {
+        postStarredFilterState(true);
+        return;
+      }
+
+      if (allTasksSelected) {
+        postStarredFilterState(false);
+      }
+    };
+
+    const matchListId = (label) => {
+      const matcher = KANBAN_LIST_MATCHERS.find(({ pattern }) => pattern.test(label));
+      return matcher?.id || null;
+    };
+
+    const hideEmbedTaskPane = () => {
+      document.querySelectorAll('[role="main"], main, [role="region"]').forEach((el) => {
+        if (!(el instanceof Element)) return;
+        if (el.closest('[data-mytasks-embed-nav]')) return;
+
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        if (rect.left >= 240 && rect.width > 200) {
+          el.setAttribute('data-mytasks-embed-hidden', 'true');
+          el.style.setProperty('display', 'none', 'important');
+        }
+      });
+
+      document.querySelectorAll('button, [role="button"], a, [role="menuitem"], li, [role="listitem"]').forEach((el) => {
+        if (!(el instanceof Element)) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.left < 260) {
+          el.setAttribute('data-mytasks-embed-nav', 'true');
+        }
+      });
+    };
+
+    document.addEventListener('click', (event) => {
+      const control = event.target.closest('button, [role="button"], a, [role="menuitem"], li, [role="listitem"]');
+      if (!control) return;
+
+      const label = getControlLabel(control);
+      if (!label) return;
+
+      if (/\b(create|add)\b.{0,24}\b(task|list)\b/i.test(label) || /\bcreate (a )?new (task|list)\b/i.test(label)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        postToParent({ type: 'MYTASKS_NATIVE_CREATE' });
+        return;
+      }
+
+      if (isAllTasksNavLabel(label)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        postStarredFilterState(false);
+        postToParent({ type: 'MYTASKS_NATIVE_LIST', listId: 'all' });
+        return;
+      }
+
+      if (isStarredNavLabel(label)) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        postStarredFilterState(true);
+        return;
+      }
+
+      const listId = matchListId(label);
+      if (listId) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        postToParent({ type: 'MYTASKS_NATIVE_LIST', listId });
+      }
+    }, true);
+
+    const embedObserver = new MutationObserver(() => {
+      hideEmbedTaskPane();
+      syncEmbedNavSelection();
+    });
+
+    embedObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'aria-hidden', 'class', 'style', 'aria-selected', 'aria-current', 'aria-pressed'],
+    });
+
+    hideEmbedTaskPane();
+    syncEmbedNavSelection();
   }
 
   function initTasksAccordion(root) {
@@ -1791,6 +2653,15 @@
     }
   }
 
+  if (isNativeTasksEmbedFrame()) {
+    initNativeTasksEmbedFrame();
+    return;
+  }
+
+  if (!isCalendarTopFrame()) {
+    return;
+  }
+
   if (window.__gpTasksSidebarReady) {
     return;
   }
@@ -1810,6 +2681,7 @@
     return true;
   });
 
+  setupNativeTasksFrameBridge();
   mountSidebar();
   setupRailObserver();
   setupNativeTasksKanbanObserver();

@@ -3,7 +3,7 @@
   "name": "My Tasks for Google Calendar",
   "version": "1.0.0",
   "description": "Open a Material Design task sidebar inside Google Calendar.",
-  "host_permissions": ["https://calendar.google.com/*"],
+  "host_permissions": ["https://calendar.google.com/*", "https://tasks.google.com/*"],
   "permissions": ["scripting", "storage"],
   "background": {
     "service_worker": "background.js"
@@ -17,6 +17,12 @@
       "js": ["content.js"],
       "css": ["sidebar.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://tasks.google.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [
