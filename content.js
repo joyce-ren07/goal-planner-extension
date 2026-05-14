@@ -1677,6 +1677,9 @@
     chip.dataset.goalListenerAttached = 'true';
 
     chip.addEventListener('click', (e) => {
+      // Let GCal's native resize handle pass through unblocked
+      if (e.target.closest('[class*="resize"]') || e.target.closest('[data-resizehandle]')) return;
+
       // Skip flag — synthetic clicks we dispatch should pass through to GCal
       if (e.currentTarget._skipGoalHandler) {
         e.currentTarget._skipGoalHandler = false;
