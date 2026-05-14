@@ -1654,7 +1654,7 @@
 
         // Replace GCal's inner content with our structured layout
         chip.innerHTML =
-          '<div class="ext-goal-chip-inner" style="display:flex;align-items:center;gap:10px">' +
+          '<div class="ext-goal-chip-inner" style="display:flex;flex-direction:row;align-items:center;gap:8px">' +
             '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
             '<div class="ext-goal-text-col">' +
               '<span class="ext-goal-badge">Goal</span>' +
