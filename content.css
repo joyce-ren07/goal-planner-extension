@@ -638,7 +638,8 @@
   isolation: isolate;
 }
 
-/* Solid overlay; leading padding aligns checkbox row with native chip inset (after left accent). */
+/* Solid overlay; leading padding aligns checkbox row with native chip inset (after left accent).
+   No full-card stroke — only GCal-style left accent bar (width/colors unchanged). */
 [data-eventchip].ext-goal-chip .ext-goal-root {
   position: absolute;
   inset: 0;
@@ -654,27 +655,21 @@
   pointer-events: none;
 
   background: #ffd7d3;
-  border-top: 1.5px solid #d3564b;
-  border-right: 1.5px solid #d3564b;
-  border-bottom: 1.5px solid #d3564b;
+  border: none;
   border-left: 4px solid #d3564b;
+  box-shadow: none;
 
   opacity: 1;
 }
 
-/* Resize feedback: outline only — no translucent root. */
+/* Resize: no full-bounding-box outline — native handles supply drag UX. */
 [data-eventchip].ext-goal-chip.ext-goal-resizing .ext-goal-root {
-  opacity: 1;
-  outline: 2px solid #1a73e8;
-  outline-offset: -2px;
+  outline: none;
 }
 
-/* State: palette only — same border width as incomplete (no horizontal shift on toggle). */
+/* State: palette only — left accent color only (no other borders). */
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root {
   background: #ffe5e2;
-  border-top-color: #e79992;
-  border-right-color: #e79992;
-  border-bottom-color: #e79992;
   border-left-color: #e79992;
 }
 
