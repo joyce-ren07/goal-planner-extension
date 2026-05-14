@@ -690,6 +690,11 @@
   pointer-events: auto;
 }
 
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-check-circle svg {
+  pointer-events: auto;
+  display: block;
+}
+
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root .ext-check-circle {
   border: none;
   background: transparent;
