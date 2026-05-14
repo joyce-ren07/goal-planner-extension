@@ -1820,29 +1820,6 @@
     });
   }
 
-  // ── Attach capture-phase click listener (idempotent via data attribute guard) ──
-  //
-  // Only the checkbox needs special handling.  All other pointer events —
-  // including the mousedown that starts a GCal native resize drag — are NOT
-  // intercepted here.  They fall through the pointer-events:none overlay to
-  // GCal's own elements and handlers untouched.
-  //
-  function attachChipClickListener(chip, goalData) {
-    if (chip.dataset.goalListenerAttached) return;
-    chip.dataset.goalListenerAttached = 'true';
-
-    chip.addEventListener('click', (e) => {
-      // Only intercept clicks that land on our injected checkbox.
-      // Every other click (chip body, resize zone, etc.) passes through to GCal.
-      if (!e.target.closest('.ext-check-circle')) return;
-
-      e.stopImmediatePropagation();
-      e.stopPropagation();
-      e.preventDefault();
-      toggleGoalComplete(goalData.chipKey, chip);
-    }, true);
-  }
-
   // ── Attach resize watchers to detect GCal drag-resize and update displayed duration ──
   //
   // Three-track approach that mirrors native GCal timed-event resize UX:
