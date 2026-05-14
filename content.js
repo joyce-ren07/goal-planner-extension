@@ -2146,7 +2146,7 @@
 
         // Per-chip observer: restore only when GCal removes our overlay root — not
         // on every subtree change (checkbox SVG swap used to call restoreChip and
-        // race gp_chip_done writes, reverting .ext-goal-done immediately).
+        // race gp_chip_done writes, reverting .ext-goal-completed immediately).
         let restoreTimeout = null;
         new MutationObserver((mutations) => {
           if (chip._gpDecorLock) return;
