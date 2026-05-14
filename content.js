@@ -1652,16 +1652,26 @@
         const isDone = !!doneMap[chipKey];
         chip.classList.toggle('ext-goal-done', isDone);
 
-        // Replace GCal's inner content with our structured layout
-        chip.innerHTML =
-          '<div class="ext-goal-chip-inner" style="display:flex;flex-direction:row;align-items:center;gap:8px">' +
-            '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
-            '<div class="ext-goal-text-col">' +
-              '<span class="ext-goal-badge">Goal</span>' +
-              '<span class="ext-goal-title">' + esc(title) + '</span>' +
-              (time ? '<span class="ext-goal-time">' + esc(time) + '</span>' : '') +
-            '</div>' +
+        // Clear all GCal content, then append our structure
+        chip.innerHTML = '';
+        const inner = document.createElement('div');
+        inner.className = 'ext-goal-chip-inner';
+        inner.style.cssText = 'display:flex;flex-direction:row;align-items:center;gap:10px';
+        inner.innerHTML =
+          '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
+          '<div class="ext-goal-text-col">' +
+            '<span class="ext-goal-badge">Goal</span>' +
+            '<span class="ext-goal-title">' + esc(title) + '</span>' +
+            (time ? '<span class="ext-goal-time">' + esc(time) + '</span>' : '') +
           '</div>';
+        chip.appendChild(inner);
+
+        // Hide any GCal sibling elements that bleed through the chip boundary
+        if (chip.parentElement) {
+          Array.from(chip.parentElement.children).forEach(sib => {
+            if (sib !== chip) sib.style.visibility = 'hidden';
+          });
+        }
 
         // Capture-phase click: checkbox branch stops propagation; all else passes through
         chip.addEventListener('click', (e) => {
