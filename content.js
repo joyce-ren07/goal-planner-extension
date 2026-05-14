@@ -1708,6 +1708,49 @@
     }, true);
   }
 
+  // ── Attach ResizeObserver to detect GCal drag-resize and update stored duration ──
+  function attachChipResizeObserver(chip, goalData) {
+    const eventContainer = chip.closest('[data-eventid]');
+    if (!eventContainer) return;
+
+    chip._resizeObserver?.disconnect();
+
+    const resizeObserver = new ResizeObserver(() => {
+      clearTimeout(chip._resizeDebounce);
+      chip._resizeDebounce = setTimeout(() => {
+        const newLabel = eventContainer.getAttribute('aria-label') || '';
+        const timeMatch = newLabel.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
+        const newTime = timeMatch ? timeMatch[1] : '';
+
+        const timeEl = chip.querySelector('.ext-goal-time');
+        if (timeEl && newTime) timeEl.textContent = newTime;
+
+        chrome.storage.local.get(['goalStates'], (result) => {
+          const states = result.goalStates || {};
+          if (states[goalData.id]) {
+            states[goalData.id].time = newTime;
+            chrome.storage.local.set({ goalStates: states });
+          }
+        });
+
+        const chipHeight = chip.getBoundingClientRect().height;
+        if (timeEl) timeEl.style.display = chipHeight < 42 ? 'none' : 'block';
+
+        chrome.runtime.sendMessage({
+          type: 'GOAL_RESIZE',
+          id: goalData.id,
+          newTime,
+          newHeight: eventContainer.getBoundingClientRect().height,
+        });
+
+        console.log('GOAL RESIZE DETECTED — new time:', newTime);
+      }, 300);
+    });
+
+    resizeObserver.observe(eventContainer);
+    chip._resizeObserver = resizeObserver;
+  }
+
   // ── Re-inject if GCal wiped our structure; re-sync done state if present ──
   function restoreChip(chip, goalData) {
     if (!chip.querySelector('.ext-goal-chip-inner')) {
