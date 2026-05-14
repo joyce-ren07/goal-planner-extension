@@ -672,9 +672,10 @@
 .ext-goal-text-col {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  flex: 1;
+  gap: 3px;
   min-width: 0;
+  overflow: hidden;
 }
 
 /* "Goal" pill badge */
