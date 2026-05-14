@@ -642,6 +642,7 @@
   min-height: 56px !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
+  transition: opacity 0.1s ease !important;
 }
 
 /* Complete state — opacity dims the whole chip uniformly */
