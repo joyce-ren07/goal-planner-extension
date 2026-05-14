@@ -1670,6 +1670,7 @@
 
         // Clear all GCal content, then append our structure
         chip.innerHTML = '';
+        chip.style.cssText += '; overflow: hidden;';
         const inner = document.createElement('div');
         inner.className = 'ext-goal-chip-inner';
         inner.style.cssText = 'display:flex;flex-direction:row;align-items:flex-start;gap:8px';
@@ -1681,6 +1682,15 @@
             (time ? '<span class="ext-goal-time">' + esc(time) + '</span>' : '') +
           '</div>';
         chip.appendChild(inner);
+
+        // Per-chip observer: prevent GCal's React reconciler from re-appending original content
+        new MutationObserver((muts) => {
+          muts.forEach(m => {
+            m.addedNodes.forEach(n => {
+              if (n.classList && !n.classList.contains('ext-goal-chip-inner')) n.remove();
+            });
+          });
+        }).observe(chip, { childList: true });
 
         // Hide any GCal sibling elements that bleed through the chip boundary
         if (chip.parentElement) {
