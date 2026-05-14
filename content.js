@@ -1746,39 +1746,25 @@
   }
 
   // ── Attach capture-phase click listener (idempotent via data attribute guard) ──
+  //
+  // Only the checkbox needs special handling.  All other pointer events —
+  // including the mousedown that starts a GCal native resize drag — are NOT
+  // intercepted here.  They fall through the pointer-events:none overlay to
+  // GCal's own elements and handlers untouched.
+  //
   function attachChipClickListener(chip, goalData) {
     if (chip.dataset.goalListenerAttached) return;
     chip.dataset.goalListenerAttached = 'true';
 
     chip.addEventListener('click', (e) => {
-      // Let GCal's native resize handle pass through unblocked
-      if (e.target.closest('[class*="resize"]') || e.target.closest('[data-resizehandle]')) return;
-
-      // Skip flag — synthetic clicks we dispatch should pass through to GCal
-      if (e.currentTarget._skipGoalHandler) {
-        e.currentTarget._skipGoalHandler = false;
-        return;
-      }
+      // Only intercept clicks that land on our injected checkbox.
+      // Every other click (chip body, resize zone, etc.) passes through to GCal.
+      if (!e.target.closest('.ext-check-circle')) return;
 
       e.stopImmediatePropagation();
       e.stopPropagation();
       e.preventDefault();
-
-      if (e.target.closest('.ext-check-circle')) {
-        console.log('GOAL CHECKBOX HIT');
-        toggleGoalComplete(goalData.chipKey, chip);
-      } else {
-        console.log('GOAL CHIP BODY HIT — opening popup');
-        const originalTarget = chip.closest('[data-eventid]') || chip;
-        setTimeout(() => {
-          const nativeClick = new MouseEvent('click', {
-            bubbles: true, cancelable: true,
-            clientX: e.clientX, clientY: e.clientY,
-          });
-          originalTarget._skipGoalHandler = true;
-          originalTarget.dispatchEvent(nativeClick);
-        }, 0);
-      }
+      toggleGoalComplete(goalData.chipKey, chip);
     }, true);
   }
 
