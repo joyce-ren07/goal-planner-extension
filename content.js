@@ -1720,13 +1720,8 @@
       chip.classList.toggle('ext-goal-completed', done);
       if (done) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
-      const circle = chip.querySelector('.goal-checkbox, .ext-check-circle');
-      if (circle) {
-        circle.innerHTML = done
-          ? (circle.classList.contains('ext-goal-completed') ? SVG_CHECK_DONE : SVG_CHECK_DONE)
-          : SVG_CIRCLE_ACTIVE;
-        circle.innerHTML = done ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
-      }
+      const circle = chip.querySelector('.goal-checkbox') || chip.querySelector('.ext-check-circle');
+      if (circle) circle.innerHTML = done ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
     },
 
     toggleCompletion(chipKey, chip) {
