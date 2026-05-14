@@ -628,7 +628,7 @@
 /* ─────────────────────────────────────────
    Goal session chip — scoped under .ext-goal-root only.
    Typography + rhythm: shared for incomplete & completed (matches GCal event scale).
-   .ext-goal-completed: color, borders, background, title strikethrough ONLY.
+   .ext-goal-completed: background + left-accent color + title strikethrough ONLY.
 ───────────────────────────────────────── */
 
 [data-eventchip].ext-goal-chip {
