@@ -651,14 +651,15 @@
 
 /* Circular checkbox */
 .ext-check-circle {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
   border-radius: 50%;
   border: 2px solid #C0514E;
   background: transparent;
   flex-shrink: 0;
-  align-self: center;
+  align-self: flex-start;
+  margin-top: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -666,10 +667,12 @@
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
-/* Done circle — visual comes from SVG; keep border, drop fill */
+/* Done circle — SVG draws its own circle; remove CSS border/fill */
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-check-circle {
-  border-color: #C0514E;
+  border: none;
   background: transparent;
+  width: 16px;
+  height: 16px;
 }
 
 /* Text column */
