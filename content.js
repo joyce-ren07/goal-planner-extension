@@ -1811,6 +1811,7 @@
       chip.querySelector('.ext-goal-root')?.remove();
 
       chip.classList.add('ext-goal-chip');
+      chip.classList.remove('ext-goal-done');
       chip.classList.toggle('ext-goal-completed', isDone);
       chip.dataset.gpChipKey = goalData.chipKey;
       if (isDone) chip.dataset.goalCompleted = 'true';
