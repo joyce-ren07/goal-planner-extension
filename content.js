@@ -1272,15 +1272,16 @@
 
     if (isKanbanDragActive()) return;
 
-    const root = getActiveKanbanRoot();
-    if (!root) return;
+    const roots = [...document.querySelectorAll('.mytasks-kanban')];
+    if (!roots.length) return;
 
-    renderKanbanBoard(root, normalized);
-    const board = root.querySelector('.mytasks-kanban__board');
-    if (!board) return;
-
-    board.dataset.dndWired = 'false';
-    wireKanbanDragAndDrop(board);
+    roots.forEach((root) => {
+      renderKanbanBoard(root, normalized);
+      const board = root.querySelector('.mytasks-kanban__board');
+      if (!board) return;
+      board.dataset.dndWired = 'false';
+      wireKanbanDragAndDrop(board);
+    });
   }
 
   async function syncTaskViewsFromStorage() {
@@ -1381,29 +1382,68 @@
 
   function serializeKanbanBoard(board) {
     const columns = {};
-
     KANBAN_COLUMN_DEFS.forEach(({ id }) => {
-      const container = board.querySelector(`.mk-column-cards[data-column-id="${id}"]`);
-      columns[id] = container
-        ? [...container.querySelectorAll('.mk-card:not(.is-dragging)')].map((cardEl) => ({
-            id: cardEl.dataset.cardId,
-            title: cardEl.querySelector('.mk-card-title')?.textContent || 'Project Outline',
-            dueDate: cardEl.dataset.dueDate || undefined,
-            due: cardEl.querySelector('.mk-card-due')?.textContent || 'Due Thurs, May 21',
-            chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
-            chipColor: cardEl.dataset.chipColor || 'blue',
-            starred: cardEl.dataset.starred === 'true',
-          }))
-        : [];
+      columns[id] = [];
+    });
+
+    const seenIds = new Set();
+
+    board.querySelectorAll('.mk-column').forEach((column) => {
+      const colId = column.dataset.columnId;
+      if (!KANBAN_COLUMN_DEFS.some((def) => def.id === colId)) return;
+
+      const cardsEl = column.querySelector(':scope > .mk-column-cards');
+      if (!cardsEl) return;
+
+      cardsEl.querySelectorAll('.mk-card:not(.is-dragging)').forEach((cardEl) => {
+        const cid = cardEl.dataset.cardId;
+        if (!cid || seenIds.has(cid)) return;
+        seenIds.add(cid);
+
+        columns[colId].push({
+          id: cid,
+          title: cardEl.querySelector('.mk-card-title')?.textContent || 'Project Outline',
+          dueDate: cardEl.dataset.dueDate || undefined,
+          due: cardEl.querySelector('.mk-card-due')?.textContent || 'Due Thurs, May 21',
+          chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
+          chipColor: cardEl.dataset.chipColor || 'blue',
+          starred: cardEl.dataset.starred === 'true',
+        });
+      });
     });
 
     return { columns };
   }
 
+  function collapseDuplicateKanbanIds(columns) {
+    const claimed = new Set();
+    const out = {};
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      out[id] = [];
+    });
+
+    [...KANBAN_COLUMN_DEFS].reverse().forEach(({ id }) => {
+      (columns[id] || []).forEach((card) => {
+        if (!card?.id || claimed.has(card.id)) return;
+        claimed.add(card.id);
+        out[id].push(card);
+      });
+    });
+
+    return out;
+  }
+
   function mergeSerializedKanbanColumns(board, state) {
     const serialized = serializeKanbanBoard(board).columns;
+    const domIds = new Set();
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      (serialized[id] || []).forEach((cardData) => {
+        if (cardData.id) domIds.add(cardData.id);
+      });
+    });
+
     const columns = {};
-    const assignedIds = new Set();
     const existingById = new Map();
 
     KANBAN_COLUMN_DEFS.forEach(({ id }) => {
@@ -1414,17 +1454,13 @@
 
     KANBAN_COLUMN_DEFS.forEach(({ id }) => {
       const container = board.querySelector(`.mk-column-cards[data-column-id="${id}"]`);
-      if (!container) {
-        columns[id] = [...(state.columns[id] || [])];
-        return;
-      }
+      if (!container) return;
 
       const next = [];
       (serialized[id] || []).forEach((cardData) => {
         if (!cardData.id) return;
 
         const existing = existingById.get(cardData.id);
-        assignedIds.add(cardData.id);
         next.push(existing
           ? {
             ...existing.card,
@@ -1435,14 +1471,19 @@
       });
 
       (state.columns[id] || []).forEach((card) => {
-        if (assignedIds.has(card.id)) return;
+        if (domIds.has(card.id)) return;
         next.push(card);
       });
 
       columns[id] = next;
     });
 
-    return columns;
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      if (columns[id] !== undefined) return;
+      columns[id] = (state.columns[id] || []).filter((card) => !domIds.has(card.id));
+    });
+
+    return collapseDuplicateKanbanIds(columns);
   }
 
   function getVisibleKanbanColumns(state) {
@@ -1763,7 +1804,7 @@
     let originNextSibling = null;
 
     function getColumnCards(container) {
-      return [...container.querySelectorAll('.mk-card')];
+      return [...container.querySelectorAll('.mk-card:not(.is-dragging)')];
     }
 
     function getGhostInsertBefore(container, clientY) {
@@ -1871,8 +1912,44 @@
     }
 
     function getDropColumnAt(clientX, clientY) {
+      if (dragClone) {
+        dragClone.style.visibility = 'hidden';
+      }
+
       const target = document.elementFromPoint(clientX, clientY);
-      const container = target?.closest('.mk-column-cards');
+
+      if (dragClone) {
+        dragClone.style.visibility = '';
+      }
+
+      const resolveColumnCards = (el) => {
+        if (!el || !(el instanceof Element)) return null;
+        const onCards = el.closest('.mk-column-cards');
+        if (onCards && board.contains(onCards)) return onCards;
+        const column = el.closest('.mk-column');
+        if (column && board.contains(column)) {
+          const cards = column.querySelector(':scope > .mk-column-cards');
+          if (cards && board.contains(cards)) return cards;
+        }
+        return null;
+      };
+
+      let container = resolveColumnCards(target);
+
+      if (!container) {
+        board.querySelectorAll('.mk-column').forEach((column) => {
+          if (container) return;
+          const rect = column.getBoundingClientRect();
+          const inside = clientX >= rect.left && clientX <= rect.right
+            && clientY >= rect.top && clientY <= rect.bottom;
+          if (!inside) return;
+          const cards = column.querySelector(':scope > .mk-column-cards');
+          if (cards && board.contains(cards)) {
+            container = cards;
+          }
+        });
+      }
+
       if (container && board.contains(container)) return container;
       if (hoveredColumn && board.contains(hoveredColumn)) return hoveredColumn;
       if (activeDropColumn && board.contains(activeDropColumn)) return activeDropColumn;
@@ -1938,7 +2015,7 @@
       document.body.classList.add('mytasks-kanban-dragging');
     }
 
-    function commitDrag() {
+    async function commitDrag() {
       if (!draggedCard || !dragGhost?.parentElement) {
         cancelDrag();
         return;
@@ -1955,7 +2032,8 @@
 
       clearDropTargets();
       finishDraggedCardSnap();
-      persistKanbanBoard(board);
+      document.body.classList.remove('mytasks-kanban-dragging');
+      await persistKanbanBoard(board);
       resetDragState();
     }
 
@@ -2025,7 +2103,7 @@
       placeDragGhost(container, pointerY);
     }
 
-    function onPointerUp(event) {
+    async function onPointerUp(event) {
       if (event.pointerId !== activePointerId) return;
 
       detachPointerListeners();
@@ -2040,7 +2118,7 @@
 
       const container = getDropColumnAt(pointerX, pointerY) || activeDropColumn;
       if (container && dragGhost?.parentElement) {
-        commitDrag();
+        await commitDrag();
       } else {
         cancelDrag();
       }
