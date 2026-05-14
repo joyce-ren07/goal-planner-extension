@@ -1651,14 +1651,12 @@
   // ── Write inner DOM structure into a chip element ──
   function injectGoalChipContent(chip, goalData, isDone) {
     chip.innerHTML = '';
-    chip.style.cssText += '; overflow: hidden;';
     chip.classList.add('ext-goal-chip');
     chip.classList.toggle('ext-goal-done', isDone);
     chip.dataset.gpChipKey = goalData.chipKey;
 
     const inner = document.createElement('div');
     inner.className = 'ext-goal-chip-inner';
-    inner.style.cssText = 'display:flex;flex-direction:row;align-items:flex-start;gap:8px';
     inner.innerHTML =
       '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
       '<div class="ext-goal-text-col">' +
@@ -1667,6 +1665,10 @@
         (goalData.time ? '<span class="ext-goal-time">' + escHtml(goalData.time) + '</span>' : '') +
       '</div>';
     chip.appendChild(inner);
+
+    const chipHeight = chip.getBoundingClientRect().height;
+    const timeEl = chip.querySelector('.ext-goal-time');
+    if (timeEl) timeEl.style.display = chipHeight < 42 ? 'none' : 'block';
   }
 
   // ── Attach capture-phase click listener (idempotent via data attribute guard) ──
