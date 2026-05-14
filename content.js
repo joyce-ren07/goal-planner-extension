@@ -2018,11 +2018,11 @@
           return;
         }
 
-        // Extract title and time from GCal's original DOM before clearing
+        // Extract title and time from GCal's original DOM
         const spans = chip.querySelectorAll('span');
         const title = (spans[0] ? spans[0].textContent : chip.textContent).replace(/🎯\s*/g, '').trim();
 
-        // Time extraction — walk every known GCal DOM pattern before innerHTML wipe
+        // Time extraction — walk every known GCal DOM pattern
         const eventContainer = chip.closest('[data-eventid]') || chip.closest('[data-eventchip]') || chip.parentElement;
         let time = '';
 
