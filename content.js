@@ -1985,7 +1985,7 @@
     _gpDecorateTimer = setTimeout(processGoalChips, 200);
   }
 
-  // Watch for new chips added by GCal and re-process; disconnect ResizeObservers for removed chips
+  // Watch for new chips added by GCal and re-process; disconnect all observers for removed chips
   function setupGoalEventObserver() {
     new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -1994,7 +1994,10 @@
           const chips = node.classList?.contains('ext-goal-chip')
             ? [node]
             : Array.from(node.querySelectorAll?.('.ext-goal-chip') || []);
-          chips.forEach(c => c._resizeObserver?.disconnect());
+          chips.forEach(c => {
+            c._resizeObserver?.disconnect();
+            c._resizeMutAttrObs?.disconnect();
+          });
         });
       }
       scheduleGoalEventDecoration();
