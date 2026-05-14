@@ -1644,8 +1644,9 @@
   // Queries [data-eventchip] on each mutation, matches goal events by 🎯 in title,
   // injects .ext-goal-root decoration; checkbox clicks use GoalInteractionController (document capture delegation).
 
-  const SVG_CHECK  = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#C0514E" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const SVG_CIRCLE = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/></svg>';
+  /* Figma CAPSTONE: darker-coral #D3564B, completed = white-filled circle + check */
+  const SVG_CHECK  = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="#fff"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#D3564B" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const SVG_CIRCLE = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="none"/></svg>';
   const escHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   /** Optional: set true in DevTools to trace checkbox hits vs propagation. */
