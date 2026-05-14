@@ -1920,6 +1920,84 @@
     });
   }
 
+  // ── Forensic diagnostic: log chip DOM structure and pointer-event state ──
+  // Flip GP_DEBUG to true in DevTools (or here) to get a full readout.
+  const GP_DEBUG = false;
+
+  function debugChipStructure(chip, phase) {
+    if (!GP_DEBUG) return;
+    const container = chip.closest('[data-eventid]') || chip.parentElement;
+    console.group(`[GoalPlanner] ${phase} — chipKey=${chip.dataset.gpChipKey || '(unkeyed)'}`);
+
+    console.log('chip node:', chip);
+    console.log('chip.children:', chip.children.length, 'items');
+    Array.from(chip.children).forEach((c, i) => {
+      const cs = window.getComputedStyle(c);
+      const r  = c.getBoundingClientRect();
+      console.log(
+        `  child[${i}]`,
+        `tag=${c.tagName} class="${c.className}"`,
+        `rect={t:${r.top.toFixed(0)},h:${r.height.toFixed(0)}}`,
+        `pe=${cs.pointerEvents} vis=${cs.visibility} z=${cs.zIndex}`,
+        c
+      );
+    });
+
+    if (container && container !== chip) {
+      console.log('container siblings:');
+      Array.from(container.children).forEach((c, i) => {
+        if (c === chip) return;
+        const cs = window.getComputedStyle(c);
+        const r  = c.getBoundingClientRect();
+        console.log(
+          `  sibling[${i}]`,
+          `tag=${c.tagName} class="${c.className}"`,
+          `rect={t:${r.top.toFixed(0)},h:${r.height.toFixed(0)}}`,
+          `pe=${cs.pointerEvents} vis=${cs.visibility} z=${cs.zIndex}`,
+          c
+        );
+      });
+
+      // elementFromPoint probe at the resize zone (bottom 6 px of event container)
+      const cr = container.getBoundingClientRect();
+      if (cr.height > 0) {
+        const probeX = cr.left + cr.width / 2;
+        const probeY = cr.bottom - 4;
+        const topEl  = document.elementFromPoint(probeX, probeY);
+        console.log(
+          `elementFromPoint at resize zone (${probeX.toFixed(0)}, ${probeY.toFixed(0)}):`,
+          topEl
+        );
+        if (topEl) {
+          const cs = window.getComputedStyle(topEl);
+          console.log(`  → class="${topEl.className}" pe=${cs.pointerEvents} cursor=${cs.cursor}`);
+        }
+      }
+    }
+    console.groupEnd();
+  }
+
+  // One-time global mousedown logger — logs every mousedown target so you can
+  // confirm resize handles are reachable.  Runs only when GP_DEBUG is true and
+  // only once per page load (cleaned up after first goal-chip resize attempt).
+  let _debugMousedownActive = false;
+  function setupDebugMousedownLogger() {
+    if (!GP_DEBUG || _debugMousedownActive) return;
+    _debugMousedownActive = true;
+    document.addEventListener('mousedown', (e) => {
+      const ec = e.target.closest('[data-eventid]');
+      if (!ec) return;
+      const cs = window.getComputedStyle(e.target);
+      console.log(
+        '[GoalPlanner] mousedown target:',
+        e.target,
+        `class="${e.target.className}"`,
+        `pe=${cs.pointerEvents} cursor=${cs.cursor}`,
+        `pos=(${e.clientX.toFixed(0)},${e.clientY.toFixed(0)})`
+      );
+    }, { capture: true });
+  }
+
   function processGoalChips() {
     chrome.storage.local.get(['gp_chip_done'], async (data) => {
       const doneMap = data.gp_chip_done || {};
