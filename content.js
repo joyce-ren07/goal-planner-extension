@@ -1918,8 +1918,11 @@
       document.querySelectorAll('[data-eventchip]').forEach(chip => {
         if (!chip.textContent.includes('🎯')) return;
 
-        // Dedup guard — inner structure already injected, just sync done state from storage
+        // Dedup guard — inner structure already injected; sync done state and
+        // re-bound the chip height in case GCal reflowed (e.g. window resize,
+        // navigation, panel open/close changes column widths).
         if (chip.querySelector('.ext-goal-chip-inner')) {
+          boundChipHeight(chip);
           const isDone = !!doneMap[chip.dataset.gpChipKey];
           chip.classList.toggle('ext-goal-done', isDone);
           const c = chip.querySelector('.ext-check-circle');
