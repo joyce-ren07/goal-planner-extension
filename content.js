@@ -47,6 +47,9 @@
   let _ghostScrollEl = null;
   let _ghostScrollHandler = null;
 
+  // ── Original suggestions (before any preferred-time override) ──
+  let _originalSuggestions = [];
+
   // ── Ghost events: remove all from DOM and tear down scroll listener ──
   function removeGhostEvents() {
     document.querySelectorAll('.goal-ghost-event').forEach(el => el.remove());
@@ -240,19 +243,25 @@
   // ── Inject once ──
   function inject() {
     if (document.getElementById('gp-panel')) return;
+
+    // Load Material Symbols Outlined font (once per page)
+    if (!document.getElementById('gp-material-symbols')) {
+      const link = document.createElement('link');
+      link.id = 'gp-material-symbols';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200';
+      document.head.appendChild(link);
+    }
+
     const btn = createRailBtn();
     const panel = createPanel();
     const modal = createRecurrenceModal();
     const deleteModal = createDeleteModal();
     const ctxMenu = createCtxMenu();
-    const stdTimeDd = document.createElement('div');
-    stdTimeDd.id = 'gp-std-time-dd';
-    stdTimeDd.className = 'gp-time-dropdown';
     document.body.appendChild(panel);
     document.body.appendChild(modal);
     document.body.appendChild(deleteModal);
     document.body.appendChild(ctxMenu);
-    document.body.appendChild(stdTimeDd);
     migrateGoals();
 
     // Always mount the button as a fixed-position element at the body level so it
@@ -415,11 +424,7 @@
     btn.id = 'gp-sidebar-btn';
     btn.title = 'Goal Planner';
     btn.setAttribute('aria-label', 'Goal Planner');
-    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#444746" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>
-      <circle cx="12" cy="12" r="1.5" fill="#444746" stroke="none"/>
-      <line x1="12" y1="3" x2="12" y2="1"/>
-    </svg>`;
+    btn.innerHTML = `<span class="material-symbols-outlined gp-ms-icon">flag</span>`;
     // Attach the listener directly on the element so it survives being moved in the DOM.
     btn.addEventListener('click', () => togglePanel());
     return btn;
@@ -439,7 +444,7 @@
             <h2>My goals</h2>
           </div>
           <button class="gp-icon-btn gp-close-icon-btn" id="gp-close-btn" title="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <span class="material-symbols-outlined gp-ms-icon">close</span>
           </button>
         </div>
         <div class="gp-divider"></div>
@@ -483,7 +488,7 @@
         <div class="gp-screen" id="gp-screen-form">
           <div class="gp-form-edit-header" id="gp-form-edit-header">
             <button class="gp-icon-btn" id="gp-form-back-btn" title="Back to goals" aria-label="Back to goals">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              <span class="material-symbols-outlined gp-ms-icon">arrow_back</span>
             </button>
             <span class="gp-form-edit-label">Edit goal</span>
           </div>
@@ -499,7 +504,7 @@
               <button class="gp-schedule-btn" id="gp-open-recurrence">
                 <span class="placeholder" id="gp-recurrence-summary">Select recurrence</span>
                 <span class="gp-chevron">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">expand_more</span>
                 </span>
               </button>
             </div>
@@ -521,37 +526,32 @@
             <span class="gp-field-label">Schedule</span>
             <button class="gp-confirm-chip" id="gp-confirm-schedule">
               <span class="gp-confirm-chip-label"></span>
-              <svg class="gp-confirm-chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span class="material-symbols-outlined gp-ms-icon gp-confirm-chip-icon" style="font-size:14px">edit</span>
             </button>
             <button class="gp-confirm-chip" id="gp-confirm-ends">
               <span class="gp-confirm-chip-label"></span>
-              <svg class="gp-confirm-chip-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span class="material-symbols-outlined gp-ms-icon gp-confirm-chip-icon" style="font-size:14px">edit</span>
             </button>
           </div>
           <div class="gp-field" style="margin-top:20px;">
             <div class="gp-section-header">
               <span class="gp-section-label">Suggested Sessions</span>
               <button class="gp-edit-btn" id="gp-edit-sessions-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span class="material-symbols-outlined gp-ms-icon" style="font-size:16px">edit</span>
               </button>
             </div>
             <div id="gp-suggestions-list"></div>
           </div>
-          <div class="gp-std-time-section" id="gp-std-time-section">
-            <div class="gp-std-time-header">
-              <span class="gp-section-label">Standardize time</span>
+          <div class="gp-pref-time-section" id="gp-pref-time-section">
+            <div class="gp-pref-time-header">
+              <span class="gp-section-label">Set a preferred time</span>
               <span class="gp-std-time-hint">optional</span>
             </div>
-            <div class="gp-std-chips">
-              <button class="gp-std-chip" data-hour="9" data-min="0">Morning<br><small>9 AM</small></button>
-              <button class="gp-std-chip" data-hour="14" data-min="0">Afternoon<br><small>2 PM</small></button>
-              <button class="gp-std-chip" data-hour="19" data-min="0">Evening<br><small>7 PM</small></button>
-              <button class="gp-std-chip gp-std-chip--custom" id="gp-std-custom-chip">Custom<br><small id="gp-std-custom-time">—</small></button>
-            </div>
+            <input type="time" class="gp-pref-time-input" id="gp-pref-time-input" />
           </div>
           <div class="gp-action-group" style="margin-top:12px;">
             <button class="gp-btn-primary gp-btn-full gp-btn-calendar" id="gp-confirm-add">Create goal</button>
-            <div class="gp-toast" id="gp-toast">✅ Sessions added to your calendar!</div>
+            <div class="gp-toast" id="gp-toast"><span class="material-symbols-outlined gp-ms-icon" style="font-size:15px;color:#137333;vertical-align:text-bottom;font-variation-settings:'opsz' 20,'wght' 400,'FILL' 1,'GRAD' 0">check_circle</span> Sessions added to your calendar!</div>
           </div>
         </div>
 
@@ -627,9 +627,9 @@
       </div>
       <div class="gp-cal-popover" id="gp-date-popover">
         <div class="gp-cal-header">
-          <button class="gp-cal-nav" id="gp-cal-prev" type="button">&#8249;</button>
+          <button class="gp-cal-nav" id="gp-cal-prev" type="button"><span class="material-symbols-outlined gp-ms-icon" style="font-size:20px">chevron_left</span></button>
           <span class="gp-cal-month-year" id="gp-cal-month-year"></span>
-          <button class="gp-cal-nav" id="gp-cal-next" type="button">&#8250;</button>
+          <button class="gp-cal-nav" id="gp-cal-next" type="button"><span class="material-symbols-outlined gp-ms-icon" style="font-size:20px">chevron_right</span></button>
         </div>
         <div class="gp-cal-weekdays">
           ${['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => `<span>${d}</span>`).join('')}
@@ -663,20 +663,12 @@
     menu.setAttribute('role', 'menu');
     menu.innerHTML = `
       <button class="gp-ctx-item" data-ctx-action="edit" role="menuitem">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
+        <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">edit</span>
         Edit goal
       </button>
       <div class="gp-ctx-divider"></div>
       <button class="gp-ctx-item" data-ctx-action="delete" role="menuitem">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6"/><path d="M14 11v6"/>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-        </svg>
+        <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">delete</span>
         Delete goal
       </button>`;
     return menu;
@@ -764,8 +756,7 @@
     document.getElementById('gp-confirm-add').addEventListener('click', confirmAddToCalendar);
 
     initDatePicker();
-    initStdTimeChips();
-    initStdTimePicker();
+    initPrefTimePicker();
   }
 
   // ── Panel toggle ──
@@ -840,13 +831,11 @@
       return `<div class="gp-goal-row" data-goal-id="${g.id}">
         <div class="gp-goal-row-main">
           <div class="gp-goal-row-info">
-            <p class="gp-goal-chip-name">🎯 ${g.title}</p>
+            <p class="gp-goal-chip-name"><span class="material-symbols-outlined gp-ms-icon" style="font-size:13px;vertical-align:middle;margin-right:3px">flag</span>${g.title}</p>
             <p class="gp-goal-chip-sub">${g.scheduleLabel} · ${daysLeft}d left</p>
           </div>
           <button class="gp-goal-kebab" data-goal-id="${g.id}" aria-label="More options" title="More options">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
-            </svg>
+            <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">more_vert</span>
           </button>
         </div>
         <div class="gp-progress-bar"><div class="gp-progress-fill" style="width:${pct}%"></div></div>
@@ -871,7 +860,7 @@
 
     const addBtn = document.createElement('button');
     addBtn.className = 'gp-add-another';
-    addBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add another goal`;
+    addBtn.innerHTML = `<span class="material-symbols-outlined gp-ms-icon" style="font-size:16px">add</span> Add another goal`;
     addBtn.addEventListener('click', () => { resetEditMode(); showScreen('form'); });
     listEl.appendChild(addBtn);
   }
@@ -1117,7 +1106,7 @@
 
     // Show the screen immediately with skeleton cards (one per selected day)
     showScreen('suggestions');
-    resetStdTimeChips();
+    resetPrefTimeInput();
     const sessionCount = Math.max(1, r.days.length);
     renderSkeletons(sessionCount);
 
@@ -1130,6 +1119,7 @@
       console.warn('GoalPlanner: freebusy unavailable, using preferred time.', e);
       state.suggestions = generateFallbackSuggestions(r);
     }
+    _originalSuggestions = state.suggestions.map(s => ({ ...s }));
     renderSuggestions();
   }
 
@@ -1293,11 +1283,28 @@
 
   function renderSuggestions() {
     const list = document.getElementById('gp-suggestions-list');
-    list.innerHTML = state.suggestions.map(s => `
+    if (!state.suggestions.length) {
+      list.innerHTML = `<div class="gp-sessions-empty">No sessions remaining — <button class="gp-sessions-empty-link" id="gp-sessions-empty-back">edit settings</button></div>`;
+      document.getElementById('gp-sessions-empty-back').addEventListener('click', openRecurrence);
+      renderGhostEvents();
+      return;
+    }
+    list.innerHTML = state.suggestions.map((s, i) => `
       <div class="gp-session-card">
+        <button class="gp-session-remove" data-idx="${i}" aria-label="Remove session">
+          <span class="material-symbols-outlined">close</span>
+        </button>
         <p class="gp-session-name">${s.date}</p>
         <p class="gp-session-time">${s.startTime} – ${s.endTime}</p>
       </div>`).join('');
+    list.querySelectorAll('.gp-session-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        state.suggestions.splice(idx, 1);
+        if (_originalSuggestions.length > idx) _originalSuggestions.splice(idx, 1);
+        renderSuggestions();
+      });
+    });
     renderGhostEvents();
   }
 
@@ -1314,70 +1321,23 @@
     renderSuggestions();
   }
 
-  function resetStdTimeChips() {
-    document.querySelectorAll('.gp-std-chip').forEach(c => c.classList.remove('active'));
-    const lbl = document.getElementById('gp-std-custom-time');
-    if (lbl) lbl.textContent = '—';
-    const dd = document.getElementById('gp-std-time-dd');
-    if (dd) dd.style.display = 'none';
+  function resetPrefTimeInput() {
+    const input = document.getElementById('gp-pref-time-input');
+    if (input) input.value = '';
   }
 
-  function initStdTimeChips() {
-    document.querySelectorAll('.gp-std-chip[data-hour]').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const h = parseInt(chip.dataset.hour);
-        const m = parseInt(chip.dataset.min || '0');
-        applyStandardTime(h, m);
-        document.querySelectorAll('.gp-std-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        const dd = document.getElementById('gp-std-time-dd');
-        if (dd) dd.style.display = 'none';
-      });
-    });
-  }
-
-  function initStdTimePicker() {
-    const customChip = document.getElementById('gp-std-custom-chip');
-    const dd = document.getElementById('gp-std-time-dd');
-    if (!customChip || !dd) return;
-
-    customChip.addEventListener('click', e => {
-      e.stopPropagation();
-      if (dd.style.display === 'block') { dd.style.display = 'none'; customChip.classList.remove('active'); return; }
-
-      dd.innerHTML = '';
-      for (let m = 0; m < 24 * 60; m += 15) {
-        const item = document.createElement('div');
-        item.className = 'gp-time-dd-item';
-        item.textContent = minsToDisplay(m);
-        item.addEventListener('mousedown', ev => {
-          ev.preventDefault();
-          const h = Math.floor(m / 60);
-          const min = m % 60;
-          applyStandardTime(h, min);
-          document.getElementById('gp-std-custom-time').textContent = minsToDisplay(m);
-          document.querySelectorAll('.gp-std-chip').forEach(c => c.classList.remove('active'));
-          customChip.classList.add('active');
-          dd.style.display = 'none';
-        });
-        dd.appendChild(item);
+  function initPrefTimePicker() {
+    const input = document.getElementById('gp-pref-time-input');
+    if (!input) return;
+    input.addEventListener('change', () => {
+      if (!input.value) {
+        // Restore algorithmically-chosen times
+        state.suggestions = _originalSuggestions.map(s => ({ ...s }));
+        renderSuggestions();
+        return;
       }
-
-      positionFloating(dd, customChip);
-      dd.style.display = 'block';
-      customChip.classList.add('active');
-      setTimeout(() => {
-        const ninth = dd.querySelector('.gp-time-dd-item:nth-child(37)');
-        if (ninth) ninth.scrollIntoView({ block: 'center' });
-      }, 0);
-    });
-
-    document.addEventListener('click', e => {
-      if (!dd || dd.style.display !== 'block') return;
-      if (!e.target.closest('#gp-std-time-dd') && e.target !== customChip && !e.target.closest('#gp-std-custom-chip')) {
-        dd.style.display = 'none';
-        customChip.classList.remove('active');
-      }
+      const [h, min] = input.value.split(':').map(Number);
+      applyStandardTime(h, min);
     });
   }
 
@@ -1579,14 +1539,10 @@
   }
 
   function closeDropdowns() {
-    ['gp-std-time-dd', 'gp-date-popover'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-    ['gp-std-custom-chip', 'gp-end-date-chip'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.remove('active');
-    });
+    const datePop = document.getElementById('gp-date-popover');
+    if (datePop) datePop.style.display = 'none';
+    const endDateChip = document.getElementById('gp-end-date-chip');
+    if (endDateChip) endDateChip.classList.remove('active');
   }
 
   function initDatePicker() {
@@ -1639,8 +1595,6 @@
       renderCal();
       positionFloating(popover, chip);
       popover.style.display = 'block';
-      const stdDd = document.getElementById('gp-std-time-dd');
-      if (stdDd) stdDd.style.display = 'none';
       chip.classList.add('active');
     });
 

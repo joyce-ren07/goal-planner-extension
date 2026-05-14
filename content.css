@@ -12,7 +12,15 @@
 }
 #gp-sidebar-btn:hover { background: #e8edf6; }
 #gp-sidebar-btn.active { background: #d3e3fd; }
-#gp-sidebar-btn svg { width: 20px; height: 20px; }
+#gp-sidebar-btn .material-symbols-outlined { font-size: 20px; color: #444746; }
+
+/* ── Material Symbols base class ── */
+.gp-ms-icon {
+  font-variation-settings: 'opsz' 20, 'wght' 300, 'FILL' 0, 'GRAD' 0;
+  font-size: 20px; line-height: 1;
+  user-select: none; display: inline-flex;
+  align-items: center; justify-content: center;
+}
 
 /* ── Panel shell — sits below the GCal toolbar, left of the icon rail ── */
 /* top/right are set dynamically by JS to match GCal's live layout measurements */
@@ -176,7 +184,7 @@
   box-sizing: border-box; transition: background 0.1s;
 }
 .gp-ctx-item:hover { background: #f1f3f4; }
-.gp-ctx-item svg { flex-shrink: 0; color: #5f6368; }
+.gp-ctx-item .material-symbols-outlined { flex-shrink: 0; color: #5f6368; font-size: 18px; }
 .gp-ctx-divider { height: 1px; background: #e0e0e0; margin: 4px 0; }
 
 .gp-add-another {
@@ -309,22 +317,6 @@
 }
 .gp-day-btn:hover:not(.selected) { background: #c8cdd4; }
 .gp-day-btn.selected { background: #0b56cf; color: #fff; }
-.gp-time-dropdown {
-  position: fixed;
-  background: #fff; border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  max-height: 200px; overflow-y: auto; width: 180px;
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 14px; color: #3c4043; z-index: 10002;
-  display: none; scrollbar-width: thin;
-}
-.gp-time-dd-item {
-  padding: 8px 14px; cursor: pointer; white-space: nowrap;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.gp-time-dd-item:hover { background: #f1f3f4; }
-.gp-time-dd-item.selected { background: #e8eaed; }
-.gp-time-dd-dur { color: #5f6368; font-size: 13px; margin-left: 6px; flex-shrink: 0; }
 /* Session length */
 .gp-session-row { display: flex; gap: 8px; align-items: center; }
 .gp-session-input {
@@ -374,7 +366,7 @@
   background: none; border: none; cursor: pointer;
   width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 22px; color: #1a73e8; padding: 0; line-height: 1;
+  color: #1a73e8; padding: 0; line-height: 1;
   transition: background 0.12s;
 }
 .gp-cal-nav:hover { background: #e8f0fe; }
@@ -475,9 +467,10 @@
   background: #e8edf6;
   border: none;
   border-radius: 16px;
-  padding: 12px 16px;
+  padding: 12px 36px 12px 16px;
   display: flex; flex-direction: column; gap: 2px;
   margin-bottom: 6px;
+  position: relative;
 }
 .gp-session-name {
   font-family: 'Google Sans', Roboto, sans-serif;
@@ -542,33 +535,51 @@
 .gp-toast.visible { display: block; }
 
 /* ─────────────────────────────────────────
-   Screen 3 — Standardize time section
+   Screen 3 — Preferred time section (replaces old Standardize time chips)
 ───────────────────────────────────────── */
-.gp-std-time-section { margin-top: 16px; }
-.gp-std-time-header {
+.gp-pref-time-section { margin-top: 16px; }
+.gp-pref-time-header {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
 }
 .gp-std-time-hint {
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 11px; font-weight: 400; color: #9aa0a6; letter-spacing: 0.3px;
 }
-.gp-std-chips {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-}
-.gp-std-chip {
-  background: #f1f3f4; border: 2px solid transparent; border-radius: 10px;
-  padding: 8px 4px; cursor: pointer; text-align: center; line-height: 1.3;
+.gp-pref-time-input {
+  width: 100%; box-sizing: border-box;
+  background: #f1f3f4; border: 2px solid transparent; border-radius: 12px;
+  padding: 10px 14px; height: 40px;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 11px; font-weight: 500; color: #3c4043;
-  transition: border-color 0.15s, background 0.15s;
+  font-size: 13px; font-weight: 400; color: #3c4043;
+  cursor: pointer; outline: none; transition: border-color 0.15s, background 0.15s;
+  color-scheme: light;
 }
-.gp-std-chip small {
-  font-size: 10px; font-weight: 400; color: #5f6368; display: block; margin-top: 3px;
+.gp-pref-time-input:focus { border-color: #0b56cf; background: #fff; }
+.gp-pref-time-input:hover:not(:focus) { background: #e8edf6; }
+
+/* ── Per-card remove button ── */
+.gp-session-remove {
+  position: absolute; top: 10px; right: 10px;
+  background: none; border: none; cursor: pointer;
+  color: #5f6368; padding: 2px; width: 24px; height: 24px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
 }
-.gp-std-chip:hover { background: #e8edf6; }
-.gp-std-chip.active { border-color: #0b56cf; background: #e8f0fe; }
-.gp-std-chip.active small { color: #0b56cf; }
-.gp-std-chip--custom { color: #3c4043; }
+.gp-session-remove:hover { background: rgba(0,0,0,0.08); color: #3c4043; }
+.gp-session-remove .material-symbols-outlined { font-size: 16px; line-height: 1; }
+
+/* ── Sessions empty state ── */
+.gp-sessions-empty {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 13px; font-weight: 400; color: #5f6368;
+  padding: 12px 4px; text-align: center;
+}
+.gp-sessions-empty-link {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 13px; font-weight: 500; color: #0b56cf; text-decoration: underline;
+}
+.gp-sessions-empty-link:hover { color: #0944a8; }
 
 /* ─────────────────────────────────────────
    Form screen — edit mode header
