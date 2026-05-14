@@ -2022,10 +2022,17 @@
           restoreTimeout = setTimeout(() => restoreChip(chip, goalData), 16);
         }).observe(chip, { childList: true, subtree: true });
 
-        // Hide any GCal sibling elements that bleed through the chip boundary
+        // Hide GCal sibling elements that bleed through the chip boundary,
+        // but NEVER hide resize handles — visibility:hidden suppresses pointer
+        // events, which would silently break native drag-to-resize.
         if (chip.parentElement) {
           Array.from(chip.parentElement.children).forEach(sib => {
-            if (sib !== chip) sib.style.visibility = 'hidden';
+            if (sib === chip) return;
+            // Preserve any element that is or contains a resize handle
+            if (/resize/i.test(sib.className || '') ||
+                sib.hasAttribute('data-resizehandle') ||
+                sib.querySelector('[class*="resize"], [data-resizehandle]')) return;
+            sib.style.visibility = 'hidden';
           });
         }
       });
