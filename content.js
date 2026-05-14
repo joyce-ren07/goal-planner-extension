@@ -1726,6 +1726,9 @@
         const circleEl = chip.querySelector('.ext-check-circle');
         if (circleEl) circleEl.innerHTML = SVG_CHECK;
       }
+      const chipHeight = chip.getBoundingClientRect().height;
+      const timeEl = chip.querySelector('.ext-goal-time');
+      if (timeEl) timeEl.style.display = chipHeight < 42 ? 'none' : 'block';
     });
   }
 
