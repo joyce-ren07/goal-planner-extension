@@ -1952,8 +1952,6 @@
         const doneMap = d.gp_chip_done || {};
         const isDone = !!doneMap[goalData.chipKey];
         injectGoalChipContent(chip, goalData, isDone);
-        delete chip.dataset.goalListenerAttached;
-        attachChipClickListener(chip, goalData);
       });
       return;
     }
