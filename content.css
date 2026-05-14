@@ -664,6 +664,10 @@
 .ext-goal-chip-inner {
   width: 100%;
   height: 100%;
+  /* Clip goal content to the chip's explicit pixel height.
+     overflow is intentionally NOT set on the chip itself because GCal's
+     resize handles live at the chip boundary and must not be clipped. */
+  overflow: hidden;
   box-sizing: border-box;
   display: flex;
   flex-direction: row;
