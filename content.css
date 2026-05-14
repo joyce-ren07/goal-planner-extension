@@ -749,9 +749,10 @@
 }
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-title {
-  color: #5f6368;
+  color: #e79992;
+  font-weight: 500;
   text-decoration: line-through;
-  text-decoration-color: #5f6368;
+  text-decoration-color: #e79992;
 }
 
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
