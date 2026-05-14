@@ -2077,7 +2077,11 @@
         const goalData = { title, time, chipKey, id: goal ? goal.id : null };
         const isDone = !!doneMap[chipKey];
 
+        debugChipStructure(chip, 'BEFORE injection');
+        setupDebugMousedownLogger();
         injectGoalChipContent(chip, goalData, isDone);
+        // rAF ensures layout is settled before the post-injection probe runs
+        requestAnimationFrame(() => debugChipStructure(chip, 'AFTER injection'));
         attachChipClickListener(chip, goalData);
         attachChipResizeObserver(chip, goalData);
 
