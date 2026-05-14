@@ -1698,6 +1698,18 @@
 
   // ── Write inner DOM structure into a chip element ──
   function injectGoalChipContent(chip, goalData, isDone) {
+    // GCal attaches native mousedown listeners to its resize handle nodes at
+    // render time.  We MUST detach them before clearing innerHTML and reattach
+    // them afterward — clones will not work because the listeners live on the
+    // original node objects and cannot be transferred.
+    // Selector mirrors the guard in attachChipClickListener so we preserve any
+    // element that GCal uses as a drag-resize target.
+    const resizeHandles = [];
+    chip.querySelectorAll('[class*="resize"], [data-resizehandle]').forEach(el => {
+      chip.removeChild(el);   // detach (keeps the node alive with its listeners)
+      resizeHandles.push(el);
+    });
+
     chip.innerHTML = '';
     chip.classList.add('ext-goal-chip');
     chip.classList.toggle('ext-goal-done', isDone);
@@ -1713,6 +1725,10 @@
         (goalData.time ? '<span class="ext-goal-time">' + escHtml(goalData.time) + '</span>' : '') +
       '</div>';
     chip.appendChild(inner);
+
+    // Re-attach the original resize handles AFTER our content so they sit
+    // at the end of the chip's child list with their native listeners intact.
+    resizeHandles.forEach(h => chip.appendChild(h));
 
     // Stamp the explicit pixel height from the event container so the chip
     // never expands beyond its duration-based bounds (see boundChipHeight).
