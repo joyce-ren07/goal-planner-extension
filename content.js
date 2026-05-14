@@ -1714,9 +1714,17 @@
       '</div>';
     chip.appendChild(inner);
 
-    const chipHeight = chip.getBoundingClientRect().height;
-    const timeEl = chip.querySelector('.ext-goal-time');
-    if (timeEl) timeEl.style.display = chipHeight < 42 ? 'none' : 'block';
+    // Stamp the explicit pixel height from the event container so the chip
+    // never expands beyond its duration-based bounds (see boundChipHeight).
+    boundChipHeight(chip);
+
+    // Show/hide the time line based on available height — re-checked in rAF
+    // after boundChipHeight has resolved the container measurement.
+    requestAnimationFrame(() => {
+      const h = chip.getBoundingClientRect().height;
+      const timeEl = chip.querySelector('.ext-goal-time');
+      if (timeEl) timeEl.style.display = h < 42 ? 'none' : 'block';
+    });
   }
 
   // ── Attach capture-phase click listener (idempotent via data attribute guard) ──
