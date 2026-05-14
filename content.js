@@ -2138,9 +2138,13 @@
         requestAnimationFrame(() => debugChipStructure(chip, 'AFTER injection'));
         attachChipResizeObserver(chip, goalData);
 
-        // Per-chip observer: restore injection if GCal's renderer wipes our structure
+        // Per-chip observer: restore only when GCal removes our overlay root — not
+        // on every subtree change (checkbox SVG swap used to call restoreChip and
+        // race gp_chip_done writes, reverting .ext-goal-done immediately).
         let restoreTimeout = null;
         new MutationObserver((mutations) => {
+          if (chip._gpDecorLock) return;
+          let needsRestore = false;
           for (const m of mutations) {
             if (m.type !== 'childList') continue;
             m.removedNodes.forEach((node) => {
@@ -2152,9 +2156,12 @@
                 console.warn(
                   '[GoalPlanner] Extension decoration (.ext-goal-root) removed by external DOM mutation; will restore.'
                 );
+                needsRestore = true;
               }
             });
           }
+          if (!chip.querySelector('.ext-goal-root')) needsRestore = true;
+          if (!needsRestore) return;
           clearTimeout(restoreTimeout);
           restoreTimeout = setTimeout(() => restoreChip(chip, goalData), 16);
         }).observe(chip, { childList: true, subtree: true });
