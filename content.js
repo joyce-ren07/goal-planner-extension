@@ -1748,32 +1748,52 @@
         const spans = chip.querySelectorAll('span');
         const title = (spans[0] ? spans[0].textContent : chip.textContent).replace(/🎯\s*/g, '').trim();
 
-        // Time extraction — try DOM selectors first, then aria-label / data-tooltip fallbacks
-        const timeEl = chip.querySelector('[data-start-time]')
-          || chip.querySelector('.KF4T6b')
-          || chip.querySelector('[class*="time"]')
-          || chip.querySelector('[aria-label*="pm"]')
-          || chip.querySelector('[aria-label*="am"]');
-        let time = timeEl?.textContent?.trim() || '';
+        // Time extraction — walk every known GCal DOM pattern before innerHTML wipe
+        const eventContainer = chip.closest('[data-eventid]') || chip.closest('[data-eventchip]') || chip.parentElement;
+        let time = '';
 
-        // Fallback 1: parse from closest [data-eventid] aria-label
+        // Pattern 1: aria-label on the event container (most reliable across GCal versions)
+        const ariaLabel = eventContainer?.getAttribute('aria-label') || '';
+        const ariaMatch = ariaLabel.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
+        if (ariaMatch) time = ariaMatch[1];
+
+        // Pattern 2: data-tooltip on the container
         if (!time) {
-          const label = chip.closest('[data-eventid]')?.getAttribute('aria-label') || '';
-          const timeMatch = label.match(/\d+:\d+\s*(am|pm)\s*[-–]\s*\d+:\d+\s*(am|pm)/i)
-            || label.match(/\d+\s*(am|pm)\s*[-–]\s*\d+\s*(am|pm)/i);
-          time = timeMatch ? timeMatch[0] : '';
+          const tooltip = eventContainer?.getAttribute('data-tooltip') || '';
+          const tooltipMatch = tooltip.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
+          if (tooltipMatch) time = tooltipMatch[1];
         }
 
-        // Fallback 2: parse from data-tooltip on the event container
+        // Pattern 3: title attribute on the container
         if (!time) {
-          const eventContainer = chip.closest('[data-eventid]');
-          const fullLabel = eventContainer?.getAttribute('data-tooltip') || '';
-          const timeMatch2 = fullLabel.match(/\d+:\d+\s*(am|pm)\s*[-–]\s*\d+:\d+\s*(am|pm)/i)
-            || fullLabel.match(/\d+\s*(am|pm)\s*[-–]\s*\d+\s*(am|pm)/i);
-          time = timeMatch2 ? timeMatch2[0] : '';
+          const titleAttr = eventContainer?.getAttribute('title') || '';
+          const titleMatch = titleAttr.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
+          if (titleMatch) time = titleMatch[1];
         }
 
-        console.log('EXTRACTED title:', title, '| time:', time);
+        // Pattern 4: walk all text nodes inside the event container
+        if (!time) {
+          const walker = document.createTreeWalker(eventContainer, NodeFilter.SHOW_TEXT);
+          let node;
+          while ((node = walker.nextNode())) {
+            const t = node.textContent.trim();
+            const m = t.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
+            if (m) { time = m[1]; break; }
+          }
+        }
+
+        // Pattern 5: known GCal jsname/class selectors for time elements
+        if (!time) {
+          const jsNameEl = eventContainer?.querySelector('[jsname="tKELmd"]')
+            || eventContainer?.querySelector('[jsname="r4nke"]')
+            || eventContainer?.querySelector('.gVNoLb')
+            || eventContainer?.querySelector('.Jmftzc');
+          if (jsNameEl) time = jsNameEl.textContent.trim();
+        }
+
+        console.log('GOAL CHIP — aria-label:', ariaLabel);
+        console.log('GOAL CHIP — extracted time:', time);
+        console.log('GOAL CHIP — extracted title:', title);
 
         // Derive a stable key: prefer GCal's event ID, then goal id + text
         const eid  = chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
