@@ -1617,12 +1617,110 @@
   // Queries [data-eventchip] on each mutation, matches goal events by 🎯 in title,
   // prepends .ext-check-circle, and wires a capture-phase click handler.
 
+  const SVG_CHECK = '<svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#C0514E" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const escHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // ── Toggle complete state and persist ──
+  function toggleGoalComplete(chipKey, chip) {
+    const nowDone = !chip.classList.contains('ext-goal-done');
+    chip.classList.toggle('ext-goal-done', nowDone);
+    const circleEl = chip.querySelector('.ext-check-circle');
+    if (circleEl) circleEl.innerHTML = nowDone ? SVG_CHECK : '';
+
+    chrome.storage.local.get(['gp_chip_done'], d => {
+      const map = d.gp_chip_done || {};
+      if (nowDone) map[chipKey] = true;
+      else delete map[chipKey];
+      chrome.storage.local.set({ gp_chip_done: map });
+    });
+
+    chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nowDone });
+    renderHomeScreen();
+  }
+
+  // ── Write inner DOM structure into a chip element ──
+  function injectGoalChipContent(chip, goalData, isDone) {
+    chip.innerHTML = '';
+    chip.style.cssText += '; overflow: hidden;';
+    chip.classList.add('ext-goal-chip');
+    chip.classList.toggle('ext-goal-done', isDone);
+    chip.dataset.gpChipKey = goalData.chipKey;
+
+    const inner = document.createElement('div');
+    inner.className = 'ext-goal-chip-inner';
+    inner.style.cssText = 'display:flex;flex-direction:row;align-items:flex-start;gap:8px';
+    inner.innerHTML =
+      '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
+      '<div class="ext-goal-text-col">' +
+        '<span class="ext-goal-badge">Goal</span>' +
+        '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
+        (goalData.time ? '<span class="ext-goal-time">' + escHtml(goalData.time) + '</span>' : '') +
+      '</div>';
+    chip.appendChild(inner);
+  }
+
+  // ── Attach capture-phase click listener (idempotent via data attribute guard) ──
+  function attachChipClickListener(chip, goalData) {
+    if (chip.dataset.goalListenerAttached) return;
+    chip.dataset.goalListenerAttached = 'true';
+
+    chip.addEventListener('click', (e) => {
+      // Skip flag — synthetic clicks we dispatch should pass through to GCal
+      if (e.currentTarget._skipGoalHandler) {
+        e.currentTarget._skipGoalHandler = false;
+        return;
+      }
+
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (e.target.closest('.ext-check-circle')) {
+        console.log('GOAL CHECKBOX HIT');
+        toggleGoalComplete(goalData.chipKey, chip);
+      } else {
+        console.log('GOAL CHIP BODY HIT — opening popup');
+        const originalTarget = chip.closest('[data-eventid]') || chip;
+        setTimeout(() => {
+          const nativeClick = new MouseEvent('click', {
+            bubbles: true, cancelable: true,
+            clientX: e.clientX, clientY: e.clientY,
+          });
+          originalTarget._skipGoalHandler = true;
+          originalTarget.dispatchEvent(nativeClick);
+        }, 0);
+      }
+    }, true);
+  }
+
+  // ── Re-inject if GCal wiped our structure; re-sync done state if present ──
+  function restoreChip(chip, goalData) {
+    if (!chip.querySelector('.ext-goal-chip-inner')) {
+      chrome.storage.local.get(['gp_chip_done'], d => {
+        const doneMap = d.gp_chip_done || {};
+        const isDone = !!doneMap[goalData.chipKey];
+        injectGoalChipContent(chip, goalData, isDone);
+        delete chip.dataset.goalListenerAttached;
+        attachChipClickListener(chip, goalData);
+      });
+      return;
+    }
+    // Structure intact — re-sync done state if out of step with storage
+    chrome.storage.local.get(['gp_chip_done'], d => {
+      const doneMap = d.gp_chip_done || {};
+      const isDone = !!doneMap[goalData.chipKey];
+      if (isDone && !chip.classList.contains('ext-goal-done')) {
+        chip.classList.add('ext-goal-done');
+        const circleEl = chip.querySelector('.ext-check-circle');
+        if (circleEl) circleEl.innerHTML = SVG_CHECK;
+      }
+    });
+  }
+
   function processGoalChips() {
     chrome.storage.local.get(['gp_chip_done'], async (data) => {
       const doneMap = data.gp_chip_done || {};
       const goals   = await getGoals();
-      const SVG_CHECK = '<svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#C0514E" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       document.querySelectorAll('[data-eventchip]').forEach(chip => {
         if (!chip.textContent.includes('🎯')) return;
@@ -1662,35 +1760,19 @@
         const eid  = chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
         const goal = goals.find(g => chip.textContent.includes(g.title));
         const chipKey = eid || (goal ? goal.id + ':' + chip.textContent.trim().slice(0, 40) : 'tx:' + chip.textContent.trim().slice(0, 50));
-        chip.dataset.gpChipKey = chipKey;
-        chip.classList.add('ext-goal-chip');
 
+        const goalData = { title, time, chipKey };
         const isDone = !!doneMap[chipKey];
-        chip.classList.toggle('ext-goal-done', isDone);
 
-        // Clear all GCal content, then append our structure
-        chip.innerHTML = '';
-        chip.style.cssText += '; overflow: hidden;';
-        const inner = document.createElement('div');
-        inner.className = 'ext-goal-chip-inner';
-        inner.style.cssText = 'display:flex;flex-direction:row;align-items:flex-start;gap:8px';
-        inner.innerHTML =
-          '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : '') + '</div>' +
-          '<div class="ext-goal-text-col">' +
-            '<span class="ext-goal-badge">Goal</span>' +
-            '<span class="ext-goal-title">' + esc(title) + '</span>' +
-            (time ? '<span class="ext-goal-time">' + esc(time) + '</span>' : '') +
-          '</div>';
-        chip.appendChild(inner);
+        injectGoalChipContent(chip, goalData, isDone);
+        attachChipClickListener(chip, goalData);
 
-        // Per-chip observer: prevent GCal's React reconciler from re-appending original content
-        new MutationObserver((muts) => {
-          muts.forEach(m => {
-            m.addedNodes.forEach(n => {
-              if (n.classList && !n.classList.contains('ext-goal-chip-inner')) n.remove();
-            });
-          });
-        }).observe(chip, { childList: true });
+        // Per-chip observer: restore injection if GCal's renderer wipes our structure
+        let restoreTimeout = null;
+        new MutationObserver(() => {
+          clearTimeout(restoreTimeout);
+          restoreTimeout = setTimeout(() => restoreChip(chip, goalData), 16);
+        }).observe(chip, { childList: true, subtree: true });
 
         // Hide any GCal sibling elements that bleed through the chip boundary
         if (chip.parentElement) {
@@ -1698,35 +1780,6 @@
             if (sib !== chip) sib.style.visibility = 'hidden';
           });
         }
-
-        // Capture-phase click: checkbox branch stops propagation; all else passes through
-        chip.addEventListener('click', (e) => {
-          if (e.target.closest('.ext-check-circle')) {
-            console.log('GOAL CHECKBOX CLICKED');
-            e.stopImmediatePropagation();
-            e.stopPropagation();
-
-            const nowDone = !chip.classList.contains('ext-goal-done');
-            chip.classList.toggle('ext-goal-done', nowDone);
-            const circleEl = chip.querySelector('.ext-check-circle');
-            if (circleEl) circleEl.innerHTML = nowDone ? SVG_CHECK : '';
-
-            // Persist
-            chrome.storage.local.get(['gp_chip_done'], d => {
-              const map = d.gp_chip_done || {};
-              if (nowDone) map[chip.dataset.gpChipKey] = true;
-              else delete map[chip.dataset.gpChipKey];
-              chrome.storage.local.set({ gp_chip_done: map });
-            });
-
-            // Notify background (fire-and-forget; background may not handle this type)
-            chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chip.dataset.gpChipKey, complete: nowDone });
-
-            renderHomeScreen();
-          } else {
-            console.log('CHIP CLICKED - POPUP');
-          }
-        }, true); // capture phase
       });
     });
   }
