@@ -1622,19 +1622,36 @@
 
   // ── Toggle complete state and persist ──
   function toggleGoalComplete(chipKey, chip) {
-    const nowDone = !chip.classList.contains('ext-goal-done');
-    chip.classList.toggle('ext-goal-done', nowDone);
-    const circleEl = chip.querySelector('.ext-check-circle');
-    if (circleEl) circleEl.innerHTML = nowDone ? SVG_CHECK : '';
+    const isDone = chip.classList.contains('ext-goal-done');
 
+    // Visual update synchronously before any async work
+    if (isDone) {
+      chip.classList.remove('ext-goal-done');
+      const circle = chip.querySelector('.ext-check-circle');
+      if (circle) {
+        circle.innerHTML = '';
+        circle.style.border = '2px solid #C0514E';
+        circle.style.background = 'transparent';
+      }
+    } else {
+      chip.classList.add('ext-goal-done');
+      const circle = chip.querySelector('.ext-check-circle');
+      if (circle) {
+        circle.innerHTML = SVG_CHECK;
+        circle.style.border = 'none';
+        circle.style.background = 'transparent';
+      }
+    }
+
+    // Persist after visual update
     chrome.storage.local.get(['gp_chip_done'], d => {
       const map = d.gp_chip_done || {};
-      if (nowDone) map[chipKey] = true;
+      if (!isDone) map[chipKey] = true;
       else delete map[chipKey];
       chrome.storage.local.set({ gp_chip_done: map });
+      chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: !isDone });
     });
 
-    chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nowDone });
     renderHomeScreen();
   }
 
