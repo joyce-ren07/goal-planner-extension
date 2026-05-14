@@ -734,8 +734,6 @@
   font-weight: 400;
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   opacity: 0.85;
   align-self: flex-start;
 }
