@@ -665,6 +665,7 @@
   border: 2px solid #C0514E;
   background: transparent;
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  transition: border-color 0.1s ease, background 0.1s ease, opacity 0.1s ease;
 }
 
 /* Done circle — SVG draws its own circle; remove CSS border/fill */
