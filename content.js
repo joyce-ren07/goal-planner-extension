@@ -1629,19 +1629,11 @@
     if (isDone) {
       chip.classList.remove('ext-goal-done');
       const circle = chip.querySelector('.ext-check-circle');
-      if (circle) {
-        circle.innerHTML = '';
-        circle.style.border = '2px solid #C0514E';
-        circle.style.background = 'transparent';
-      }
+      if (circle) circle.innerHTML = SVG_CIRCLE;
     } else {
       chip.classList.add('ext-goal-done');
       const circle = chip.querySelector('.ext-check-circle');
-      if (circle) {
-        circle.innerHTML = SVG_CHECK;
-        circle.style.border = 'none';
-        circle.style.background = 'transparent';
-      }
+      if (circle) circle.innerHTML = SVG_CHECK;
     }
 
     // Persist after visual update
