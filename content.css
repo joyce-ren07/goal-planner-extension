@@ -662,11 +662,15 @@
 }
 
 .ext-goal-chip-inner {
-  width: 100%;
-  height: 100%;
-  /* Clip goal content to the chip's explicit pixel height.
-     overflow is intentionally NOT set on the chip itself because GCal's
-     resize handles live at the chip boundary and must not be clipped. */
+  /* Absolutely-positioned overlay so GCal's original chip children
+     (resize handles, drag layers, etc.) remain fully intact beneath it.
+     pointer-events:none means every mouse event that doesn't land on one
+     of our interactive elements (.ext-check-circle) falls straight through
+     to GCal's native handlers — including the mousedown that starts a resize
+     drag.  background:inherit covers GCal's original event text visually. */
+  position: absolute;
+  inset: 0;
+  background: inherit;
   overflow: hidden;
   box-sizing: border-box;
   display: flex;
@@ -674,6 +678,7 @@
   align-items: flex-start;
   padding: 4px 6px 4px 0px;
   gap: 8px;
+  pointer-events: none;
 }
 
 /* Complete state — opacity dims the whole chip uniformly */
