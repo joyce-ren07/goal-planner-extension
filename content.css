@@ -626,64 +626,52 @@
 .gp-btn-danger:hover { background: rgba(197,34,31,0.08); }
 
 /* ─────────────────────────────────────────
-   Goal session chip injection
-   Scoped to [data-eventchip].ext-goal-chip — does NOT touch any other GCal styles.
+   Goal session chip — ALL extension visuals scoped under .ext-goal-root only.
+   The native [data-eventchip] keeps GCal border-radius / shell; we do not override
+   border-radius or box-shadow on the chip element itself.
 ───────────────────────────────────────── */
 
-/* Incomplete state */
 [data-eventchip].ext-goal-chip {
-  background: #FADADD !important;
-  border-top: 1.5px solid #E88B8B !important;
-  border-right: 1.5px solid #E88B8B !important;
-  border-bottom: 1.5px solid #E88B8B !important;
-  border-left: 4px solid #C0514E !important;
-  border-radius: 8px !important;
+  /* Marker class only + bounded height from JS. No borders/radius here — avoids
+     fighting GCal’s native event chrome. */
   width: 100% !important;
-  /* height is set explicitly via chip.style.height by boundChipHeight() in JS.
-     CSS height:100% is NOT used here because it degrades to height:auto when
-     [data-eventid]'s height is determined by positioning constraints rather than
-     an explicit pixel value — causing the chip to grow to fit its content and
-     appear to extend infinitely below the event's end time.
-     position:relative is also NOT overridden — GCal uses position:absolute on
-     [data-eventchip] with all four edges pinned; forcing relative breaks that.
-     overflow is NOT set here — GCal places resize handles as children of this
-     element and the ~8 px drag zone often overlaps the chip boundary. Clipping
-     here would hide those handles and suppress their pointer events. Content
-     clipping is handled by .ext-goal-chip-inner instead. */
   box-sizing: border-box !important;
-  transition: opacity 0.1s ease !important;
 }
 
-/* Visual feedback while GCal's native resize handle is being dragged */
-[data-eventchip].ext-goal-chip.ext-goal-resizing {
-  opacity: 0.78 !important;
-  outline: 2px solid #C0514E !important;
-  outline-offset: -2px !important;
-}
-
-.ext-goal-chip-inner {
-  /* Absolutely-positioned overlay so GCal's original chip children
-     (resize handles, drag layers, etc.) remain fully intact beneath it.
-     pointer-events:none means every mouse event that doesn't land on one
-     of our interactive elements (.ext-check-circle) falls straight through
-     to GCal's native handlers — including the mousedown that starts a resize
-     drag.  background:inherit covers GCal's original event text visually. */
+/* Single decoration layer: additive, absolute, pointer-events:none except .ext-check-circle */
+[data-eventchip].ext-goal-chip .ext-goal-root {
   position: absolute;
   inset: 0;
-  background: inherit;
-  overflow: hidden;
+  z-index: 1;
+  border-radius: inherit;
   box-sizing: border-box;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   padding: 4px 6px 4px 0px;
   gap: 8px;
+  overflow: hidden;
   pointer-events: none;
+
+  background: #fadadd;
+  border-top: 1.5px solid #e88b8b;
+  border-right: 1.5px solid #e88b8b;
+  border-bottom: 1.5px solid #e88b8b;
+  border-left: 4px solid #c0514e;
+
+  transition: opacity 0.1s ease;
 }
 
-/* Complete state — opacity dims the whole chip uniformly */
-[data-eventchip].ext-goal-chip.ext-goal-done {
-  opacity: 0.65 !important;
+/* Visual feedback while GCal's native resize handle is being dragged */
+[data-eventchip].ext-goal-chip.ext-goal-resizing .ext-goal-root {
+  opacity: 0.78;
+  outline: 2px solid #c0514e;
+  outline-offset: -2px;
+}
+
+/* Complete state — dim only our layer; native siblings unchanged */
+[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root {
+  opacity: 0.65;
 }
 
 /* Circular checkbox — both states use SVG; no CSS border needed */
