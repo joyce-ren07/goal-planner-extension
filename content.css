@@ -640,9 +640,19 @@
   border-radius: 8px !important;
   width: 100% !important;
   height: 100% !important;
-  overflow: visible !important;
+  /* Clip content to GCal's allocated event height — prevents visual overflow that
+     made goal sessions appear to expand infinitely below their end time. */
+  overflow: hidden !important;
+  position: relative !important;
   box-sizing: border-box !important;
   transition: opacity 0.1s ease !important;
+}
+
+/* Visual feedback while GCal's native resize handle is being dragged */
+[data-eventchip].ext-goal-chip.ext-goal-resizing {
+  opacity: 0.78 !important;
+  outline: 2px solid #C0514E !important;
+  outline-offset: -2px !important;
 }
 
 .ext-goal-chip-inner {
