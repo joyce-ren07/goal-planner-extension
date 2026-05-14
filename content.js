@@ -1742,7 +1742,6 @@
 
   GoalInteractionController.install();
 
-  // ── Toggle complete state and persist ── (legacy name — forwards to controller)
   function toggleGoalComplete(chipKey, chip) {
     GoalInteractionController.toggleCompletion(chipKey, chip);
   }
