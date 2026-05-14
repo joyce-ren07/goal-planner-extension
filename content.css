@@ -700,6 +700,9 @@
   border: none;
   background: transparent;
   transition: opacity 0.1s ease;
+  /* Re-enable pointer events for the checkbox only; the parent overlay is
+     pointer-events:none so everything else falls through to GCal. */
+  pointer-events: auto;
 }
 
 /* Done circle — SVG draws its own circle; remove CSS border/fill */
