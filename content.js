@@ -1735,22 +1735,90 @@
     }, true);
   }
 
-  // ── Attach ResizeObserver to detect GCal drag-resize and update stored duration ──
+  // ── Attach resize watchers to detect GCal drag-resize and update displayed duration ──
+  //
+  // Three-track approach that mirrors native GCal timed-event resize UX:
+  //
+  //  Track 1 — MutationObserver on aria-label / data-tooltip
+  //    GCal updates these attributes as the event is resized.  Whenever they
+  //    change we immediately rewrite the time label — zero debounce, so the
+  //    displayed time string follows the drag in real time.
+  //
+  //  Track 2 — ResizeObserver (pixel-based live duration)
+  //    GCal changes the inline height of [data-eventid] during a drag.  We
+  //    read the new height, convert to minutes via getGridMetrics() (same
+  //    pxPerHour constant used by the ghost-event renderer), and show a live
+  //    "X hr Y min" label.  This is the fallback when GCal hasn't yet updated
+  //    the aria-label mid-drag.  Storage is written only after the resize
+  //    settles (400 ms debounce) to avoid thrashing chrome.storage.
+  //
+  //  Track 3 — mousedown on the GCal resize handle
+  //    Adds .ext-goal-resizing (translucent + outline) while the drag is live,
+  //    removed on mouseup.  Passes through to GCal's own handler without
+  //    preventDefault so native snapping / min-duration / bounds all work.
+  //
   function attachChipResizeObserver(chip, goalData) {
     const eventContainer = chip.closest('[data-eventid]');
     if (!eventContainer) return;
 
+    // Disconnect any previous observers attached to this chip
     chip._resizeObserver?.disconnect();
+    chip._resizeMutAttrObs?.disconnect();
 
+    // ── Track 1: aria-label / data-tooltip attribute watcher (real-time label sync) ──
+    const labelObs = new MutationObserver(() => {
+      const newLabel = eventContainer.getAttribute('aria-label')
+        || eventContainer.getAttribute('data-tooltip') || '';
+      const timeMatch = newLabel.match(
+        /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i
+      );
+      if (!timeMatch) return;
+      const timeEl = chip.querySelector('.ext-goal-time');
+      if (timeEl) {
+        timeEl.textContent = timeMatch[1];
+        timeEl.style.display = chip.getBoundingClientRect().height < 42 ? 'none' : 'block';
+      }
+    });
+    labelObs.observe(eventContainer, {
+      attributes: true,
+      attributeFilter: ['aria-label', 'data-tooltip'],
+    });
+    chip._resizeMutAttrObs = labelObs;
+
+    // ── Track 2: ResizeObserver — pixel-based live duration + debounced persistence ──
     const resizeObserver = new ResizeObserver(() => {
+      // Immediate visual update: derive duration from current pixel height
+      const containerH = eventContainer.getBoundingClientRect().height;
+      const metrics = getGridMetrics();
+      if (metrics && metrics.pxPerHour > 0) {
+        // Round to nearest 15-min interval, matching GCal's snap behaviour
+        const rawMins = (containerH / metrics.pxPerHour) * 60;
+        const durationMins = Math.max(15, Math.round(rawMins / 15) * 15);
+        const timeEl = chip.querySelector('.ext-goal-time');
+        if (timeEl) {
+          timeEl.textContent = formatDuration(durationMins);
+          timeEl.style.display = containerH < 42 ? 'none' : 'block';
+        }
+      }
+
+      // Debounced: persist final value once the drag settles
       clearTimeout(chip._resizeDebounce);
       chip._resizeDebounce = setTimeout(() => {
-        const newLabel = eventContainer.getAttribute('aria-label') || '';
-        const timeMatch = newLabel.match(/(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i);
+        chip.classList.remove('ext-goal-resizing');
+
+        // Prefer the authoritative aria-label for the final stored value
+        const finalLabel = eventContainer.getAttribute('aria-label')
+          || eventContainer.getAttribute('data-tooltip') || '';
+        const timeMatch = finalLabel.match(
+          /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i
+        );
         const newTime = timeMatch ? timeMatch[1] : '';
 
         const timeEl = chip.querySelector('.ext-goal-time');
-        if (timeEl && newTime) timeEl.textContent = newTime;
+        if (timeEl && newTime) {
+          timeEl.textContent = newTime;
+          timeEl.style.display = containerH < 42 ? 'none' : 'block';
+        }
 
         chrome.storage.local.get(['goalStates'], (result) => {
           const states = result.goalStates || {};
@@ -1760,22 +1828,30 @@
           }
         });
 
-        const chipHeight = chip.getBoundingClientRect().height;
-        if (timeEl) timeEl.style.display = chipHeight < 42 ? 'none' : 'block';
-
         chrome.runtime.sendMessage({
           type: 'GOAL_RESIZE',
           id: goalData.id,
           newTime,
-          newHeight: eventContainer.getBoundingClientRect().height,
+          newHeight: containerH,
         });
 
-        console.log('GOAL RESIZE DETECTED — new time:', newTime);
-      }, 300);
+        console.log('GOAL RESIZE SETTLED — new time:', newTime, 'height:', containerH);
+      }, 400);
     });
 
     resizeObserver.observe(eventContainer);
     chip._resizeObserver = resizeObserver;
+
+    // ── Track 3: resize-handle mousedown — enter visual "resizing" state ──
+    // passive:true so we never delay GCal's own pointer handling
+    eventContainer.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('[class*="resize"], [data-resizehandle]')) return;
+      chip.classList.add('ext-goal-resizing');
+      // Clean up on mouseup regardless of where pointer is released
+      document.addEventListener('mouseup', () => {
+        chip.classList.remove('ext-goal-resizing');
+      }, { once: true, passive: true });
+    }, { passive: true });
   }
 
   // ── Re-inject if GCal wiped our structure; re-sync done state if present ──
