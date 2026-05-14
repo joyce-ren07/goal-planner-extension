@@ -1738,23 +1738,32 @@
         const spans = chip.querySelectorAll('span');
         const title = (spans[0] ? spans[0].textContent : chip.textContent).replace(/🎯\s*/g, '').trim();
 
-        // Strategy 1: second span
-        let time = spans[1] ? spans[1].textContent.trim() : '';
+        // Time extraction — try DOM selectors first, then aria-label / data-tooltip fallbacks
+        const timeEl = chip.querySelector('[data-start-time]')
+          || chip.querySelector('.KF4T6b')
+          || chip.querySelector('[class*="time"]')
+          || chip.querySelector('[aria-label*="pm"]')
+          || chip.querySelector('[aria-label*="am"]');
+        let time = timeEl?.textContent?.trim() || '';
 
-        // Strategy 2: parse innerText lines for a time-like pattern
+        // Fallback 1: parse from closest [data-eventid] aria-label
         if (!time) {
-          const lines = chip.innerText.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
-          const timeLine = lines.find((l, i) => i > 0 && /\d{1,2}(:\d{2})?\s*(am|pm)/i.test(l));
-          if (timeLine) time = timeLine;
+          const label = chip.closest('[data-eventid]')?.getAttribute('aria-label') || '';
+          const timeMatch = label.match(/\d+:\d+\s*(am|pm)\s*[-–]\s*\d+:\d+\s*(am|pm)/i)
+            || label.match(/\d+\s*(am|pm)\s*[-–]\s*\d+\s*(am|pm)/i);
+          time = timeMatch ? timeMatch[0] : '';
         }
 
-        // Strategy 3: data-start-time attribute anywhere in chip
+        // Fallback 2: parse from data-tooltip on the event container
         if (!time) {
-          const timeEl = chip.querySelector('[data-start-time]');
-          if (timeEl) time = timeEl.textContent.trim();
+          const eventContainer = chip.closest('[data-eventid]');
+          const fullLabel = eventContainer?.getAttribute('data-tooltip') || '';
+          const timeMatch2 = fullLabel.match(/\d+:\d+\s*(am|pm)\s*[-–]\s*\d+:\d+\s*(am|pm)/i)
+            || fullLabel.match(/\d+\s*(am|pm)\s*[-–]\s*\d+\s*(am|pm)/i);
+          time = timeMatch2 ? timeMatch2[0] : '';
         }
 
-        console.log('extracted title:', title, 'extracted time:', time);
+        console.log('EXTRACTED title:', title, '| time:', time);
 
         // Derive a stable key: prefer GCal's event ID, then goal id + text
         const eid  = chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
