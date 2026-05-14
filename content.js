@@ -1653,34 +1653,44 @@
 
   /** Optional: set true in DevTools to trace checkbox hits vs propagation. */
   const GP_GOAL_CLICK_DEBUG = false;
+  /** Log if content script loads twice and tries to double-bind document capture. */
+  const GP_GOAL_LISTENER_GUARD_DEBUG = false;
 
   /**
-   * GoalInteractionController — single entry point for goal-chip checkbox UX.
-   * Does not mutate native GCal DOM; only toggles extension classes / checkbox SVG
-   * and persistence when our checkbox is clicked.
-   *
-   * Delegation runs on document CAPTURE so we run before GCal handlers registered
-   * on [data-eventchip] that may stopPropagation during capture (which prevented
-   * per-chip listeners from ever seeing checkbox clicks).
+   * GoalInteractionController — single document-level delegation for goal checkboxes.
+   * One listener, one stable bound reference, guarded against duplicate content-script inits.
+   * Capture phase runs before GCal handlers that stopPropagation on [data-eventchip].
    */
   const GoalInteractionController = {
     _installed: false,
+    _boundDocClick: null,
 
     install() {
+      if (window.__gpGoalChipClickDelegationInstalled) {
+        if (GP_GOAL_LISTENER_GUARD_DEBUG) {
+          console.warn('[GoalPlanner] Goal checkbox delegation already present; duplicate bind skipped.');
+        }
+        this._installed = true;
+        return;
+      }
       if (this._installed) return;
       this._installed = true;
-      document.addEventListener('click', this._onDocumentClickCapture.bind(this), true);
+      window.__gpGoalChipClickDelegationInstalled = true;
+      this._boundDocClick = this._onDocumentClickCapture.bind(this);
+      document.addEventListener('click', this._boundDocClick, true);
     },
 
     _onDocumentClickCapture(e) {
-      const checkbox =
-        e.target.closest('[data-gp-checkbox].ext-check-circle') ||
-        e.target.closest('.ext-goal-root .ext-check-circle');
+      if (e.button !== 0 && e.button !== undefined) return;
+
+      const checkbox = e.target.closest('.goal-checkbox, [data-gp-checkbox].ext-check-circle');
       if (!checkbox) return;
 
-      const chip = checkbox.closest('[data-eventchip].ext-goal-chip');
+      const chip = checkbox.closest('[data-eventchip]');
+      if (!chip || !chip.querySelector('.ext-goal-root')) return;
+
       const root = checkbox.closest('.ext-goal-root');
-      if (!chip || !root || root.closest('[data-eventchip]') !== chip) return;
+      if (!root || root.closest('[data-eventchip]') !== chip) return;
 
       const chipKey = chip.dataset.gpChipKey;
       if (!chipKey) return;
@@ -1701,18 +1711,27 @@
       this.toggleCompletion(chipKey, chip);
     },
 
-    /** Apply completed visuals only (extension subtree); chip native children untouched. */
-    applyCompletionVisual(chip, isDone) {
-      chip.classList.toggle('ext-goal-done', !!isDone);
-      if (isDone) chip.dataset.goalCompleted = 'true';
+    /**
+     * Pure UI sync: chip.extension completed state ↔ class + checkbox glyph only.
+     * Native GCal nodes are never touched.
+     */
+    applyGoalSessionCompletionUI(chip, isDone) {
+      const done = !!isDone;
+      chip.classList.toggle('ext-goal-completed', done);
+      if (done) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
-      const circle = chip.querySelector('.ext-check-circle');
-      if (circle) circle.innerHTML = isDone ? SVG_CHECK : SVG_CIRCLE;
+      const circle = chip.querySelector('.goal-checkbox, .ext-check-circle');
+      if (circle) {
+        circle.innerHTML = done
+          ? (circle.classList.contains('ext-goal-completed') ? SVG_CHECK_DONE : SVG_CHECK_DONE)
+          : SVG_CIRCLE_ACTIVE;
+        circle.innerHTML = done ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
+      }
     },
 
     toggleCompletion(chipKey, chip) {
-      const nextDone = !chip.classList.contains('ext-goal-done');
-      this.applyCompletionVisual(chip, nextDone);
+      const nextDone = !chip.classList.contains('ext-goal-completed');
+      this.applyGoalSessionCompletionUI(chip, nextDone);
 
       chrome.storage.local.get(['gp_chip_done'], d => {
         const map = { ...(d.gp_chip_done || {}) };
@@ -1726,7 +1745,6 @@
     },
   };
 
-  // Install delegation as soon as this script executes — runs before calendar chip handlers that block propagation.
   GoalInteractionController.install();
 
   // ── Toggle complete state and persist ── (legacy name — forwards to controller)
