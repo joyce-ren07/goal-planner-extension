@@ -1636,11 +1636,27 @@
           return;
         }
 
-        // Extract title and time from GCal's original spans before we overwrite content
+        // Extract title and time from GCal's original DOM before clearing
         const spans = chip.querySelectorAll('span');
         const title = (spans[0] ? spans[0].textContent : chip.textContent).replace(/🎯\s*/g, '').trim();
-        const time  = spans[1] ? spans[1].textContent.trim() : '';
-        console.log('GOAL CHIP TITLE:', title, '| TIME:', time);
+
+        // Strategy 1: second span
+        let time = spans[1] ? spans[1].textContent.trim() : '';
+
+        // Strategy 2: parse innerText lines for a time-like pattern
+        if (!time) {
+          const lines = chip.innerText.split(/[\n\r]+/).map(l => l.trim()).filter(Boolean);
+          const timeLine = lines.find((l, i) => i > 0 && /\d{1,2}(:\d{2})?\s*(am|pm)/i.test(l));
+          if (timeLine) time = timeLine;
+        }
+
+        // Strategy 3: data-start-time attribute anywhere in chip
+        if (!time) {
+          const timeEl = chip.querySelector('[data-start-time]');
+          if (timeEl) time = timeEl.textContent.trim();
+        }
+
+        console.log('extracted title:', title, 'extracted time:', time);
 
         // Derive a stable key: prefer GCal's event ID, then goal id + text
         const eid  = chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
