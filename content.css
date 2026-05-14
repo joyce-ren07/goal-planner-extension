@@ -666,11 +666,11 @@
 /* Visual feedback while GCal's native resize handle is being dragged */
 [data-eventchip].ext-goal-chip.ext-goal-resizing .ext-goal-root {
   opacity: 0.78;
-  outline: 2px solid #c0514e;
+  outline: 2px solid #d3564b;
   outline-offset: -2px;
 }
 
-/* Complete state — dim only our layer; native siblings unchanged */
+/* Complete state — Figma FullscreenCalEvent opacity 65% on chip body */
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root {
   opacity: 0.65;
 }
