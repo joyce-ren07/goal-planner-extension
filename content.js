@@ -1696,6 +1696,22 @@
     });
   }
 
+  /** Keep .ext-goal-time in sync with GCal’s live aria/tooltip (always inject the span). */
+  function syncExtGoalTimeFromContainer(chip, eventContainer) {
+    const timeEl = chip.querySelector('.ext-goal-time');
+    if (!timeEl || !eventContainer) return;
+    const label =
+      eventContainer.getAttribute('aria-label') ||
+      eventContainer.getAttribute('data-tooltip') ||
+      '';
+    const timeMatch = label.match(
+      /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i
+    );
+    if (timeMatch) timeEl.textContent = timeMatch[1];
+    const h = chip.getBoundingClientRect().height;
+    timeEl.style.display = h > 0 && h < 42 ? 'none' : 'block';
+  }
+
   // ── Write inner DOM structure into a chip element ──
   //
   // ADDITIVE INJECTION — we never call innerHTML = '' or remove any GCal child.
