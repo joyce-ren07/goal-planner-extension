@@ -1818,6 +1818,12 @@
     const resizeObserver = new ResizeObserver(() => {
       // Immediate visual update: derive duration from current pixel height
       const containerH = eventContainer.getBoundingClientRect().height;
+
+      // Keep the chip height in sync with the container so it never overflows
+      // its event boundary mid-drag (mirrors boundChipHeight but synchronously
+      // since we already have the container height in hand).
+      if (containerH > 0) chip.style.height = containerH + 'px';
+
       const metrics = getGridMetrics();
       if (metrics && metrics.pxPerHour > 0) {
         // Round to nearest 15-min interval, matching GCal's snap behaviour
