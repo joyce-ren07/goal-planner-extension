@@ -60,7 +60,8 @@
 #gp-panel.mytasks-sidebar.open {
   pointer-events: auto;
   transform: translate3d(0, 0, 0);
-  overflow: visible;
+  overflow: hidden;
+  min-height: 0;
 }
 
 #gp-sidebar-rail {
@@ -105,23 +106,30 @@
 .mytasks-sidebar .gp-card {
   background: var(--m3-surface-container-lowest);
   margin: 0;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  height: 100%;
-  max-height: none;
+  max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   padding: 0 0 24px;
   box-shadow: none;
   font-family: 'Google Sans', Roboto, sans-serif;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--m3-on-surface) 28%, transparent) transparent;
 }
 
 .mytasks-sidebar .gp-card::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.mytasks-sidebar .gp-card::-webkit-scrollbar-thumb {
+  border-radius: var(--m3-radius-full);
+  background: color-mix(in srgb, var(--m3-on-surface) 28%, transparent);
 }
 
 .mytasks-sidebar .gp-header {
@@ -316,7 +324,8 @@
 }
 
 .mytasks-sidebar .gp-task-folder.open .gp-task-folder-panel {
-  max-height: 1200px;
+  max-height: none;
+  overflow: visible;
 }
 
 .mytasks-sidebar .gp-task-folder-panel-inner {

@@ -53,7 +53,7 @@
         </div>
         <div class="gp-task-folder-panel">
           <div class="gp-task-folder-panel-inner">
-            <article class="gp-task-row">
+            <article class="gp-task-row" data-due-date="2026-05-21">
               <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
                 <span class="gp-task-checkbox-icon" aria-hidden="true">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -83,7 +83,7 @@
               </div>
             </article>
 
-            <article class="gp-task-row">
+            <article class="gp-task-row" data-due-date="2026-05-21">
               <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
                 <span class="gp-task-checkbox-icon" aria-hidden="true">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -459,9 +459,137 @@
     window.addEventListener('resize', reapply);
   }
 
+  const MONTH_LOOKUP = {
+    jan: 0,
+    january: 0,
+    feb: 1,
+    february: 1,
+    mar: 2,
+    march: 2,
+    apr: 3,
+    april: 3,
+    may: 4,
+    jun: 5,
+    june: 5,
+    jul: 6,
+    july: 6,
+    aug: 7,
+    august: 7,
+    sep: 8,
+    sept: 8,
+    september: 8,
+    oct: 9,
+    october: 9,
+    nov: 10,
+    november: 10,
+    dec: 11,
+    december: 11,
+  };
+
+  function normalizeDateOnly(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function parseTaskDueDate(subtitleText) {
+    if (!subtitleText) return null;
+
+    const match = subtitleText.trim().match(/^Due\s+\w+,?\s+([A-Za-z]+)\s+(\d{1,2})$/i);
+    if (!match) return null;
+
+    const monthKey = match[1].trim().toLowerCase();
+    const day = Number(match[2]);
+    const month = MONTH_LOOKUP[monthKey];
+    if (month === undefined || Number.isNaN(day)) return null;
+
+    const now = new Date();
+    let year = now.getFullYear();
+    const candidate = new Date(year, month, day);
+    if (candidate < normalizeDateOnly(now) && month < now.getMonth()) {
+      year += 1;
+    }
+
+    return new Date(year, month, day);
+  }
+
+  function getTaskDueDate(row) {
+    if (!row) return null;
+
+    if (row.dataset.dueDate) {
+      const [year, month, day] = row.dataset.dueDate.split('-').map(Number);
+      if (year && month && day) {
+        return new Date(year, month - 1, day);
+      }
+    }
+
+    const subtitle = row.querySelector('.gp-task-subtitle')?.textContent;
+    return parseTaskDueDate(subtitle);
+  }
+
+  function getDeadlineFolderKey(dueDate, now = new Date()) {
+    if (!dueDate) return 'later';
+
+    const dueDay = normalizeDateOnly(dueDate);
+    const today = normalizeDateOnly(now);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (dueDay < today) return 'today';
+    if (dueDay.getTime() === today.getTime()) return 'today';
+    if (dueDay.getTime() === tomorrow.getTime()) return 'tomorrow';
+    return 'later';
+  }
+
+  function setCheckboxUncheckedVisual(checkbox) {
+    const icon = checkbox.querySelector('.gp-task-checkbox-icon');
+    if (!icon) return;
+
+    icon.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+    </svg>`;
+    checkbox.classList.remove('gp-task-checkbox--checked');
+  }
+
+  function restoreTaskFromCompleted(chip) {
+    const row = chip.closest('.gp-task-row');
+    const completedFolder = row?.closest('.gp-task-folder');
+    const accordion = row?.closest('#gp-tasks-accordion');
+    if (!row || !accordion || completedFolder?.dataset.folder !== 'completed') return;
+
+    const targetFolderKey = getDeadlineFolderKey(getTaskDueDate(row));
+    const targetFolder = accordion.querySelector(`[data-folder="${targetFolderKey}"]`);
+    if (!targetFolder) return;
+
+    const checkbox = row.querySelector('.gp-task-checkbox');
+    if (checkbox) {
+      checkbox.disabled = false;
+      setCheckboxUncheckedVisual(checkbox);
+    }
+
+    row.classList.remove('gp-task-row--completed', 'gp-task-row--departing');
+    row.dataset.completing = 'false';
+
+    const targetInner = targetFolder.querySelector('.gp-task-folder-panel-inner');
+    if (targetInner) {
+      targetInner.appendChild(row);
+    }
+
+    adjustFolderCount(completedFolder, -1);
+    adjustFolderCount(targetFolder, 1);
+
+    targetFolder.classList.add('open');
+    const targetToggle = targetFolder.querySelector('.gp-task-folder-toggle');
+    if (targetToggle) {
+      targetToggle.setAttribute('aria-expanded', 'true');
+    }
+  }
+
   function applyTaskStatus(chip, statusKey, options = {}) {
     const status = TASK_STATUSES[statusKey];
     if (!chip || !status) return;
+
+    const row = chip.closest('.gp-task-row');
+    const folder = row?.closest('.gp-task-folder');
+    const folderKey = folder?.dataset.folder;
 
     chip.dataset.status = statusKey;
     chip.classList.remove(
@@ -484,12 +612,15 @@
     }
 
     if (statusKey === 'done' && !options.skipComplete) {
-      const row = chip.closest('.gp-task-row');
-      const folder = row?.closest('.gp-task-folder');
       const checkbox = row?.querySelector('.gp-task-checkbox');
-      if (row && folder?.dataset.folder !== 'completed' && checkbox) {
+      if (row && folderKey !== 'completed' && checkbox) {
         completeTask(checkbox);
       }
+      return;
+    }
+
+    if (folderKey === 'completed' && statusKey !== 'done' && !options.skipRestore) {
+      restoreTaskFromCompleted(chip);
     }
   }
 
@@ -497,18 +628,27 @@
     const triggerRect = trigger.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const menuWidth = menu.offsetWidth || 208;
-    const maxLeft = Math.max(8, panelRect.width - menuWidth - 8);
-    let left = triggerRect.right - panelRect.left - menuWidth;
-    left = Math.max(8, Math.min(left, maxLeft));
+    const menuHeight = menu.offsetHeight || 156;
+    const edgePadding = 8;
 
-    menu.style.top = `${triggerRect.bottom - panelRect.top + 4}px`;
+    let left = triggerRect.right - panelRect.left - menuWidth;
+    left = Math.max(edgePadding, Math.min(left, panelRect.width - menuWidth - edgePadding));
+
+    let top = triggerRect.bottom - panelRect.top + 4;
+    if (top + menuHeight > panelRect.height - edgePadding) {
+      top = triggerRect.top - panelRect.top - menuHeight - 4;
+    }
+    top = Math.max(edgePadding, Math.min(top, panelRect.height - menuHeight - edgePadding));
+
+    menu.style.top = `${top}px`;
     menu.style.left = `${left}px`;
   }
 
   function initTaskStatusMenus(panel) {
     const menu = panel.querySelector('#gp-status-menu');
     const accordion = panel.querySelector('#gp-tasks-accordion');
-    if (!menu || !accordion || menu.dataset.wired === 'true') return;
+    const scrollContainer = panel.querySelector('.gp-card');
+    if (!menu || !accordion || !scrollContainer || menu.dataset.wired === 'true') return;
 
     menu.dataset.wired = 'true';
     let activeTrigger = null;
@@ -582,7 +722,7 @@
       openStatusMenu(trigger);
     });
 
-    panel.addEventListener('pointerdown', (event) => {
+    panel.addEventListener('click', (event) => {
       if (!isStatusMenuOpen()) return;
       if (menu.contains(event.target) || event.target.closest('.gp-filter-chip-menu-btn')) return;
       closeStatusMenu();
@@ -598,6 +738,15 @@
       if (!activeTrigger || !isStatusMenuOpen()) return;
       positionStatusMenu(activeTrigger, menu, panel);
     });
+
+    scrollContainer.addEventListener(
+      'scroll',
+      () => {
+        if (!activeTrigger || !isStatusMenuOpen()) return;
+        positionStatusMenu(activeTrigger, menu, panel);
+      },
+      { passive: true }
+    );
 
     closeTaskStatusMenu = closeStatusMenu;
   }
