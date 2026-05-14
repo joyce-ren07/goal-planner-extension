@@ -1796,6 +1796,12 @@
       resetDragState();
     }
 
+    function clearPointerSelection() {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      selection.removeAllRanges();
+    }
+
     function onPointerMove(event) {
       if (event.pointerId !== activePointerId) return;
 
@@ -1809,6 +1815,8 @@
       } else {
         event.preventDefault();
       }
+
+      clearPointerSelection();
 
       pointerX = event.clientX;
       pointerY = event.clientY;
@@ -1835,6 +1843,8 @@
       if (!dragActive) {
         pendingCard = null;
         activePointerId = null;
+        document.body.classList.remove('mytasks-kanban-dragging');
+        clearPointerSelection();
         return;
       }
 
@@ -1859,6 +1869,10 @@
       activePointerId = event.pointerId;
       startX = event.clientX;
       startY = event.clientY;
+
+      event.preventDefault();
+      clearPointerSelection();
+      document.body.classList.add('mytasks-kanban-dragging');
 
       document.addEventListener('pointermove', onPointerMove, { passive: false });
       document.addEventListener('pointerup', onPointerUp);
