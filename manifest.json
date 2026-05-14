@@ -4,8 +4,11 @@
   "version": "1.0",
   "description": "Plan long-term goals and block focused work sessions directly in Google Calendar.",
   "permissions": ["identity", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "oauth2": {
-    "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "client_id": "406008612162-m5le40di3sfmk6ak8htdhn62qnsepmh4.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/calendar.events"
     ]

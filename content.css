@@ -12,27 +12,32 @@
 #gp-sidebar-btn.active { background: #d3e3fd; }
 #gp-sidebar-btn svg { width: 20px; height: 20px; }
 
-/* ── Panel shell (matches GCal native Tasks/Notes rail: 320px, flush right, hairline left edge) ── */
+/* ── Panel shell — sits below the GCal toolbar, left of the icon rail ── */
+/* top/right are set dynamically by JS to match GCal's live layout measurements */
 #gp-panel {
-  position: fixed; top: 0; right: 0;
-  width: 320px; height: 100vh; z-index: 1000;
+  position: fixed;
+  top: 65px; right: 56px; bottom: 0;
+  width: 320px; height: auto;
+  z-index: 1000;
   display: flex; flex-direction: column;
-  pointer-events: none; opacity: 0;
-  transform: translateX(0);
-  transition: opacity 0.2s ease;
-  border-radius: 0;
-  box-shadow: -1px 0 0 #e0e0e0;
+  pointer-events: none;
+  /* hidden: slide fully off-screen to the right (panel width + rail width) */
+  transform: translateX(calc(100% + 56px));
+  /* match Material Design standard easing used by GCal's native side panels */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-#gp-panel.open { pointer-events: all; opacity: 1; }
+#gp-panel.open { pointer-events: all; transform: translateX(0); }
 
-/* ── Card ── */
+/* ── Card — rounded like GCal's Contacts/Tasks panels ── */
 .gp-card {
-  background: #fff; border-radius: 0;
-  margin: 0; flex: 1; min-height: 0; height: 100%; max-height: none;
+  background: #fff;
+  border-radius: 16px;
+  margin: 8px 0;
+  flex: 1; min-height: 0; height: 100%; max-height: 100%;
   overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column; align-items: stretch;
   padding: 20px 16px 24px;
-  box-shadow: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   font-family: 'Google Sans', Roboto, sans-serif;
   scrollbar-width: none;
 }
@@ -44,19 +49,25 @@
   display: flex; align-items: center;
   justify-content: space-between; padding-bottom: 16px; flex-shrink: 0;
 }
+.gp-header-title { display: flex; flex-direction: column; gap: 2px; }
+.gp-header-eyebrow {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 10px; font-weight: 500; color: #5f6368;
+  letter-spacing: 1.5px; text-transform: uppercase; line-height: 14px;
+}
 .gp-header h2 {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 16px; font-weight: 500; color: #3c4043;
-  margin: 0; line-height: 20px;
+  font-size: 22px; font-weight: 400; color: #202124;
+  margin: 0; line-height: 28px;
 }
-.gp-header-actions { display: flex; gap: 4px; align-items: center; }
 .gp-icon-btn {
   width: 32px; height: 32px; border: none; background: transparent;
   border-radius: 50%; cursor: pointer; display: flex;
   align-items: center; justify-content: center;
-  padding: 0; transition: background 0.15s; color: #444746;
+  padding: 0; transition: background 0.15s; color: #5f6368;
 }
 .gp-icon-btn:hover { background: #f0f4f9; }
+.gp-close-icon-btn { flex-shrink: 0; }
 
 /* ── Divider ── */
 .gp-divider { width: 100%; height: 1px; background: #e0e0e0; flex-shrink: 0; }
@@ -87,29 +98,93 @@
 }
 
 /* ── Goals list (populated state) ── */
-.gp-goals-list { display: none; width: 100%; box-sizing: border-box; flex-direction: column; gap: 10px; padding: 16px 0 12px; }
+.gp-goals-list { display: none; width: 100%; box-sizing: border-box; flex-direction: column; gap: 2px; padding: 12px 0 12px; }
 .gp-goals-list.visible { display: flex; }
-.gp-goal-chip {
-  background: #e8edf6; border-radius: 16px;
-  padding: 12px 16px; display: flex; flex-direction: column; gap: 4px;
+
+/* Goal row — Google Calendar sidebar style */
+.gp-goal-row {
+  padding: 8px 4px 8px 10px;
+  border-radius: 8px;
+  position: relative;
+  transition: background 0.1s;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+}
+.gp-goal-row:hover { background: #f0f4f9; }
+.gp-goal-row-main {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 4px;
+}
+.gp-goal-row-info {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 3px;
+  padding-top: 1px;
 }
 .gp-goal-chip-name {
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 13px; font-weight: 500; color: #3c4043; margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gp-goal-chip-sub {
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 12px; font-weight: 400; color: #5f6368; margin: 0;
 }
-.gp-progress-bar { width: 100%; height: 4px; background: #dadce0; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.gp-progress-bar { width: 100%; height: 3px; background: #dadce0; border-radius: 2px; margin-top: 8px; overflow: hidden; }
 .gp-progress-fill { height: 100%; background: #0b56cf; border-radius: 2px; transition: width 0.3s; }
+
+/* Kebab trigger — invisible by default, fades in on row hover */
+.gp-goal-kebab {
+  opacity: 0;
+  background: none; border: none; cursor: pointer;
+  width: 28px; height: 28px; min-width: 28px;
+  border-radius: 50%; padding: 0; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #5f6368;
+  transition: opacity 0.12s, background 0.12s;
+}
+.gp-goal-row:hover .gp-goal-kebab,
+.gp-goal-kebab:focus-visible,
+.gp-goal-kebab.menu-open { opacity: 1; }
+.gp-goal-kebab:hover { background: rgba(0,0,0,0.08); }
+.gp-goal-kebab.menu-open { background: rgba(0,0,0,0.08); }
+
+/* Contextual action menu */
+.gp-ctx-menu {
+  position: fixed;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 2px 6px 2px rgba(0,0,0,0.15);
+  min-width: 176px;
+  z-index: 10003;
+  padding: 4px 0;
+  display: none;
+}
+.gp-ctx-menu.open {
+  display: block;
+  animation: gpFadeIn 0.1s ease;
+}
+.gp-ctx-item {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; padding: 9px 16px;
+  background: none; border: none; cursor: pointer;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px; font-weight: 400; color: #3c4043;
+  text-align: left; white-space: nowrap;
+  box-sizing: border-box; transition: background 0.1s;
+}
+.gp-ctx-item:hover { background: #f1f3f4; }
+.gp-ctx-item svg { flex-shrink: 0; color: #5f6368; }
+.gp-ctx-divider { height: 1px; background: #e0e0e0; margin: 4px 0; }
+
 .gp-add-another {
   display: flex; align-items: center; gap: 6px;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 13px; font-weight: 500; color: #0b56cf;
-  cursor: pointer; background: none; border: none; padding: 4px 0; width: 100%;
+  cursor: pointer; background: none; border: none; padding: 6px 10px; width: 100%;
+  margin-top: 4px; border-radius: 8px; transition: background 0.1s;
 }
-.gp-add-another:hover { text-decoration: underline; }
+.gp-add-another:hover { background: #f0f4f9; text-decoration: none; }
 
 /* ─────────────────────────────────────────
    SCREEN 2 — Goal name + schedule (frame 1046:9958)
@@ -156,71 +231,72 @@
   width: 20px; height: 20px; flex-shrink: 0;
   color: #444746; display: flex; align-items: center; justify-content: center;
 }
-.gp-action-group { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 28px; }
+/* Action row */
+.gp-action-group { display: flex; flex-direction: column; width: 100%; margin-top: 16px; }
 .gp-btn-primary {
-  width: 100%; height: 48px; background: #0b56cf; border: none;
-  border-radius: 12px; color: #fff;
+  height: 36px; background: #1a73e8; border: none;
+  border-radius: 4px; color: #fff;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  padding: 0 24px; transition: background 0.15s; white-space: nowrap;
 }
-.gp-btn-primary:hover { background: #0a4bbf; }
-.gp-btn-primary:disabled { background: #dfdfdf; color: #94989c; cursor: default; }
-.gp-btn-secondary {
-  width: 100%; height: 48px; background: #dfdfdf; border: none;
-  border-radius: 12px; color: #94989c;
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 14px; font-weight: 500; cursor: default;
+.gp-btn-primary.gp-btn-full { width: 100%; padding: 0; }
+.gp-btn-primary.gp-btn-calendar {
+  background: #0b56cf; border-radius: 16px; height: 48px;
 }
-.gp-btn-secondary.enabled {
-  background: transparent; border: 1.5px solid #0b56cf;
-  color: #0b56cf; cursor: pointer;
-}
-.gp-btn-secondary.enabled:hover { background: #f0f4ff; }
+.gp-btn-primary.gp-btn-calendar:hover:not(:disabled) { background: #0944a8; }
+.gp-btn-primary:hover:not(:disabled) { background: #1557b0; }
+.gp-btn-primary:disabled { background: #f1f3f4; color: #bdc1c6; cursor: default; }
 
 /* ─────────────────────────────────────────
-   SCREEN 2b — Recurrence overlay (frame 1046:10694)
+   Recurrence modal — matches Figma node 1046:10694
 ───────────────────────────────────────── */
 #gp-recurrence-overlay {
-  display: none; position: absolute; inset: 0;
-  background: rgba(0,0,0,0.35); border-radius: 0;
-  z-index: 10; align-items: flex-end; justify-content: center;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.32);
+  z-index: 10001;
+  align-items: center; justify-content: center;
 }
 #gp-recurrence-overlay.open { display: flex; }
 .gp-recurrence-sheet {
-  background: #e8edf6; border-radius: 0;
-  width: 100%; padding: 20px 0;
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-  animation: slideUp 0.2s ease;
+  background: #e8edf6;
+  border-radius: 28px;
+  width: 335px;
+  padding: 28px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+  display: flex; flex-direction: column; gap: 0;
+  animation: gpFadeIn 0.15s ease;
+  max-height: 90vh; overflow-y: auto;
 }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.gp-rec-inner { width: 100%; box-sizing: border-box; padding: 0 16px; display: flex; flex-direction: column; gap: 18px; }
+@keyframes gpFadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+.gp-rec-inner { display: flex; flex-direction: column; gap: 20px; }
 .gp-rec-title {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 16px; font-weight: 500; color: #3c4043; margin: 0;
+  font-size: 24px; font-weight: 400; color: #36363f; margin: 0;
 }
 .gp-rec-label {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 12px; font-weight: 400; color: #5f6368; margin: 0;
+  font-size: 14px; font-weight: 500; color: #49454f; margin: 0 0 12px 0; display: block;
 }
-/* Repeats every row */
+/* Pill inputs — match Figma #dde2e9 background, no border */
 .gp-rec-freq { display: flex; gap: 8px; align-items: center; }
 .gp-rec-num-input {
   background: #dde2e9; border: none; border-radius: 4px;
   width: 50px; height: 40px; text-align: center;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043; outline: none;
+  font-size: 14px; font-weight: 400; color: #49454f; outline: none;
 }
 .gp-rec-period-select {
   background: #dde2e9; border: none; border-radius: 4px;
-  flex: 1; height: 40px; padding: 0 12px;
+  flex: 1; height: 40px; padding: 0 28px 0 16px;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043; outline: none; cursor: pointer;
+  font-size: 14px; font-weight: 400; color: #49454f; outline: none; cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%2349454f'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 8px center;
 }
-/* Day selector */
-.gp-days { display: flex; gap: 8px; align-items: center; }
+/* Day selector — 24px circles per Figma */
+.gp-days { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .gp-day-btn {
   width: 24px; height: 24px; border-radius: 50%; border: none;
   background: #dadce0; cursor: pointer;
@@ -229,60 +305,127 @@
   display: flex; align-items: center; justify-content: center;
   transition: background 0.12s, color 0.12s; padding: 0;
 }
+.gp-day-btn:hover:not(.selected) { background: #c8cdd4; }
 .gp-day-btn.selected { background: #0b56cf; color: #fff; }
-/* Set time */
-.gp-time-input {
-  background: #dde2e9; border: none; border-radius: 4px;
-  width: 100%; height: 40px; padding: 0 16px;
+.gp-time-dropdown {
+  position: fixed;
+  background: #fff; border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  max-height: 200px; overflow-y: auto; width: 180px;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043; outline: none;
+  font-size: 14px; color: #3c4043; z-index: 10002;
+  display: none; scrollbar-width: thin;
 }
-/* Session length — added input matching same style */
+.gp-time-dd-item {
+  padding: 8px 14px; cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.gp-time-dd-item:hover { background: #f1f3f4; }
+.gp-time-dd-item.selected { background: #e8eaed; }
+.gp-time-dd-dur { color: #5f6368; font-size: 13px; margin-left: 6px; flex-shrink: 0; }
+/* Session length */
 .gp-session-row { display: flex; gap: 8px; align-items: center; }
 .gp-session-input {
   background: #dde2e9; border: none; border-radius: 4px;
   width: 70px; height: 40px; padding: 0 12px;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043; outline: none; text-align: center;
+  font-size: 14px; font-weight: 400; color: #49454f; outline: none; text-align: center;
 }
 .gp-session-unit {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 12px; font-weight: 400; color: #5f6368;
+  font-size: 14px; font-weight: 400; color: #49454f;
 }
 /* Ends section */
-.gp-ends { display: flex; flex-direction: column; gap: 4px; }
-.gp-radio-row { display: flex; align-items: center; gap: 8px; min-height: 40px; }
-.gp-radio-row input[type="radio"] { accent-color: #0b56cf; width: 16px; height: 16px; cursor: pointer; }
+.gp-ends { display: flex; flex-direction: column; gap: 0; }
+.gp-radio-row { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.gp-radio-row input[type="radio"] { accent-color: #0b56cf; width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
 .gp-radio-row label {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 12px; font-weight: 400; color: #5f6368; cursor: pointer;
+  font-size: 14px; font-weight: 400; color: #49454f; cursor: pointer; min-width: 40px;
 }
-.gp-end-date-input, .gp-occur-input {
-  background: #dde2e9; border: none; border-radius: 4px;
-  height: 40px; padding: 0 12px;
+/* Date chip picker */
+.gp-date-picker-wrapper { display: inline-flex; }
+.gp-date-chip {
+  background: #e8eaed; border: none; border-radius: 4px;
+  height: 32px; padding: 0 12px;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043; outline: none;
+  font-size: 14px; font-weight: 400; color: #3c4043;
+  cursor: pointer; transition: background 0.12s;
+  border-bottom: 2px solid transparent; white-space: nowrap;
 }
-.gp-end-date-input { width: 130px; }
-.gp-occur-input { width: 60px; text-align: center; }
-/* Overlay action buttons */
-.gp-rec-actions { display: flex; gap: 8px; justify-content: flex-end; width: 100%; box-sizing: border-box; }
+.gp-date-chip:hover { background: #dadce0; }
+.gp-date-chip.active { background: #e8f0fe; border-bottom-color: #1a73e8; }
+/* Calendar popover */
+.gp-cal-popover {
+  position: fixed;
+  background: #fff; border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  padding: 16px; width: 280px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 13px; z-index: 10002; display: none;
+}
+.gp-cal-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 12px;
+}
+.gp-cal-nav {
+  background: none; border: none; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: #1a73e8; padding: 0; line-height: 1;
+  transition: background 0.12s;
+}
+.gp-cal-nav:hover { background: #e8f0fe; }
+.gp-cal-month-year {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px; font-weight: 500; color: #3c4043;
+}
+.gp-cal-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px;
+}
+.gp-cal-weekdays span {
+  height: 24px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: #5f6368;
+}
+.gp-cal-days { display: grid; grid-template-columns: repeat(7, 1fr); }
+.gp-cal-day {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: none; cursor: pointer;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 13px; font-weight: 400; color: #3c4043;
+  display: flex; align-items: center; justify-content: center;
+  justify-self: center; padding: 0; transition: background 0.12s;
+}
+.gp-cal-day:hover:not(.selected):not(.gp-cal-day-empty) { background: #f1f3f4; }
+.gp-cal-day.today:not(.selected) { background: #e8f0fe; color: #1a73e8; font-weight: 500; }
+.gp-cal-day.selected { background: #1a73e8; color: #fff; }
+.gp-cal-day-empty { pointer-events: none; }
+/* Occurrences input (standalone, no longer grouped with date input) */
+.gp-occur-input {
+  background: #dde2e9; border: none; border-radius: 4px;
+  height: 40px; padding: 0 16px; box-sizing: border-box;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px; font-weight: 400; color: #49454f; outline: none;
+  width: 56px; text-align: center;
+}
+/* Modal footer buttons */
+.gp-rec-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; padding-top: 8px; }
 .gp-btn-text {
   background: transparent; border: none; cursor: pointer; height: 40px;
-  padding: 0 16px; border-radius: 20px;
+  padding: 0 16px; border-radius: 100px;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 14px; font-weight: 500; color: #0b56cf;
   transition: background 0.15s;
 }
-.gp-btn-text:hover { background: #e8f0fe; }
+.gp-btn-text:hover { background: rgba(11,86,207,0.08); }
 .gp-btn-filled-pill {
   background: #0b56cf; border: none; cursor: pointer; height: 40px;
-  padding: 0 20px; border-radius: 20px;
+  padding: 0 24px; border-radius: 100px;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 14px; font-weight: 500; color: #fff;
   transition: background 0.15s;
 }
-.gp-btn-filled-pill:hover { background: #0a4bbf; }
+.gp-btn-filled-pill:hover { background: #0944a8; }
 
 /* ─────────────────────────────────────────
    SCREEN 3 — Suggested sessions (frame 1046:10064 sidebar)
@@ -303,34 +446,68 @@
   transition: background 0.15s;
 }
 .gp-edit-btn:hover { background: #f0f4f9; }
-/* Summary chips (schedule summary) */
-.gp-chip {
-  background: #e2e3e1; border-radius: 16px;
-  padding: 12px 16px; margin-bottom: 6px;
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043; cursor: pointer;
+/* Screen 3 — clickable schedule chips (GCal edit-field style) */
+.gp-confirm-chip {
+  background: #f1f3f4;
+  border: none; border-radius: 8px;
+  padding: 11px 12px 11px 14px; margin-bottom: 6px;
+  width: 100%; box-sizing: border-box;
   display: flex; align-items: center; justify-content: space-between;
-}
-.gp-chip.editable { background: #e8edf6; }
-.gp-adjust-recurrence-btn { border: none; cursor: pointer; width: 100%; text-align: left; margin-top: 2px; }
-.gp-adjust-recurrence-label {
+  cursor: pointer; text-align: left;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 13px; font-weight: 400; color: #3c4043;
+  transition: background 0.12s;
 }
-/* Session suggestion cards */
+.gp-confirm-chip:hover { background: #e8edf6; }
+.gp-confirm-chip-label {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gp-confirm-chip-icon {
+  flex-shrink: 0; color: #9aa0a6; margin-left: 8px;
+  transition: color 0.12s;
+}
+.gp-confirm-chip:hover .gp-confirm-chip-icon { color: #5f6368; }
+/* Session suggestion cards — coral/pink calendar-event style */
 .gp-session-card {
-  background: #e8edf6; border-radius: 16px;
-  padding: 12px 16px; display: flex; flex-direction: column; gap: 2px;
+  background: #f6b3ac;
+  border: 2px dashed #d3564b;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 2px;
   margin-bottom: 6px;
 }
-.gp-session-date {
+.gp-session-name {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 500; color: #3c4043; margin: 0;
+  font-size: 13px; font-weight: 500; color: #202124;
+  margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .gp-session-time {
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 12px; font-weight: 400; color: #5f6368; margin: 0;
 }
+
+/* Skeleton loading cards */
+.gp-skeleton-card {
+  background: #f1f3f4;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 6px;
+  animation: gp-pulse 1.4s ease-in-out infinite;
+}
+.gp-skeleton-line {
+  background: #e0e0e0; border-radius: 4px; height: 12px;
+}
+.gp-skeleton-line--title { width: 70%; }
+.gp-skeleton-line--time  { width: 45%; }
+@keyframes gp-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* Suggestions list container */
+#gp-suggestions-list { display: flex; flex-direction: column; }
 
 /* ── Toast ── */
 .gp-toast {
@@ -341,3 +518,83 @@
   text-align: center; line-height: 18px; margin-top: 8px;
 }
 .gp-toast.visible { display: block; }
+
+/* ─────────────────────────────────────────
+   Screen 3 — Standardize time section
+───────────────────────────────────────── */
+.gp-std-time-section { margin-top: 16px; }
+.gp-std-time-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+}
+.gp-std-time-hint {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 11px; font-weight: 400; color: #9aa0a6; letter-spacing: 0.3px;
+}
+.gp-std-chips {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.gp-std-chip {
+  background: #f1f3f4; border: 2px solid transparent; border-radius: 10px;
+  padding: 8px 4px; cursor: pointer; text-align: center; line-height: 1.3;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 11px; font-weight: 500; color: #3c4043;
+  transition: border-color 0.15s, background 0.15s;
+}
+.gp-std-chip small {
+  font-size: 10px; font-weight: 400; color: #5f6368; display: block; margin-top: 3px;
+}
+.gp-std-chip:hover { background: #e8edf6; }
+.gp-std-chip.active { border-color: #0b56cf; background: #e8f0fe; }
+.gp-std-chip.active small { color: #0b56cf; }
+.gp-std-chip--custom { color: #3c4043; }
+
+/* ─────────────────────────────────────────
+   Form screen — edit mode header
+───────────────────────────────────────── */
+.gp-form-edit-header {
+  display: none; /* shown via JS in edit mode */
+  align-items: center; gap: 8px;
+  margin-bottom: 12px; padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.gp-form-edit-label {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px; font-weight: 500; color: #3c4043;
+}
+
+/* ─────────────────────────────────────────
+   Delete confirmation modal — GCal style
+───────────────────────────────────────── */
+#gp-delete-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.32); z-index: 10001;
+  align-items: center; justify-content: center;
+}
+#gp-delete-overlay.open { display: flex; }
+.gp-delete-sheet {
+  background: #fff; border-radius: 28px;
+  width: 312px; padding: 24px 24px 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: gpFadeIn 0.15s ease;
+}
+.gp-delete-title {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 22px; font-weight: 400; color: #202124; margin: 0; line-height: 28px;
+}
+.gp-delete-body {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px; font-weight: 400; color: #5f6368; margin: 0; line-height: 20px;
+}
+.gp-delete-actions {
+  display: flex; gap: 4px; justify-content: flex-end;
+  align-items: center; padding-top: 4px;
+}
+.gp-btn-danger {
+  background: transparent; border: none; cursor: pointer; height: 36px;
+  padding: 0 12px; border-radius: 4px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px; font-weight: 500; color: #c5221f;
+  transition: background 0.15s;
+}
+.gp-btn-danger:hover { background: rgba(197,34,31,0.08); }
