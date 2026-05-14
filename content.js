@@ -1716,6 +1716,7 @@
      */
     applyGoalSessionCompletionUI(chip, isDone) {
       const done = !!isDone;
+      chip.classList.remove('ext-goal-done');
       chip.classList.toggle('ext-goal-completed', done);
       if (done) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
