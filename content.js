@@ -1731,33 +1731,33 @@
   //   fall through the overlay to GCal's native elements below.
   //
   function injectGoalChipContent(chip, goalData, isDone) {
-    // Idempotent: remove only our previously-injected overlay, nothing else.
-    chip.querySelector('.ext-goal-chip-inner')?.remove();
+    // Idempotent: remove only our decoration root; never clear native chip children.
+    chip.querySelector('.ext-goal-root')?.remove();
 
     chip.classList.add('ext-goal-chip');
     chip.classList.toggle('ext-goal-done', isDone);
     chip.dataset.gpChipKey = goalData.chipKey;
 
-    const inner = document.createElement('div');
-    inner.className = 'ext-goal-chip-inner';
-    inner.innerHTML =
+    const root = document.createElement('div');
+    root.className = 'ext-goal-root';
+    const initialTime = goalData.time ? escHtml(goalData.time) : '';
+    root.innerHTML =
       '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
       '<div class="ext-goal-text-col">' +
         '<span class="ext-goal-badge">Goal</span>' +
         '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
-        (goalData.time ? '<span class="ext-goal-time">' + escHtml(goalData.time) + '</span>' : '') +
+        '<span class="ext-goal-time">' + initialTime + '</span>' +
       '</div>';
 
     // Append last — GCal's original children (resize handles etc.) remain in
     // the child list before ours and keep their native event listeners.
-    chip.appendChild(inner);
+    chip.appendChild(root);
 
     boundChipHeight(chip);
 
+    const ec = chip.closest('[data-eventid]');
     requestAnimationFrame(() => {
-      const h = chip.getBoundingClientRect().height;
-      const timeEl = chip.querySelector('.ext-goal-time');
-      if (timeEl) timeEl.style.display = h < 42 ? 'none' : 'block';
+      syncExtGoalTimeFromContainer(chip, ec);
     });
   }
 
