@@ -112,28 +112,29 @@
       <div class="gp-card" id="gp-card">
 
         <!-- Header -->
-        <div class="gp-header">
-          <h2>My goals</h2>
-          <div class="gp-header-actions">
-            <button class="gp-icon-btn" id="gp-add-btn" title="New goal">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-            <button class="gp-icon-btn" id="gp-close-btn" title="Close">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-          </div>
+        <div class="gp-header gp-header--tasks">
+          <h2 class="gp-header-title">My Tasks</h2>
+          <button class="gp-icon-btn" id="gp-close-btn" type="button" title="Close" aria-label="Close tasks panel">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
         <div class="gp-divider"></div>
 
         <!-- ── SCREEN 1: Empty / home ── -->
         <div class="gp-screen active" id="gp-screen-home">
+          <button type="button" class="gp-create-task-row" id="gp-create-task-btn">
+            <span class="gp-create-task-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </span>
+            <span class="gp-create-task-label">Create task</span>
+          </button>
           <div class="gp-tasks-accordion" id="gp-tasks-accordion">
             <section class="gp-task-folder" data-folder="today">
               <div class="gp-task-folder-header">
-                <span class="gp-task-folder-label">Due Today (3)</span>
                 <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Today tasks">
-                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
                 </button>
+                <span class="gp-task-folder-label">Due Today (3)</span>
               </div>
               <div class="gp-task-folder-panel">
                 <div class="gp-task-folder-panel-inner">
@@ -145,10 +146,10 @@
             </section>
             <section class="gp-task-folder" data-folder="tomorrow">
               <div class="gp-task-folder-header">
-                <span class="gp-task-folder-label">Due Tomorrow (1)</span>
                 <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Tomorrow tasks">
-                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
                 </button>
+                <span class="gp-task-folder-label">Due Tomorrow (1)</span>
               </div>
               <div class="gp-task-folder-panel">
                 <div class="gp-task-folder-panel-inner">
@@ -159,10 +160,10 @@
             </section>
             <section class="gp-task-folder" data-folder="later">
               <div class="gp-task-folder-header">
-                <span class="gp-task-folder-label">Due Later (2)</span>
                 <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Later tasks">
-                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
                 </button>
+                <span class="gp-task-folder-label">Due Later (2)</span>
               </div>
               <div class="gp-task-folder-panel">
                 <div class="gp-task-folder-panel-inner">
@@ -174,10 +175,10 @@
             </section>
             <section class="gp-task-folder" data-folder="completed">
               <div class="gp-task-folder-header">
-                <span class="gp-task-folder-label">Completed (15)</span>
                 <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Completed tasks">
-                  <svg class="gp-task-folder-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
                 </button>
+                <span class="gp-task-folder-label">Completed (15)</span>
               </div>
               <div class="gp-task-folder-panel">
                 <div class="gp-task-folder-panel-inner">
@@ -351,7 +352,7 @@
     // Rail btn
     document.getElementById('gp-sidebar-btn').addEventListener('click', togglePanel);
     document.getElementById('gp-close-btn').addEventListener('click', closePanel);
-    document.getElementById('gp-add-btn').addEventListener('click', () => showScreen('form'));
+    document.getElementById('gp-create-task-btn').addEventListener('click', () => showScreen('form'));
     document.getElementById('gp-set-goal-btn').addEventListener('click', () => showScreen('form'));
 
     // Screen 2 — goal name input
@@ -394,23 +395,8 @@
       if (!toggle) return;
 
       toggle.addEventListener('click', () => {
-        const isOpen = folder.classList.contains('open');
-
-        root.querySelectorAll('.gp-task-folder.open').forEach(openFolder => {
-          if (openFolder === folder) return;
-          openFolder.classList.remove('open');
-          const openToggle = openFolder.querySelector('.gp-task-folder-toggle');
-          if (openToggle) openToggle.setAttribute('aria-expanded', 'false');
-        });
-
-        if (isOpen) {
-          folder.classList.remove('open');
-          toggle.setAttribute('aria-expanded', 'false');
-          return;
-        }
-
-        folder.classList.add('open');
-        toggle.setAttribute('aria-expanded', 'true');
+        const isOpen = folder.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
     });
   }
