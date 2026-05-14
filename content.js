@@ -1969,23 +1969,14 @@
     }, { passive: true });
   }
 
-  // ── Re-inject if GCal wiped our structure; re-sync done state if present ──
+  // ── Re-inject only when GCal removes our overlay root (no storage-driven UI flapping here) ──
   function restoreChip(chip, goalData) {
-    if (!chip.querySelector('.ext-goal-root')) {
-      chrome.storage.local.get(['gp_chip_done'], d => {
-        const doneMap = d.gp_chip_done || {};
-        const isDone = !!doneMap[goalData.chipKey];
-        injectGoalChipContent(chip, goalData, isDone);
-      });
-      return;
-    }
-    // Structure intact — re-sync done state if out of step with storage
+    if (chip.querySelector('.ext-goal-root')) return;
     chrome.storage.local.get(['gp_chip_done'], d => {
+      if (chip.querySelector('.ext-goal-root')) return;
       const doneMap = d.gp_chip_done || {};
       const isDone = !!doneMap[goalData.chipKey];
-      GoalInteractionController.applyCompletionVisual(chip, isDone);
-      const ec = chip.closest('[data-eventid]');
-      syncExtGoalTimeFromContainer(chip, ec);
+      injectGoalChipContent(chip, goalData, isDone);
     });
   }
 
