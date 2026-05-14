@@ -662,11 +662,6 @@
   opacity: 1;
 }
 
-/* Resize: no full-bounding-box outline — native handles supply drag UX. */
-[data-eventchip].ext-goal-chip.ext-goal-resizing .ext-goal-root {
-  outline: none;
-}
-
 /* State: palette only — left accent color only (no other borders). */
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root {
   background: #ffe5e2;
