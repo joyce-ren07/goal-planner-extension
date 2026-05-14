@@ -726,4 +726,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0.75;
+  align-self: flex-start;
 }
