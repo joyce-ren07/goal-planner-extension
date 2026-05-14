@@ -280,6 +280,9 @@
     renderHomeScreen();
     setupCalendarPushObserver();
     setupNativeSidebarObserver();
+    setupGoalEventObserver();
+    // Initial decoration pass — catches any goal events already in the DOM
+    scheduleGoalEventDecoration();
 
     // Re-render ghost events on window resize (column widths change)
     window.addEventListener('resize', () => {
@@ -503,9 +506,6 @@
               <span class="gp-field-label">Schedule</span>
               <button class="gp-schedule-btn" id="gp-open-recurrence">
                 <span class="placeholder" id="gp-recurrence-summary">Select recurrence</span>
-                <span class="gp-chevron">
-                  <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">expand_more</span>
-                </span>
               </button>
             </div>
           </div>
@@ -526,28 +526,23 @@
             <span class="gp-field-label">Schedule</span>
             <button class="gp-confirm-chip" id="gp-confirm-schedule">
               <span class="gp-confirm-chip-label"></span>
-              <span class="material-symbols-outlined gp-ms-icon gp-confirm-chip-icon" style="font-size:14px">edit</span>
             </button>
             <button class="gp-confirm-chip" id="gp-confirm-ends">
               <span class="gp-confirm-chip-label"></span>
-              <span class="material-symbols-outlined gp-ms-icon gp-confirm-chip-icon" style="font-size:14px">edit</span>
             </button>
           </div>
           <div class="gp-field" style="margin-top:20px;">
             <div class="gp-section-header">
               <span class="gp-section-label">Suggested Sessions</span>
-              <button class="gp-edit-btn" id="gp-edit-sessions-btn">
-                <span class="material-symbols-outlined gp-ms-icon" style="font-size:16px">edit</span>
-              </button>
             </div>
             <div id="gp-suggestions-list"></div>
           </div>
           <div class="gp-pref-time-section" id="gp-pref-time-section">
             <div class="gp-pref-time-header">
-              <span class="gp-section-label">Set a preferred time</span>
+              <span class="gp-section-label">Set custom time</span>
               <span class="gp-std-time-hint">optional</span>
             </div>
-            <input type="time" class="gp-pref-time-input" id="gp-pref-time-input" />
+            <input type="time" id="gp-pref-time-input" class="gp-pref-time-input" />
           </div>
           <div class="gp-action-group" style="margin-top:12px;">
             <button class="gp-btn-primary gp-btn-full gp-btn-calendar" id="gp-confirm-add">Create goal</button>
@@ -807,7 +802,8 @@
 
   // ── Home screen ──
   async function renderHomeScreen() {
-    const goals = await getGoals();
+    const goals     = await getGoals();
+    const completed = await getCompletedSessions();
     const emptyEl = document.getElementById('gp-empty-state');
     const listEl = document.getElementById('gp-goals-list');
     if (!goals.length) {
@@ -826,8 +822,16 @@
       const deadline = new Date(g.endDate || g.deadline || fallbackEnd.toISOString());
       const totalDays = Math.max(1, Math.ceil((deadline - new Date(g.created)) / 86400000));
       const elapsed = Math.ceil((now - new Date(g.created)) / 86400000);
-      const pct = Math.min(100, Math.round((elapsed / totalDays) * 100));
       const daysLeft = Math.max(0, Math.ceil((deadline - now) / 86400000));
+      // Use completion-based progress when the user has started checking off sessions;
+      // fall back to time-elapsed progress for goals with no completions yet.
+      const totalSessions    = (g.calEventIds || []).length;
+      const completedCount   = totalSessions > 0
+        ? (g.calEventIds || []).filter(id => !!completed[id]).length
+        : 0;
+      const pct = totalSessions > 0 && completedCount > 0
+        ? Math.min(100, Math.round((completedCount / totalSessions) * 100))
+        : Math.min(100, Math.round((elapsed / totalDays) * 100));
       return `<div class="gp-goal-row" data-goal-id="${g.id}">
         <div class="gp-goal-row-main">
           <div class="gp-goal-row-info">
@@ -1608,6 +1612,198 @@
     });
   }
 
+  // ── Goal Session Calendar Block Decoration ──
+  // Visually restyles GCal event chips that belong to goal sessions.
+  // Only the visual layer is touched — GCal's own click handlers (popup, drag, etc.)
+  // remain fully intact. The checkbox intercepts its own click so it does NOT
+  // open the popup; all other clicks on the chip pass through to GCal as normal.
+
+  // ── Completion storage ──
+  function getCompletedSessions() {
+    return new Promise(r => chrome.storage.local.get(['gp_completed_sessions'], d => r(d.gp_completed_sessions || {})));
+  }
+  function saveCompletedSessions(obj) {
+    return new Promise(r => chrome.storage.local.set({ gp_completed_sessions: obj }, r));
+  }
+
+  // Toggle a session's completion state and refresh all visuals
+  async function toggleSessionCompletion(sessionKey) {
+    const completed = await getCompletedSessions();
+    if (completed[sessionKey]) {
+      delete completed[sessionKey];
+    } else {
+      completed[sessionKey] = true;
+    }
+    await saveCompletedSessions(completed);
+    await applyGoalEventDecorations();
+    renderHomeScreen(); // refresh progress bar
+  }
+
+  // Extract the goal title and time string from a GCal event chip's current DOM content.
+  // Only called the FIRST time we see a chip (before we replace its innerHTML).
+  function extractChipContent(chipEl) {
+    let title = '';
+    let timeStr = '';
+    const walker = document.createTreeWalker(chipEl, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      const t = node.textContent.trim();
+      if (!t) continue;
+      if (!title && t.includes('🎯')) {
+        title = t.replace(/🎯\s*/g, '').trim();
+      } else if (!timeStr && /\d/.test(t) && /(am|pm|AM|PM|–|-)/.test(t)) {
+        timeStr = t;
+      }
+    }
+    return { title, timeStr };
+  }
+
+  // Derive a stable session key for completion tracking.
+  // Prefers the GCal event ID (data-eventid) which maps directly to calEventIds in storage,
+  // falling back to the aria-label or stored title text.
+  function getChipSessionKey(chipEl) {
+    for (let el = chipEl, i = 0; el && el !== document.body && i < 5; el = el.parentElement, i++) {
+      const eid = el.getAttribute('data-eventid') || el.getAttribute('data-eid');
+      if (eid) return eid;
+    }
+    const ariaEl = chipEl.matches('[aria-label]') ? chipEl : chipEl.closest('[aria-label]');
+    const label = ariaEl ? ariaEl.getAttribute('aria-label') || '' : '';
+    if (label.includes('🎯')) return 'al:' + label.slice(0, 120);
+    const stored = chipEl.dataset.gpTitle || chipEl.textContent.replace(/\s+/g, ' ').trim();
+    return 'tx:' + stored.slice(0, 60);
+  }
+
+  // Walk up from a DOM node that contains 🎯 to find the GCal event chip container.
+  // GCal event chips have role="button" with a colored background in the time grid.
+  function findChipFromNode(startEl) {
+    let cur = startEl;
+    for (let i = 0; i < 12; i++) {
+      if (!cur || cur === document.body) return null;
+      if (cur.id === 'gp-panel') return null;
+      if (cur.closest && cur.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-ctx-menu, #gp-rail-fallback')) return null;
+      const role = cur.getAttribute('role');
+      const eid  = cur.getAttribute('data-eventid') || cur.getAttribute('data-eid');
+      // GCal event chips: role="button" (or role="link") that are large enough to be an event block
+      if ((role === 'button' || role === 'link') && cur.offsetHeight >= 12) return cur;
+      // Also match by data-eventid wrapper
+      if (eid && cur.offsetHeight >= 12) return cur;
+      // Match elements with an inline background-color (GCal colors timed events inline)
+      if (cur.style && cur.style.backgroundColor && cur.offsetHeight >= 12) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
+  // Return all GCal event chip elements that correspond to goal sessions (contain 🎯)
+  function findGoalEventChips() {
+    const chips = new Set();
+    const root = document.querySelector('[role="main"]') || document.body;
+    if (!root.textContent.includes('🎯')) return [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (!node.textContent.includes('🎯')) continue;
+      const el = node.parentElement;
+      if (!el) continue;
+      const chip = findChipFromNode(el);
+      if (chip) chips.add(chip);
+    }
+    return [...chips];
+  }
+
+  // Apply (or refresh) the goal-session visual decoration to every matching chip in the DOM.
+  async function applyGoalEventDecorations() {
+    const chips = findGoalEventChips();
+    if (!chips.length) return;
+
+    const completed = await getCompletedSessions();
+
+    for (const chip of chips) {
+      // ── 1. Extract & cache title/time from GCal's original content ──
+      // Must happen before we overwrite innerHTML.
+      let title   = chip.dataset.gpTitle;
+      let timeStr = chip.dataset.gpTime;
+      if (title === undefined) {
+        const ex = extractChipContent(chip);
+        title   = ex.title   || chip.textContent.replace(/🎯/g, '').trim().slice(0, 60);
+        timeStr = ex.timeStr || '';
+        chip.dataset.gpTitle = title;
+        chip.dataset.gpTime  = timeStr;
+      }
+
+      // ── 2. Determine session key and completion state ──
+      const sessionKey  = getChipSessionKey(chip);
+      const isCompleted = !!completed[sessionKey];
+
+      // ── 3. Skip if already correctly decorated (prevents MutationObserver loop) ──
+      if (chip.dataset.gpDecorated === sessionKey &&
+          chip.dataset.gpCompleted === (isCompleted ? '1' : '0')) {
+        continue;
+      }
+
+      // ── 4. Decide whether to show the time row (hide on very short blocks) ──
+      const showTime = !!(timeStr && chip.offsetHeight >= 32);
+
+      // ── 5. Rebuild inner HTML with our custom structure ──
+      const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      chip.innerHTML =
+        `<span class="gp-ev-cb material-symbols-outlined${isCompleted ? ' gp-ev-done' : ''}">${isCompleted ? 'check_circle' : 'radio_button_unchecked'}</span>` +
+        `<div class="gp-ev-body">` +
+          `<span class="gp-ev-chip">Goal</span>` +
+          `<span class="gp-ev-title">${esc(title)}</span>` +
+          (showTime ? `<span class="gp-ev-time">${esc(timeStr)}</span>` : '') +
+        `</div>`;
+
+      // ── 6. Apply CSS class and completion state class ──
+      chip.classList.add('goal-session-event-block');
+      chip.classList.toggle('gp-ev-completed', isCompleted);
+
+      // ── 7. Mark decorated + store session key for the click handler ──
+      chip.dataset.gpDecorated  = sessionKey;
+      chip.dataset.gpCompleted  = isCompleted ? '1' : '0';
+      chip.dataset.gpSessionKey = sessionKey;
+
+      // ── 8. Wire capture-phase click on the chip to intercept checkbox clicks only ──
+      // We attach once per chip element; GCal replaces chips with fresh DOM nodes on
+      // re-render, so the guard below is just a safety net for the same element.
+      if (!chip.dataset.gpHasListener) {
+        chip.dataset.gpHasListener = '1';
+        chip.addEventListener('click', (e) => {
+          if (e.target.closest('.gp-ev-cb')) {
+            // Checkbox click: toggle completion, do NOT open GCal popup
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const key = chip.dataset.gpSessionKey;
+            if (key) toggleSessionCompletion(key);
+          }
+          // All other clicks on the chip propagate normally → GCal opens the popup
+        }, true); // capture phase — fires before GCal's own handlers
+      }
+    }
+  }
+
+  // Debounced scheduler — prevents thrashing when GCal's Virtual DOM fires many mutations
+  let _gpDecorateTimer = null;
+  let _gpDecorating    = false;
+  function scheduleGoalEventDecoration() {
+    if (_gpDecorateTimer) clearTimeout(_gpDecorateTimer);
+    _gpDecorateTimer = setTimeout(async () => {
+      if (_gpDecorating) { scheduleGoalEventDecoration(); return; }
+      _gpDecorating = true;
+      try { await applyGoalEventDecorations(); }
+      finally { _gpDecorating = false; }
+    }, 200);
+  }
+
+  // Observe GCal DOM for new/replaced event chips and re-apply decorations as needed
+  function setupGoalEventObserver() {
+    const mo = new MutationObserver((mutations) => {
+      const hasNewNodes = mutations.some(m => m.type === 'childList' && m.addedNodes.length > 0);
+      if (hasNewNodes) scheduleGoalEventDecoration();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+  }
+
   // ── Boot ──
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
   else inject();
@@ -1622,6 +1818,8 @@
         const screen = document.getElementById('gp-screen-suggestions');
         if (screen && screen.classList.contains('active')) renderGhostEvents();
       }, 1200);
+      // Re-apply goal session decorations after navigation (GCal re-renders all chips)
+      setTimeout(scheduleGoalEventDecoration, 1400);
     }
   }).observe(document.body, { childList: true, subtree: true });
 
