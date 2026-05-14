@@ -2127,7 +2127,6 @@
         injectGoalChipContent(chip, goalData, isDone);
         // rAF ensures layout is settled before the post-injection probe runs
         requestAnimationFrame(() => debugChipStructure(chip, 'AFTER injection'));
-        attachChipClickListener(chip, goalData);
         attachChipResizeObserver(chip, goalData);
 
         // Per-chip observer: restore injection if GCal's renderer wipes our structure
