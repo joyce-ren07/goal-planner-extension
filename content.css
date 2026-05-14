@@ -674,8 +674,7 @@
   opacity: 0.65;
 }
 
-/* Circular checkbox — both states use SVG; no CSS border needed */
-.ext-check-circle {
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-check-circle {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -688,21 +687,17 @@
   border: none;
   background: transparent;
   transition: opacity 0.1s ease;
-  /* Re-enable pointer events for the checkbox only; the parent overlay is
-     pointer-events:none so everything else falls through to GCal. */
   pointer-events: auto;
 }
 
-/* Done circle — SVG draws its own circle; remove CSS border/fill */
-[data-eventchip].ext-goal-chip.ext-goal-done .ext-check-circle {
+[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root .ext-check-circle {
   border: none;
   background: transparent;
   width: 18px;
   height: 18px;
 }
 
-/* Text column */
-.ext-goal-text-col {
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-text-col {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -712,8 +707,7 @@
   padding-bottom: 2px;
 }
 
-/* "Goal" badge — full column width */
-.ext-goal-badge {
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-badge {
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -726,8 +720,7 @@
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
-/* Event title */
-.ext-goal-title {
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
   color: #C0514E;
   font-size: 13px;
   font-weight: 400;
@@ -738,13 +731,13 @@
   max-width: 100%;
   align-self: flex-start;
 }
-[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-title {
+
+[data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-root .ext-goal-title {
   text-decoration: line-through;
   text-decoration-color: currentColor;
 }
 
-/* Event time */
-.ext-goal-time {
+[data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   color: #C0514E;
   font-size: 11px;
   font-weight: 400;
