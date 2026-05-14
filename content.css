@@ -678,25 +678,24 @@
 .ext-goal-text-col {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   flex: 1;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   overflow: hidden;
 }
 
-/* "Goal" badge — content-width pill */
+/* "Goal" badge — full column width */
 .ext-goal-badge {
-  display: inline-block;
-  width: auto;
-  align-self: flex-start;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   background: #C0514E;
   color: #fff;
   font-size: 12px;
   font-weight: 500;
   border-radius: 6px;
-  padding: 2px 10px;
-  box-sizing: border-box;
+  padding: 3px 8px;
   font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
@@ -710,6 +709,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  align-self: flex-start;
 }
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-title {
   text-decoration: line-through;
