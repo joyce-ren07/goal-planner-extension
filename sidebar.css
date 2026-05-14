@@ -1,0 +1,609 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+
+#gp-panel.mytasks-sidebar {
+  --m3-surface: #ffffff;
+  --m3-on-surface: #1d1b20;
+  --m3-on-surface-variant: #49454f;
+  --m3-primary: #0b56cf;
+  --m3-on-primary: #ffffff;
+  --m3-outline: #79747e;
+  --m3-outline-variant: #e2e3e1;
+  --m3-surface-container-low: #f8f9fa;
+  --m3-surface-container-lowest: #ffffff;
+  --m3-secondary-container: #d3e3fd;
+  --m3-on-secondary-container: #185abc;
+  --m3-headline-on-surface: #36363f;
+  --m3-subtitle-on-surface: #6f747b;
+  --m3-course-psych-container: #c5ecff;
+  --m3-on-course-psych-container: #049be5;
+  --m3-course-cogs-container: #d7ebe0;
+  --m3-on-course-cogs-container: #00832d;
+  --m3-chip-planned-container: #ebeff2;
+  --m3-chip-planned-outline: #94989c;
+  --m3-chip-planned-on-container: #616161;
+  --m3-chip-planned-dot: #616161;
+  --m3-chip-progress-container: #c9dffc;
+  --m3-chip-progress-outline: #7aa9f6;
+  --m3-chip-progress-on-container: #185abc;
+  --m3-chip-progress-dot: #185abc;
+  --m3-state-hover: 0.08;
+  --m3-state-pressed: 0.12;
+  --m3-state-focused: 0.12;
+  --m3-radius-xs: 4px;
+  --m3-radius-sm: 8px;
+  --m3-radius-md: 12px;
+  --m3-radius-lg: 16px;
+  --m3-radius-xl: 28px;
+  --m3-radius-full: 9999px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 341px;
+  height: 100vh;
+  z-index: 2147483646;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  transform: translate3d(100%, 0, 0);
+  transition: transform 0.2s ease;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--m3-surface-container-lowest);
+  font-family: 'Google Sans', Roboto, sans-serif;
+}
+
+#gp-panel.mytasks-sidebar.open {
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+#gp-sidebar-rail {
+  position: fixed;
+  z-index: 2147483645;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+#gp-sidebar-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+  color: #444746;
+}
+
+#gp-sidebar-btn:hover {
+  background: #e8edf6;
+}
+
+#gp-sidebar-btn.active {
+  background: #d3e3fd;
+}
+
+#gp-sidebar-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.mytasks-sidebar .gp-card {
+  background: var(--m3-surface-container-lowest);
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 0 24px;
+  box-shadow: none;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  scrollbar-width: none;
+}
+
+.mytasks-sidebar .gp-card::-webkit-scrollbar {
+  display: none;
+}
+
+.mytasks-sidebar .gp-header {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.mytasks-sidebar .gp-header--tasks {
+  padding: 16px;
+  box-shadow: inset 0 -1px 0 var(--m3-outline-variant);
+}
+
+.mytasks-sidebar .gp-header-title {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 28px;
+  color: var(--m3-headline-on-surface);
+  margin: 0;
+}
+
+.mytasks-sidebar .gp-icon-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: transparent;
+  border-radius: var(--m3-radius-full);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--m3-on-surface-variant);
+}
+
+.mytasks-sidebar .gp-icon-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--m3-on-surface);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mytasks-sidebar .gp-icon-btn:hover::before {
+  opacity: var(--m3-state-hover);
+}
+
+.mytasks-sidebar .gp-icon-btn:active::before {
+  opacity: var(--m3-state-pressed);
+}
+
+.mytasks-sidebar .gp-create-task-row {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mytasks-sidebar .gp-create-task-row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--m3-on-surface);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mytasks-sidebar .gp-create-task-row:hover::before {
+  opacity: var(--m3-state-hover);
+}
+
+.mytasks-sidebar .gp-create-task-row:active::before {
+  opacity: var(--m3-state-pressed);
+}
+
+.mytasks-sidebar .gp-create-task-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--m3-primary);
+}
+
+.mytasks-sidebar .gp-create-task-label {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+  color: var(--m3-primary);
+}
+
+.mytasks-sidebar .gp-tasks-accordion {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--m3-surface-container-lowest);
+}
+
+.mytasks-sidebar .gp-task-folder {
+  background: var(--m3-surface-container-lowest);
+  border-top: 1px solid var(--m3-outline-variant);
+}
+
+.mytasks-sidebar .gp-task-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.mytasks-sidebar .gp-task-folder-label {
+  flex: 1;
+  min-width: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+  color: var(--m3-on-surface-variant);
+}
+
+.mytasks-sidebar .gp-task-folder-toggle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background: transparent;
+  color: var(--m3-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.mytasks-sidebar .gp-task-folder-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--m3-on-surface);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mytasks-sidebar .gp-task-folder-toggle:hover::before {
+  opacity: var(--m3-state-hover);
+}
+
+.mytasks-sidebar .gp-task-folder-toggle:active::before {
+  opacity: var(--m3-state-pressed);
+}
+
+.mytasks-sidebar .gp-task-folder-chevron {
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.mytasks-sidebar .gp-task-folder.open .gp-task-folder-chevron {
+  transform: rotate(90deg);
+}
+
+.mytasks-sidebar .gp-task-folder-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+
+.mytasks-sidebar .gp-task-folder.open .gp-task-folder-panel {
+  max-height: 1200px;
+}
+
+.mytasks-sidebar .gp-task-folder-panel-inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.mytasks-sidebar .gp-task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.mytasks-sidebar .gp-task-checkbox {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background: transparent;
+  color: var(--m3-outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.mytasks-sidebar .gp-task-checkbox::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--m3-on-surface);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mytasks-sidebar .gp-task-checkbox:hover::before {
+  opacity: var(--m3-state-hover);
+}
+
+.mytasks-sidebar .gp-task-checkbox:active::before {
+  opacity: var(--m3-state-pressed);
+}
+
+.mytasks-sidebar .gp-task-checkbox-icon {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mytasks-sidebar .gp-task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mytasks-sidebar .gp-task-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mytasks-sidebar .gp-task-title {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0.15px;
+  color: var(--m3-headline-on-surface);
+}
+
+.mytasks-sidebar .gp-task-subtitle {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  color: var(--m3-subtitle-on-surface);
+}
+
+.mytasks-sidebar .gp-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.mytasks-sidebar .gp-course-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 8px;
+  border-radius: var(--m3-radius-sm);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+
+.mytasks-sidebar .gp-course-chip--psych {
+  background: var(--m3-course-psych-container);
+  color: var(--m3-on-course-psych-container);
+}
+
+.mytasks-sidebar .gp-course-chip--cogs {
+  background: var(--m3-course-cogs-container);
+  color: var(--m3-on-course-cogs-container);
+}
+
+.mytasks-sidebar .gp-filter-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 4px 8px 4px 12px;
+  border-radius: var(--m3-radius-lg);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+}
+
+.mytasks-sidebar .gp-filter-chip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--m3-on-surface);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mytasks-sidebar .gp-filter-chip:hover::before {
+  opacity: var(--m3-state-hover);
+}
+
+.mytasks-sidebar .gp-filter-chip:active::before {
+  opacity: var(--m3-state-pressed);
+}
+
+.mytasks-sidebar .gp-filter-chip--planned {
+  background: var(--m3-chip-planned-container);
+  border-color: var(--m3-chip-planned-outline);
+  color: var(--m3-chip-planned-on-container);
+}
+
+.mytasks-sidebar .gp-filter-chip--progress {
+  background: var(--m3-chip-progress-container);
+  border-color: var(--m3-chip-progress-outline);
+  color: var(--m3-chip-progress-on-container);
+}
+
+.mytasks-sidebar .gp-filter-chip-dot {
+  position: relative;
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: var(--m3-radius-full);
+  flex-shrink: 0;
+}
+
+.mytasks-sidebar .gp-filter-chip--planned .gp-filter-chip-dot {
+  background: var(--m3-chip-planned-dot);
+}
+
+.mytasks-sidebar .gp-filter-chip--progress .gp-filter-chip-dot {
+  background: var(--m3-chip-progress-dot);
+}
+
+.mytasks-sidebar .gp-filter-chip-label,
+.mytasks-sidebar .gp-filter-chip-trailing {
+  position: relative;
+  z-index: 1;
+}
+
+.mytasks-sidebar .gp-filter-chip-trailing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+}
+
+.mytasks-sidebar .gp-filter-chip-trailing svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mytasks-sidebar .gp-task-checkbox--checked {
+  color: var(--m3-primary);
+}
+
+.mytasks-sidebar .gp-task-row--departing {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    max-height 0.55s ease 0.2s,
+    padding 0.45s ease;
+}
+
+.mytasks-sidebar .gp-task-row--completed .gp-task-title {
+  color: var(--m3-on-surface-variant);
+  text-decoration: line-through;
+}
+
+.mytasks-sidebar .gp-task-row--completed .gp-task-subtitle,
+.mytasks-sidebar .gp-task-row--completed .gp-task-meta {
+  opacity: 0.72;
+}
+
+.mytasks-sidebar .gp-task-folder--receiving .gp-task-folder-header {
+  background: var(--m3-secondary-container);
+  transition: background 0.35s ease;
+}
+
+.mytasks-sidebar .gp-fly-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+
+.mytasks-sidebar .gp-task-row--flying {
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 0;
+  box-sizing: border-box;
+  transform-origin: top left;
+  transition:
+    transform 1.2s ease-in-out,
+    opacity 1.2s ease-in-out;
+  background: var(--m3-surface-container-lowest);
+  border-radius: var(--m3-radius-lg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--m3-on-surface) 16%, transparent);
+}
+
+.mytasks-sidebar .gp-confetti-burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 2147483647;
+  transform: translate(-50%, -50%);
+}
+
+.mytasks-sidebar .gp-confetti-piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--m3-radius-xs);
+  opacity: 0;
+  animation: gp-confetti-fall 1.2s ease-out forwards;
+}
+
+@keyframes gp-confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--gp-confetti-x), var(--gp-confetti-y), 0) rotate(var(--gp-confetti-rotation));
+  }
+}

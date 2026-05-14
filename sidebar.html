@@ -1,0 +1,137 @@
+<div id="gp-panel" class="mytasks-sidebar" aria-hidden="true">
+  <div class="gp-card" id="gp-card">
+    <header class="gp-header gp-header--tasks">
+      <h2 class="gp-header-title">My Tasks</h2>
+      <button class="gp-icon-btn" id="gp-close-btn" type="button" title="Close" aria-label="Close tasks panel">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </header>
+
+    <button type="button" class="gp-create-task-row" id="gp-create-task-btn">
+      <span class="gp-create-task-icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </span>
+      <span class="gp-create-task-label">Create task</span>
+    </button>
+
+    <div class="gp-tasks-accordion" id="gp-tasks-accordion">
+      <section class="gp-task-folder open" data-folder="today">
+        <div class="gp-task-folder-header">
+          <button class="gp-task-folder-toggle" type="button" aria-expanded="true" aria-label="Toggle Due Today tasks">
+            <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+          </button>
+          <span class="gp-task-folder-label">Due Today (3)</span>
+        </div>
+        <div class="gp-task-folder-panel">
+          <div class="gp-task-folder-panel-inner">
+            <article class="gp-task-row">
+              <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
+                <span class="gp-task-checkbox-icon" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                  </svg>
+                </span>
+              </button>
+              <div class="gp-task-body">
+                <div class="gp-task-text">
+                  <p class="gp-task-title">Project Outline</p>
+                  <p class="gp-task-subtitle">Due Thurs, May 21</p>
+                </div>
+                <div class="gp-task-meta">
+                  <span class="gp-course-chip gp-course-chip--psych">PSYC101</span>
+                  <button type="button" class="gp-filter-chip gp-filter-chip--planned" aria-label="Status: Planned">
+                    <span class="gp-filter-chip-dot" aria-hidden="true"></span>
+                    <span class="gp-filter-chip-label">Planned</span>
+                    <span class="gp-filter-chip-trailing" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <article class="gp-task-row">
+              <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
+                <span class="gp-task-checkbox-icon" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                  </svg>
+                </span>
+              </button>
+              <div class="gp-task-body">
+                <div class="gp-task-text">
+                  <p class="gp-task-title">Project Outline</p>
+                  <p class="gp-task-subtitle">Due Thurs, May 21</p>
+                </div>
+                <div class="gp-task-meta">
+                  <span class="gp-course-chip gp-course-chip--cogs">COGS14B</span>
+                  <button type="button" class="gp-filter-chip gp-filter-chip--progress" aria-label="Status: In progress">
+                    <span class="gp-filter-chip-dot" aria-hidden="true"></span>
+                    <span class="gp-filter-chip-label">In progress</span>
+                    <span class="gp-filter-chip-trailing" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="gp-task-folder" data-folder="tomorrow">
+        <div class="gp-task-folder-header">
+          <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Tomorrow tasks">
+            <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+          </button>
+          <span class="gp-task-folder-label">Due Tomorrow (1)</span>
+        </div>
+        <div class="gp-task-folder-panel">
+          <div class="gp-task-folder-panel-inner"></div>
+        </div>
+      </section>
+
+      <section class="gp-task-folder" data-folder="later">
+        <div class="gp-task-folder-header">
+          <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Later tasks">
+            <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+          </button>
+          <span class="gp-task-folder-label">Due Later (2)</span>
+        </div>
+        <div class="gp-task-folder-panel">
+          <div class="gp-task-folder-panel-inner"></div>
+        </div>
+      </section>
+
+      <section class="gp-task-folder" data-folder="completed">
+        <div class="gp-task-folder-header">
+          <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Completed tasks">
+            <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+          </button>
+          <span class="gp-task-folder-label">Completed (15)</span>
+        </div>
+        <div class="gp-task-folder-panel">
+          <div class="gp-task-folder-panel-inner"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
