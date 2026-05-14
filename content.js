@@ -2072,7 +2072,7 @@
         if (chip.querySelector('.ext-goal-root')) {
           boundChipHeight(chip);
           const isDone = !!doneMap[chip.dataset.gpChipKey];
-          GoalInteractionController.applyCompletionVisual(chip, isDone);
+          GoalInteractionController.applyGoalSessionCompletionUI(chip, isDone);
           const ec = chip.closest('[data-eventid]');
           requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip, ec));
           return;
