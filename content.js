@@ -1617,7 +1617,8 @@
   // Queries [data-eventchip] on each mutation, matches goal events by 🎯 in title,
   // prepends .ext-check-circle, and wires a capture-phase click handler.
 
-  const SVG_CHECK = '<svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#C0514E" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const SVG_CHECK  = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#C0514E" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const SVG_CIRCLE = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#C0514E" stroke-width="1.75" fill="none"/></svg>';
   const escHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // ── Toggle complete state and persist ──
