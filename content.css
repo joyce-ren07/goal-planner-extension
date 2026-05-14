@@ -669,13 +669,13 @@
   outline-offset: -2px;
 }
 
-/* Completed — solid muted surface (not opacity-blended). */
+/* Completed — Figma 1068:7020: solid-light-red + solid-completed-task (monochrome pink/coral) */
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root {
-  background: #e8eaed;
-  border-top-color: #dadce0;
-  border-right-color: #dadce0;
-  border-bottom-color: #dadce0;
-  border-left-color: #80868b;
+  background: #ffe5e2;
+  border-top-color: #e79992;
+  border-right-color: #e79992;
+  border-bottom-color: #e79992;
+  border-left-color: #e79992;
   opacity: 1;
 }
 
