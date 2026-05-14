@@ -1882,10 +1882,20 @@
     _gpDecorateTimer = setTimeout(processGoalChips, 200);
   }
 
-  // Watch for new chips added by GCal and re-process
+  // Watch for new chips added by GCal and re-process; disconnect ResizeObservers for removed chips
   function setupGoalEventObserver() {
-    new MutationObserver(() => scheduleGoalEventDecoration())
-      .observe(document.body, { childList: true, subtree: true });
+    new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        m.removedNodes.forEach(node => {
+          if (node.nodeType !== 1) return;
+          const chips = node.classList?.contains('ext-goal-chip')
+            ? [node]
+            : Array.from(node.querySelectorAll?.('.ext-goal-chip') || []);
+          chips.forEach(c => c._resizeObserver?.disconnect());
+        });
+      }
+      scheduleGoalEventDecoration();
+    }).observe(document.body, { childList: true, subtree: true });
   }
 
   // ── Boot ──
