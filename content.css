@@ -653,11 +653,12 @@
   overflow: hidden;
   pointer-events: none;
 
-  background: #fadadd;
-  border-top: 1.5px solid #e88b8b;
-  border-right: 1.5px solid #e88b8b;
-  border-bottom: 1.5px solid #e88b8b;
-  border-left: 4px solid #c0514e;
+  /* Figma: --(lofi-light-red #ffd7d3), --darker-coral #d3564b */
+  background: #ffd7d3;
+  border-top: 1.5px solid #d3564b;
+  border-right: 1.5px solid #d3564b;
+  border-bottom: 1.5px solid #d3564b;
+  border-left: 4px solid #d3564b;
 
   transition: opacity 0.1s ease;
 }
