@@ -1793,12 +1793,15 @@
     chip.classList.add('ext-goal-chip');
     chip.classList.toggle('ext-goal-done', isDone);
     chip.dataset.gpChipKey = goalData.chipKey;
+    if (isDone) chip.dataset.goalCompleted = 'true';
+    else delete chip.dataset.goalCompleted;
 
     const root = document.createElement('div');
     root.className = 'ext-goal-root';
     const initialTime = goalData.time ? escHtml(goalData.time) : '';
     root.innerHTML =
-      '<div class="ext-check-circle">' + (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
+      '<div class="ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
+      (isDone ? SVG_CHECK : SVG_CIRCLE) + '</div>' +
       '<div class="ext-goal-text-col">' +
         '<span class="ext-goal-badge">Goal</span>' +
         '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
