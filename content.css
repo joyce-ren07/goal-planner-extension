@@ -696,13 +696,13 @@
 /* Event title */
 .ext-goal-title {
   color: #C0514E;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   font-family: 'Google Sans', Roboto, sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 100%;
 }
 [data-eventchip].ext-goal-chip.ext-goal-done .ext-goal-title {
   text-decoration: line-through;
