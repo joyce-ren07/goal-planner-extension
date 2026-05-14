@@ -18,6 +18,8 @@
   --m3-on-course-psych-container: #049be5;
   --m3-course-cogs-container: #d7ebe0;
   --m3-on-course-cogs-container: #00832d;
+  --m3-course-ps-container: #fff4d5;
+  --m3-on-course-ps-container: #eab627;
   --m3-chip-planned-container: #ebeff2;
   --m3-chip-planned-outline: #94989c;
   --m3-chip-planned-on-container: #616161;
@@ -333,6 +335,18 @@
   flex-direction: column;
 }
 
+.mytasks-sidebar .gp-task-folder-empty {
+  margin: 0;
+  padding: 4px 16px 12px calc(16px + 48px + 12px);
+  text-align: left;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  color: var(--m3-subtitle-on-surface);
+}
+
 .mytasks-sidebar .gp-task-row {
   display: flex;
   align-items: flex-start;
@@ -450,6 +464,11 @@
 .mytasks-sidebar .gp-course-chip--cogs {
   background: var(--m3-course-cogs-container);
   color: var(--m3-on-course-cogs-container);
+}
+
+.mytasks-sidebar .gp-course-chip--ps {
+  background: var(--m3-course-ps-container);
+  color: var(--m3-on-course-ps-container);
 }
 
 .mytasks-sidebar .gp-filter-chip {

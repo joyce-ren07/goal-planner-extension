@@ -18,6 +18,12 @@
       className: 'gp-filter-chip--done',
     },
   };
+  const FOLDER_LABELS = {
+    today: 'Due Today',
+    tomorrow: 'Due Tomorrow',
+    later: 'Due Later',
+    completed: 'Completed',
+  };
   const SIDEBAR_MARKUP = `
 <div id="gp-panel" class="mytasks-sidebar" aria-hidden="true">
   <div class="gp-card" id="gp-card">
@@ -49,7 +55,7 @@
               <polyline points="9 6 15 12 9 18"></polyline>
             </svg>
           </button>
-          <span class="gp-task-folder-label">Due Today (3)</span>
+          <span class="gp-task-folder-label">Due Today (2)</span>
         </div>
         <div class="gp-task-folder-panel">
           <div class="gp-task-folder-panel-inner">
@@ -116,9 +122,9 @@
         </div>
       </section>
 
-      <section class="gp-task-folder" data-folder="tomorrow">
+      <section class="gp-task-folder open" data-folder="tomorrow">
         <div class="gp-task-folder-header">
-          <button class="gp-task-folder-toggle" type="button" aria-expanded="false" aria-label="Toggle Due Tomorrow tasks">
+          <button class="gp-task-folder-toggle" type="button" aria-expanded="true" aria-label="Toggle Due Tomorrow tasks">
             <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="9 6 15 12 9 18"></polyline>
             </svg>
@@ -126,7 +132,37 @@
           <span class="gp-task-folder-label">Due Tomorrow (1)</span>
         </div>
         <div class="gp-task-folder-panel">
-          <div class="gp-task-folder-panel-inner"></div>
+          <div class="gp-task-folder-panel-inner">
+            <article class="gp-task-row" data-due-date="2026-05-21">
+              <button type="button" class="gp-task-checkbox" aria-label="Mark Project Outline complete">
+                <span class="gp-task-checkbox-icon" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+                  </svg>
+                </span>
+              </button>
+              <div class="gp-task-body">
+                <div class="gp-task-text">
+                  <p class="gp-task-title">Project Outline</p>
+                  <p class="gp-task-subtitle">Due Thurs, May 21</p>
+                </div>
+                <div class="gp-task-meta">
+                  <span class="gp-course-chip gp-course-chip--ps">PS</span>
+                  <div class="gp-filter-chip gp-filter-chip--progress" data-status="progress" role="group" aria-label="Status: In progress">
+                    <span class="gp-filter-chip-dot" aria-hidden="true"></span>
+                    <span class="gp-filter-chip-label">In progress</span>
+                    <button type="button" class="gp-filter-chip-menu-btn" aria-haspopup="menu" aria-controls="gp-status-menu" aria-expanded="false" aria-label="Change task status">
+                      <span class="gp-filter-chip-trailing" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -137,7 +173,7 @@
               <polyline points="9 6 15 12 9 18"></polyline>
             </svg>
           </button>
-          <span class="gp-task-folder-label">Due Later (2)</span>
+          <span class="gp-task-folder-label">Due Later (0)</span>
         </div>
         <div class="gp-task-folder-panel">
           <div class="gp-task-folder-panel-inner"></div>
@@ -151,7 +187,7 @@
               <polyline points="9 6 15 12 9 18"></polyline>
             </svg>
           </button>
-          <span class="gp-task-folder-label">Completed (15)</span>
+          <span class="gp-task-folder-label">Completed (0)</span>
         </div>
         <div class="gp-task-folder-panel">
           <div class="gp-task-folder-panel-inner"></div>
@@ -573,8 +609,7 @@
       targetInner.appendChild(row);
     }
 
-    adjustFolderCount(completedFolder, -1);
-    adjustFolderCount(targetFolder, 1);
+    syncFolderCounts(accordion);
 
     targetFolder.classList.add('open');
     const targetToggle = targetFolder.querySelector('.gp-task-folder-toggle');
@@ -751,15 +786,49 @@
     closeTaskStatusMenu = closeStatusMenu;
   }
 
-  function adjustFolderCount(folder, delta) {
+  function getFolderTaskCount(folder) {
+    const inner = folder?.querySelector('.gp-task-folder-panel-inner');
+    if (!inner) return 0;
+
+    return inner.querySelectorAll('.gp-task-row:not(.gp-task-row--departing)').length;
+  }
+
+  function syncFolderCount(folder) {
     const label = folder?.querySelector('.gp-task-folder-label');
-    if (!label) return;
+    const folderKey = folder?.dataset.folder;
+    const title = FOLDER_LABELS[folderKey];
+    if (!label || !title) return;
 
-    const match = label.textContent.match(/^(.*)\((\d+)\)\s*$/);
-    if (!match) return;
+    label.textContent = `${title} (${getFolderTaskCount(folder)})`;
+    syncFolderEmptyState(folder);
+  }
 
-    const next = Math.max(0, Number(match[2]) + delta);
-    label.textContent = `${match[1].trim()} (${next})`;
+  function syncFolderEmptyState(folder) {
+    const inner = folder?.querySelector('.gp-task-folder-panel-inner');
+    if (!inner) return;
+
+    const shouldShow = folder.classList.contains('open') && getFolderTaskCount(folder) === 0;
+    let emptyState = inner.querySelector('.gp-task-folder-empty');
+
+    if (!shouldShow) {
+      emptyState?.remove();
+      return;
+    }
+
+    if (!emptyState) {
+      emptyState = document.createElement('p');
+      emptyState.className = 'gp-task-folder-empty';
+      emptyState.textContent = 'All Done!';
+      inner.appendChild(emptyState);
+    }
+  }
+
+  function syncFolderCounts(root) {
+    if (!root) return;
+
+    root.querySelectorAll('.gp-task-folder').forEach((folder) => {
+      syncFolderCount(folder);
+    });
   }
 
   function setCheckboxCheckedVisual(checkbox) {
@@ -878,6 +947,7 @@
 
     setFlyingRowPosition(flyingRow, startX, startY, 1, 1);
     row.classList.add('gp-task-row--departing');
+    syncFolderCounts(accordion);
     completedFolder.classList.add('gp-task-folder--receiving');
 
     const checkboxRect = checkbox.getBoundingClientRect();
@@ -904,8 +974,7 @@
         completedInner.prepend(row);
       }
 
-      adjustFolderCount(sourceFolder, -1);
-      adjustFolderCount(completedFolder, 1);
+      syncFolderCounts(accordion);
 
       completedFolder.classList.add('open');
       const completedToggle = completedFolder.querySelector('.gp-task-folder-toggle');
@@ -956,6 +1025,7 @@
       toggle.addEventListener('click', () => {
         const isOpen = folder.classList.toggle('open');
         toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        syncFolderEmptyState(folder);
       });
     });
   }
@@ -976,6 +1046,7 @@
     initTasksAccordion(panel.querySelector('#gp-tasks-accordion'));
     initTaskStatusMenus(panel);
     initTaskCompletion(panel.querySelector('#gp-tasks-accordion'));
+    syncFolderCounts(panel.querySelector('#gp-tasks-accordion'));
   }
 
   function mountSidebar() {
