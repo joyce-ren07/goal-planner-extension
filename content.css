@@ -369,14 +369,16 @@
   display: none !important;
 }
 
+/* Horizontal inset matches native accordion body via vars only — no extra card margin (width:100% + mx overflows). */
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card {
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch;
+  align-self: stretch;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin: 4px 8px !important;
+  margin: 4px 0 !important;
   padding: 16px !important;
   border-radius: 16px !important;
   cursor: pointer;
