@@ -272,11 +272,11 @@
 
 .gp-gcal-sidebar-icon-btn:hover {
   background-color: var(--gp-m3-state-hover);
-  color: var(--gp-m3-on-surface-variant);
+  color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant));
 }
 .gp-gcal-sidebar-icon-btn:active {
   background-color: var(--gp-m3-state-pressed);
-  color: var(--gp-m3-on-surface-variant);
+  color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant));
 }
 
 /* M3 focus indicator — single ring on the full header row (matches native accordion hit target) */
