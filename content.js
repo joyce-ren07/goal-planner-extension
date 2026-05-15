@@ -2386,9 +2386,13 @@
 
       const patchReport = patchSidebarGoalCardProgressOnly(cardToPatch, g, traceId, legacyById);
       const lgRow = legacyById.get(gid) || legacyById.get(String(gid));
-      const slotArr = lgRow
-        ? meta?.slotPackOverride?.[gid] ?? meta?.slotPackOverride?.[String(gid)]
-        : null;
+      const slotArr =
+        meta?.slotPackOverride?.[gid] ??
+        meta?.slotPackOverride?.[String(gid)] ??
+        null;
+      const chipTruthy = meta?.chipDoneOverride
+        ? Object.keys(meta.chipDoneOverride).filter((k) => meta.chipDoneOverride[k])
+        : [];
       console.info(
         '[gp-my-goals] progress painted',
         gid,
@@ -2399,6 +2403,7 @@
           pct: patchReport?.pct,
           calEventIds: (lgRow?.calEventIds || []).length,
           slotDone: Array.isArray(slotArr) ? slotArr : [],
+          chipTruthyKeys: chipTruthy.length,
         }
       );
       const pair = goalSidebarCardSigs(g, legacyById);
