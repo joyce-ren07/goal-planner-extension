@@ -1827,6 +1827,7 @@
           chip._gpGoalDragMoveRaf = requestAnimationFrame(() => {
             chip._gpGoalDragMoveRaf = null;
             syncExtGoalTimeFromContainer(chip);
+            globalThis.GoalCalendarSync?.schedulePersistSessionGeometry?.(chip);
           });
         };
 
