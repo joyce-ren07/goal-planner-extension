@@ -460,7 +460,7 @@
   display: block !important;
   box-sizing: border-box !important;
   height: 100% !important;
-  border-radius: 16px !important;
+  border-radius: 9999px !important;
   background-color: var(--goal-progress-color, #d3564b) !important;
   /* Width from card --goal-progress-pct (set by patchSidebarGoalCardProgressOnly). */
   width: var(--goal-progress-pct, 0%) !important;
@@ -471,11 +471,12 @@
 
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-sessions {
   font-family: var(--gp-native-font-family, inherit);
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 400 !important;
   color: var(--goal-progress-color, #d3564b) !important;
-  line-height: normal;
+  line-height: 1.35;
   margin: 0 !important;
+  opacity: 0.95;
 }
 
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-session-sep {
