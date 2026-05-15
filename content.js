@@ -1171,6 +1171,7 @@
     const root = document.createElement('div');
     root.id = 'gp-gcal-sidebar-goals-root';
     root.className = 'gp-gcal-sidebar-goals-root';
+    root.dataset.gpCollapseMode = 'instant';
 
     const header = document.createElement('div');
     header.className = 'gp-gcal-sidebar-section-header';
