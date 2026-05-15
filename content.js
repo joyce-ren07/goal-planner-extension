@@ -988,7 +988,6 @@
     stripGCalMenuItemBehaviorAttrs(row);
     row.setAttribute(GP_CREATE_MENU_GOAL_ATTR, '1');
     row.setAttribute('aria-label', 'Goal');
-    row.classList.remove('CDELXb'); // unstable class cleanup not needed — keep cloned classes verbatim
     replaceClonedMenuItemPrimaryLabel(row, 'Goal');
 
     const activate = (e) => openGoalCreateFromCalendarToolbarMenu(e);
