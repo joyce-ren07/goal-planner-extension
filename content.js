@@ -1656,68 +1656,119 @@
       .replace(/"/g, '&quot;');
   }
 
-  function renderMyGoalsProgressPanelFromState(unifiedState) {
-    mountLeftSidebarGoalsSection();
-    const el = document.getElementById('gp-gcal-sidebar-goals-cards');
-    const root = document.getElementById('gp-gcal-sidebar-goals-root');
-    if (!el || !root) return;
-
-    const goals = unifiedState && Array.isArray(unifiedState.goals) ? unifiedState.goals : [];
-    root.hidden = false;
-
-    if (!goals.length) {
-      el.innerHTML =
-        '<p class="gp-gcal-mgg-empty">No goals yet. Use <strong>+</strong> above to create one in Goal Planner.</p>';
-      return;
-    }
-
-    el.innerHTML = goals
-      .map((g) => {
-        const sessions = g.sessions || [];
-        const total = sessions.length;
-        const done = sessions.filter((s) => s.completed).length;
-        const pct = Math.max(
-          0,
-          Math.min(
-            100,
-            typeof g.progressPct === 'number'
-              ? g.progressPct
-              : total
-                ? Math.round((done / total) * 100)
-                : 0
-          )
-        );
-        const title = escapeHtmlGp(g.title || 'Untitled goal');
-        return (
-          `<article class="gp-gcal-mgg-card" role="group" aria-label="${title}, ${done} of ${total} sessions complete">` +
-          `<div class="gp-gcal-mgg-eyebrow">Goal progress</div>` +
-          `<div class="gp-mgg-row-head">` +
-          `<span class="gp-mgg-title">${title}</span>` +
-          `<span class="gp-mgg-count">${done}/${total} sessions</span>` +
-          `</div>` +
-          `<div class="gp-progress-bar" aria-hidden="true"><div class="gp-progress-fill" style="width:${pct}%"></div></div>` +
-          `</article>`
-        );
-      })
-      .join('');
+  async function handleGoalCardClick(goalId) {
+    openPanel();
+    showScreen('home');
+    await renderHomeScreen();
+    requestAnimationFrame(() => {
+      try {
+        const row = document.querySelector(`#gp-goals-list .gp-goal-row[data-goal-id="${CSS.escape(goalId)}"]`);
+        row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (_) {
+        const row = document.querySelector(`#gp-goals-list .gp-goal-row[data-goal-id="${goalId}"]`);
+        row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    });
   }
 
-  async function renderMyGoalsProgressPanel() {
+  /**
+   * Render goal cards into the injected left-sidebar list using GoalPlannerModel + live gp_chip_done.
+   * @param {{ goals?: unknown[] } | null | undefined} [preloadedUnified] Optional snapshot (avoids duplicate load from home screen).
+   */
+  async function renderGoalsSidebar(preloadedUnified) {
+    mountLeftSidebarGoalsSection();
+    const container =
+      document.querySelector('.gcal-ext-goals-list') ||
+      document.querySelector('[data-extension="my-goals-list"]') ||
+      document.getElementById('gp-gcal-sidebar-goals-cards');
+    const root = document.getElementById('gp-gcal-sidebar-goals-root');
+    if (!container || !root) return;
+
+    const legacyDone = await new Promise((r) =>
+      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+    );
+    const legacyGoals = await getGoals();
+    const legacyById = new Map(legacyGoals.map((g) => [g.id, g]));
+
     const Model = globalThis.GoalPlannerModel;
-    if (!Model) {
-      renderMyGoalsProgressPanelFromState({ goals: [] });
+    let goals = [];
+    if (preloadedUnified && Array.isArray(preloadedUnified.goals)) goals = preloadedUnified.goals;
+    else if (Model) {
+      const state = await Model.loadUnifiedState();
+      goals = state.goals || [];
+    }
+
+    root.hidden = false;
+    container.innerHTML = '';
+
+    if (!goals.length) {
+      container.innerHTML =
+        '<div class="gcal-ext-goals-empty">No goals yet. Click + to add one.</div>';
       return;
     }
-    const state = await Model.loadUnifiedState();
-    renderMyGoalsProgressPanelFromState(state);
+
+    goals.forEach((g) => {
+      const legacy = legacyById.get(g.id);
+      const sessions = g.sessions || [];
+      const total = sessions.length;
+      let completed = 0;
+      if (total > 0) {
+        completed = sessions.filter((s) => gpSidebarSessionCompleted(s, legacyDone)).length;
+      }
+      const pct =
+        total > 0 ? Math.round((completed / total) * 100) : typeof g.progressPct === 'number' ? g.progressPct : 0;
+      const pctClamped = Math.max(0, Math.min(100, pct));
+      const color = gpCalendarColorHex(g.id, legacy);
+      const name = escapeHtmlGp(g.title || 'Untitled goal');
+
+      const card = document.createElement('div');
+      card.className = 'gcal-ext-goal-card';
+      card.dataset.goalId = g.id;
+      card.dataset.extension = 'goal-card';
+      card.style.setProperty('--goal-color', color);
+      card.setAttribute(
+        'role',
+        'button'
+      );
+      card.setAttribute(
+        'aria-label',
+        `${g.title || 'Untitled goal'}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
+      );
+      card.tabIndex = 0;
+      card.innerHTML =
+        `<div class="gcal-ext-goal-accent" style="background-color:${color}"></div>` +
+        `<div class="gcal-ext-goal-body">` +
+        `<div class="gcal-ext-goal-name">${name}</div>` +
+        `<div class="gcal-ext-goal-progress-track">` +
+        `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%;background-color:${color}"></div>` +
+        `</div>` +
+        `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>` +
+        `</div>`;
+
+      card.addEventListener('click', () => handleGoalCardClick(g.id));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleGoalCardClick(g.id);
+        }
+      });
+
+      container.appendChild(card);
+    });
   }
 
   function setupMyGoalsUnifiedBinding() {
     if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
     try {
       chrome.storage.onChanged.addListener((changes, area) => {
-        if (area !== 'local' || !changes.goalPlannerUnifiedState) return;
-        renderMyGoalsProgressPanel();
+        if (area !== 'local') return;
+        if (
+          changes.goalPlannerUnifiedState ||
+          changes.gp_goals ||
+          changes.gp_chip_done
+        ) {
+          renderGoalsSidebar();
+        }
       });
     } catch (_) {
       /* ignore */
