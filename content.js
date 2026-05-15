@@ -2072,10 +2072,10 @@
       gpMyGoalsSidebarDiag('3–4 DOM patch apply', {
         traceId,
         goalId: card.dataset.goalId,
-        numbers,
-        widthAssign,
-        countAssign,
-        pctAssign,
+        numbers: painted?.numbers,
+        widthAssign: painted?.widthAssign,
+        countAssign: painted?.countAssign,
+        pctAssign: painted?.pctAssign,
         before,
         after,
         textChanged:
@@ -2084,14 +2084,10 @@
       });
     }
     return {
-      numbers,
-      widthAssign,
-      countAssign,
-      pctAssign,
+      ...painted,
       before,
       after,
-      fillEl,
-      forceVisualTest: !!(GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST && fillEl),
+      forceVisualTest: !!(GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST && painted?.trackEl),
     };
   }
 
