@@ -1924,6 +1924,10 @@
     // Disconnect any previous observers attached to this chip
     chip._resizeObserver?.disconnect();
     chip._resizeMutAttrObs?.disconnect();
+    if (chip._gpLabelSyncRaf != null) {
+      cancelAnimationFrame(chip._gpLabelSyncRaf);
+      chip._gpLabelSyncRaf = null;
+    }
 
     // ── Track 1: subtree mutations → rAF-coalesced label sync (move + resize) ──
     const scheduleLabelSync = () => {
