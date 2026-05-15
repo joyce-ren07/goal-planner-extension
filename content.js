@@ -2330,7 +2330,14 @@
     const completedRaw = await new Promise((r) =>
       chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
     );
-    const completed = expandChipDoneOntoCalEventIds(completedRaw, goals);
+    const slotPackHome = await new Promise((r) =>
+      chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
+    );
+    const completed = injectSlotDoneIntoExpandedChipDone(
+      expandChipDoneOntoCalEventIds(completedRaw, goals),
+      goals,
+      slotPackHome
+    );
     const emptyEl = document.getElementById('gp-empty-state');
     const listEl = document.getElementById('gp-goals-list');
     if (!goals.length) {
