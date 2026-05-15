@@ -178,7 +178,7 @@
 .gp-gcal-sidebar-icon-btn:hover {
   background-color: rgba(32, 33, 36, 0.08);
 }
-.gp-gcal-sidebar-icon-btn:focus-visible {
+.gp-gcal-sidebar-label-btn:focus-visible {
   outline: 2px solid #1a73e8;
   outline-offset: 1px;
 }
