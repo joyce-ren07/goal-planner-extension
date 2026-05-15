@@ -1222,16 +1222,9 @@
     if (cs.marginLeft && cs.marginLeft !== '0px') setVar('--gp-native-root-ml', cs.marginLeft);
     if (cs.marginRight && cs.marginRight !== '0px') setVar('--gp-native-root-mr', cs.marginRight);
 
-    const ptUse =
-      (cs.paddingTop && cs.paddingTop !== '0px') || (cs.paddingBottom && cs.paddingBottom !== '0px')
-        ? cs.paddingTop
-        : pcs.paddingTop;
-    const pbUse =
-      (cs.paddingTop && cs.paddingTop !== '0px') || (cs.paddingBottom && cs.paddingBottom !== '0px')
-        ? cs.paddingBottom
-        : pcs.paddingBottom;
-    setVar('--gp-native-header-pt', ptUse);
-    setVar('--gp-native-header-pb', pbUse);
+    const minVert = minNativeSidebarHeaderVerticalPaddingPx(scroll);
+    setVar('--gp-native-header-pt', `${minVert.pt}px`);
+    setVar('--gp-native-header-pb', `${minVert.pb}px`);
 
     root.style.removeProperty('--gp-native-header-min-height');
     let minH = '';
