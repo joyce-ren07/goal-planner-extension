@@ -2000,57 +2000,71 @@
     };
   }
 
-  /** Session completion / progress only: same card node, progress fill width + session count/pct spans. */
-  function patchSidebarGoalCardProgressOnly(card, g, traceId) {
+  /**
+   * Paint progress on the visible track (gradient) + fill width + session text.
+   * Track gradient survives GCal !important fill rules and zero-width fill edge cases.
+   */
+  function paintSidebarGoalProgressOnCard(card, g, legacyById) {
     if (!card || !g) return null;
     const numbers = computeGoalSidebarNumbers(g);
     const { total, completed, pctClamped } = numbers;
-    const widthAssign = `${pctClamped}%`;
+    const pct = Math.max(0, Math.min(100, pctClamped));
+    const widthAssign = `${pct}%`;
+    const legacy = legacyByIdLookup(legacyById, g.id) || {};
+    const colorSource = {
+      ...legacy,
+      color: legacy.color != null && legacy.color !== '' ? legacy.color : g.color,
+    };
+    const color = getGoalDisplayColor(colorSource);
+    const trackBg = hexToTint(color, 0.76);
     const plainTitle = String(g.title || 'Untitled goal').trim();
-    const before = inspectSidebarGoalCardDom(card);
 
     card.setAttribute(
       'aria-label',
-      `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
+      `${plainTitle}, ${completed} of ${total} sessions complete, ${pct} percent`
     );
+    card.style.setProperty('--goal-progress-color', color);
+    card.style.setProperty('--goal-progress-pct', widthAssign);
+    card.dataset.gpProgressPct = String(pct);
+
+    const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
+    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
+    const grad = `linear-gradient(90deg, ${color} 0%, ${color} ${pct}%, ${trackBg} ${pct}%, ${trackBg} 100%)`;
+    if (trackEl) {
+      trackEl.style.setProperty('background', grad, 'important');
+      trackEl.style.setProperty('background-color', trackBg, 'important');
+    }
+    if (fillEl) {
+      fillEl.style.setProperty('display', 'block', 'important');
+      fillEl.style.setProperty('width', widthAssign, 'important');
+      fillEl.style.setProperty('opacity', pct > 0 ? '1' : '0', 'important');
+    }
+
     const sessWrap = card.querySelector('.gcal-ext-goal-sessions');
     ensureSidebarGoalSessionsSpans(sessWrap);
     const countSpan = sessWrap?.querySelector('.gcal-ext-goal-session-count');
     const pctSpan = sessWrap?.querySelector('.gcal-ext-goal-session-pct');
     const countAssign = `${completed} of ${total} sessions`;
-    const pctAssign = `${pctClamped}%`;
+    const pctAssign = `${pct}%`;
     if (countSpan) countSpan.textContent = countAssign;
     if (pctSpan) pctSpan.textContent = pctAssign;
     else if (sessWrap) sessWrap.textContent = `${countAssign} • ${pctAssign}`;
 
-    card.style.setProperty('--goal-progress-pct', widthAssign);
-    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-    if (fillEl) {
-      fillEl.style.removeProperty('width');
-      if (!fillEl.style.display) fillEl.style.display = 'block';
+    return { numbers, widthAssign, countAssign, pctAssign, fillEl, trackEl, color, pct };
+  }
 
-      if (GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST) {
-        card.style.setProperty('--goal-progress-pct', '80%', 'important');
-        fillEl.style.setProperty('background-color', 'red', 'important');
-        fillEl.style.setProperty('height', '8px', 'important');
-        if (GP_MY_GOALS_SIDEBAR_DIAG) {
-          const rect = fillEl.getBoundingClientRect();
-          gpMyGoalsSidebarDiag('FORCE VISUAL TEST on fill', {
-            traceId,
-            goalId: card.dataset.goalId,
-            isConnected: fillEl.isConnected,
-            cardVisible: isElementVisibleForPatch(card),
-            parentClass: fillEl.parentElement?.className,
-            rect: { w: rect.width, h: rect.height, top: rect.top, left: rect.left },
-            computed: {
-              width: getComputedStyle(fillEl).width,
-              height: getComputedStyle(fillEl).height,
-              backgroundColor: getComputedStyle(fillEl).backgroundColor,
-              pctVar: getComputedStyle(card).getPropertyValue('--goal-progress-pct'),
-            },
-          });
-        }
-      }
+  /** Session completion / progress only: same card node, progress fill width + session count/pct spans. */
+  function patchSidebarGoalCardProgressOnly(card, g, traceId, legacyById) {
+    if (!card || !g) return null;
+    const before = inspectSidebarGoalCardDom(card);
+    const painted = paintSidebarGoalProgressOnCard(card, g, legacyById || new Map());
+
+    if (GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST && painted?.trackEl) {
+      painted.trackEl.style.setProperty(
+        'background',
+        'linear-gradient(90deg, red 0%, red 80%, #eee 80%, #eee 100%)',
+        'important'
+      );
     }
 
     const after = inspectSidebarGoalCardDom(card);
