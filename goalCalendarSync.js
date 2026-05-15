@@ -185,24 +185,24 @@
     var truthyKeys = Object.keys(raw).filter(function (k) {
       return raw[k];
     });
-    for (gi = 0; gi < goals.length; gi++) {
-      g = goals[gi];
-      ids = g.calEventIds || [];
-      if (!ids.length) continue;
-      idStrSet = {};
-      for (ii = 0; ii < ids.length; ii++) idStrSet[String(ids[ii])] = true;
-      var syntheticGoal = [{ calEventIds: ids }];
-      for (ci = 0; ci < ids.length; ci++) {
-        calId = ids[ci];
-        if (!calId && calId !== 0) continue;
-        calStr = String(calId);
-        if (raw[calStr]) continue;
-        for (ki = 0; ki < truthyKeys.length; ki++) {
-          k = truthyKeys[ki];
-          if (idStrSet[String(k)]) continue;
-          var hit = resolvePlannerEventIdForChip(k, syntheticGoal);
-          if (hit && calEventIdsContain(ids, hit)) {
-            raw[calStr] = true;
+    for (var gj = 0; gj < goals.length; gj++) {
+      var gg = goals[gj];
+      var idsG = gg.calEventIds || [];
+      if (!idsG.length) continue;
+      var idStrSetG = {};
+      for (var ij = 0; ij < idsG.length; ij++) idStrSetG[String(idsG[ij])] = true;
+      var syntheticGoal = [{ calEventIds: idsG }];
+      for (var cj = 0; cj < idsG.length; cj++) {
+        var calIdG = idsG[cj];
+        if (!calIdG && calIdG !== 0) continue;
+        var calStrG = String(calIdG);
+        if (raw[calStrG]) continue;
+        for (var kj = 0; kj < truthyKeys.length; kj++) {
+          var kk = truthyKeys[kj];
+          if (idStrSetG[String(kk)]) continue;
+          var hitG = resolvePlannerEventIdForChip(kk, syntheticGoal);
+          if (hitG && calEventIdsContain(idsG, hitG)) {
+            raw[calStrG] = true;
             break;
           }
         }
