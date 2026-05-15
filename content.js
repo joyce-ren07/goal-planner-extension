@@ -2481,6 +2481,7 @@
             endDate: r.endDate || '',
             calEventIds: eventIds,
             colorId: goals[idx].colorId || '9',
+            color: goals[idx].color || GP_GOAL_DEFAULT_UI_COLOR,
           };
         }
       } else {
