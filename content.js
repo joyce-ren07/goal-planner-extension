@@ -2385,12 +2385,21 @@
       }
 
       const patchReport = patchSidebarGoalCardProgressOnly(cardToPatch, g, traceId, legacyById);
+      const lgRow = legacyById.get(gid) || legacyById.get(String(gid));
+      const slotArr = lgRow
+        ? meta?.slotPackOverride?.[gid] ?? meta?.slotPackOverride?.[String(gid)]
+        : null;
       console.info(
         '[gp-my-goals] progress painted',
         gid,
         `${patchReport?.numbers?.completed ?? '?'}/${patchReport?.numbers?.total ?? '?'}`,
         patchReport?.pctAssign,
-        { visible: resolved?.visible, pct: patchReport?.pct }
+        {
+          visible: resolved?.visible,
+          pct: patchReport?.pct,
+          calEventIds: (lgRow?.calEventIds || []).length,
+          slotDone: Array.isArray(slotArr) ? slotArr : [],
+        }
       );
       const pair = goalSidebarCardSigs(g, legacyById);
       cardToPatch.dataset.gpSidebarStructSig = pair.struct;
