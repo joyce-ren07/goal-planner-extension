@@ -858,8 +858,13 @@
     ['home','form','suggestions'].forEach(s => {
       document.getElementById(`gp-screen-${s}`).classList.toggle('active', s === name);
     });
-    if (name === 'home') { renderHomeScreen(); removeGhostEvents(); }
-    if (name === 'form') removeGhostEvents();
+    if (name === 'home') {
+      clearGoalCreationPreview();
+      renderHomeScreen();
+    } else if (name === 'form') {
+      clearGoalCreationPreview();
+    }
+    if (name === 'suggestions') { /* preview state only cleared on commit / cancel */ }
   }
 
   // ── My Goals — read-only progress strip (GoalPlannerModel / goalPlannerUnifiedState only) ──
