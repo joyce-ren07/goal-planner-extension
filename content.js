@@ -1307,7 +1307,6 @@
     if (chevTrans) setVar('--gp-native-chevron-transition', chevTrans);
 
     let collapseMode = 'instant';
-    const pane = findNativeSectionContentSibling(ref, scroll);
     if (pane && scroll.contains(pane)) {
       const ps = getComputedStyle(pane);
       const pDur = gpMaxTransitionDurationMs(ps.transitionDuration);
