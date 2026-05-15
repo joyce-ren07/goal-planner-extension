@@ -292,13 +292,13 @@
   padding-right: 2px !important;
   border-radius: 50% !important;
   width: calc(
-    var(--gp-booking-add-btn-w, calc(var(--gp-native-add-btn-w, var(--gp-native-icon-btn-w, 40px)) + 4px)) + 4px -
-      8px
-  ) !important;
+      var(--gp-booking-add-btn-w, var(--gp-native-add-btn-w, var(--gp-native-icon-btn-w, 40px))) - 8px
+    )
+    !important;
   height: calc(
-    var(--gp-booking-add-btn-h, calc(var(--gp-native-add-btn-h, var(--gp-native-icon-btn-h, 40px)) + 4px)) + 4px -
-      8px
-  ) !important;
+      var(--gp-booking-add-btn-h, var(--gp-native-add-btn-h, var(--gp-native-icon-btn-h, 40px))) - 8px
+    )
+    !important;
 }
 
 /* M3 focus indicator — single ring on the full header row (matches native accordion hit target) */
