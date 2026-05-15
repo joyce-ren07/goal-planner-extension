@@ -1094,6 +1094,29 @@
     return m;
   }
 
+  /** Max (scroll inner right − rightmost header icon) across native section rows — matches gutter at drawer edge. */
+  function maxNativeSidebarIconToScrollInnerRightGapPx(scrollEl) {
+    if (!scrollEl) return 0;
+    const sr = scrollEl.getBoundingClientRect();
+    const innerRight = sr.left + scrollEl.clientWidth;
+    let m = 0;
+    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      const nested = nativeSidebarNestedTriggers(row);
+      if (!nested.length) continue;
+      let maxIconRight = sr.left;
+      for (const b of nested) {
+        const br = b.getBoundingClientRect();
+        if (br.right > maxIconRight) maxIconRight = br.right;
+      }
+      m = Math.max(m, Math.round(innerRight - maxIconRight));
+    }
+    return m;
+  }
+
   function findNativeSectionContentSibling(headerRef, scrollEl) {
     if (!headerRef || !scrollEl) return null;
     let sib = headerRef.nextElementSibling;
