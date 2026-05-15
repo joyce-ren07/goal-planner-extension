@@ -2190,7 +2190,10 @@
     await renderGoalsSidebar(unifiedSnapshot);
 
     const goals     = await getGoals();
-    const completed = await new Promise(r => chrome.storage.local.get(['gp_chip_done'], d => r(d.gp_chip_done || {})));
+    const completedRaw = await new Promise((r) =>
+      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+    );
+    const completed = expandChipDoneOntoCalEventIds(completedRaw, goals);
     const emptyEl = document.getElementById('gp-empty-state');
     const listEl = document.getElementById('gp-goals-list');
     if (!goals.length) {
