@@ -5172,7 +5172,14 @@
         const eid =
           chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
         const goal = goals.find(g => chip.textContent.includes(g.title));
-        const resolvedEid = eid ? resolvePlannerEventIdForChip(eid, goals) || eid : '';
+        let resolvedEid = eid ? resolvePlannerEventIdForChip(eid, goals) || eid : '';
+        if (goal) {
+          const slotFromTime = resolveSlotIndexByAnchorTime(chip, goal);
+          if (slotFromTime >= 0 && goal.calEventIds?.[slotFromTime]) {
+            resolvedEid = String(goal.calEventIds[slotFromTime]);
+            chip.dataset.gpCalEventId = resolvedEid;
+          }
+        }
         const chipKey =
           resolvedEid ||
           (goal ? goal.id + ':' + chip.textContent.trim().slice(0, 40) : 'tx:' + chip.textContent.trim().slice(0, 50));
