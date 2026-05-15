@@ -3702,6 +3702,22 @@
       const dayNames = { SU:'Sun', MO:'Mon', TU:'Tue', WE:'Wed', TH:'Thu', FR:'Fri', SA:'Sat' };
       const dayStr = r.days.map(d => dayNames[d]).join(', ');
       const schedLabel = r.every === 1 ? `Weekly on ${dayStr}` : `Every ${r.every} ${r.period}s`;
+      const startDate =
+        earliestSuggestionStartYmd(state.suggestions) ||
+        ymdFromIsoStart(new Date().toISOString());
+      const Model = globalThis.GoalPlannerModel;
+      const totalSessions = Model?.resolveGoalTotalSessions
+        ? Model.resolveGoalTotalSessions({
+            recurrence: r,
+            endDate: r.endDate || '',
+            startDate,
+            sessionAnchors: state.suggestions.map((sug, i) => ({
+              eventId: '',
+              isoStart: sug?.isoStart || '',
+            })),
+            calEventIds: state.suggestions.map(() => 'pending'),
+          })
+        : getPreviewTotalSessions();
 
       const goals = await getGoals();
       if (isEditing) {
