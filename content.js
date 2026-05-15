@@ -1159,14 +1159,25 @@
     setVar('--gp-native-header-pr', prVal);
     if (cs.marginLeft && cs.marginLeft !== '0px') setVar('--gp-native-root-ml', cs.marginLeft);
     if (cs.marginRight && cs.marginRight !== '0px') setVar('--gp-native-root-mr', cs.marginRight);
-    if (pcs.paddingTop) setVar('--gp-native-header-pt', pcs.paddingTop);
-    if (pcs.paddingBottom) setVar('--gp-native-header-pb', pcs.paddingBottom);
 
+    const ptUse = parseFloat(cs.paddingTop) > 0 ? cs.paddingTop : pcs.paddingTop;
+    const pbUse = parseFloat(cs.paddingBottom) > 0 ? cs.paddingBottom : pcs.paddingBottom;
+    setVar('--gp-native-header-pt', ptUse);
+    setVar('--gp-native-header-pb', pbUse);
+
+    root.style.removeProperty('--gp-native-header-min-height');
     let minH = '';
-    if (cs.minHeight && cs.minHeight !== '0px') minH = cs.minHeight;
-    else if (pcs.minHeight && pcs.minHeight !== '0px') minH = pcs.minHeight;
-    setVar('--gp-native-header-min-height', minH);
+    if (cs.minHeight && cs.minHeight !== '0px' && cs.minHeight !== 'auto') minH = cs.minHeight;
+    else if (pcs.minHeight && pcs.minHeight !== '0px' && pcs.minHeight !== 'auto') minH = pcs.minHeight.replace(/\s*min-content\s*/i, '').trim();
+    if (minH && minH !== 'auto') setVar('--gp-native-header-min-height', minH);
 
+    root.style.removeProperty('--gp-native-body-pad-top');
+    root.style.removeProperty('--gp-native-body-pad-bottom');
+    if (pane && scroll.contains(pane)) {
+      const panCs = getComputedStyle(pane);
+      setVar('--gp-native-body-pad-top', panCs.paddingTop);
+      setVar('--gp-native-body-pad-bottom', panCs.paddingBottom);
+    }
     if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
     setVar('--gp-native-header-align', cs.alignItems);
 
