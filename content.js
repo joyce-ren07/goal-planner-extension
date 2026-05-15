@@ -3197,13 +3197,13 @@
 
       const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
       const storageKey = liveEid || canonicalEventKey;
-      if (liveEid && chip.dataset.gpChipKey !== liveEid) chip.dataset.gpChipKey = liveEid;
 
       chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
         const legacyGoals = d.gp_goals || [];
         const target = resolveChipCompletionTarget(chip, legacyGoals);
         let plannerEventId = target.plannerEventId || resolvePlannerEventIdForChip(storageKey, legacyGoals);
         if (!plannerEventId) plannerEventId = storageKey;
+        if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
         const map = { ...(d.gp_chip_done || {}) };
         if (nextDone) map[plannerEventId] = true;
         else delete map[plannerEventId];
