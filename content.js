@@ -3758,6 +3758,8 @@
           scheduleLabel: schedLabel,
           recurrence: { ...r },
           endDate: r.endDate || '',
+          startDate,
+          totalSessions,
           created: new Date().toISOString(),
           calEventIds: eventIds,
           sessionAnchors,
