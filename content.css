@@ -215,6 +215,9 @@
 }
 
 /* ── Goals list (populated state) ── */
+.gp-goals-list { display: none; width: 100%; box-sizing: border-box; flex-direction: column; gap: 2px; padding: 12px 0 12px; }
+.gp-goals-list.visible { display: flex; }
+
 .gp-goal-row {
   padding: 8px 4px 8px 10px;
   border-radius: 8px;
