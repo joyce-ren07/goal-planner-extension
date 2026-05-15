@@ -1034,6 +1034,9 @@
     const ref = findNativeCalendarSidebarAccordionRow(scroll);
     if (!ref) return;
 
+    root.style.removeProperty('--gp-native-root-ml');
+    root.style.removeProperty('--gp-native-root-mr');
+
     const setVar = (name, val) => {
       if (val == null || val === '' || val === 'auto' || val === 'normal') return;
       root.style.setProperty(name, String(val));
