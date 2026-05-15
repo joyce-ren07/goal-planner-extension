@@ -164,7 +164,7 @@
       for (var ii = 0; ii < ids.length; ii++) idSet[String(ids[ii])] = true;
       for (var ci = 0; ci < ids.length; ci++) {
         var calId = ids[ci];
-        if (!calId) continue;
+        if (calId == null || calId === '') continue;
         var calStr = String(calId);
         if (raw[calStr]) continue;
         var keys = Object.keys(raw);

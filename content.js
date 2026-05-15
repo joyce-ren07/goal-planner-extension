@@ -2168,7 +2168,7 @@
       if (!ids.length) continue;
       const idSet = new Set(ids.map((x) => String(x)));
       for (const calId of ids) {
-        if (!calId) continue;
+        if (calId == null || calId === '') continue;
         const calStr = String(calId);
         if (raw[calStr]) continue;
         for (const k of Object.keys(raw)) {
