@@ -314,6 +314,7 @@
     setupRailFallbackPositioner();
 
     wireEvents();
+    setupMyGoalsUnifiedBinding();
     renderHomeScreen();
     setupCalendarPushObserver();
     setupNativeSidebarObserver();
