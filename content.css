@@ -460,7 +460,7 @@
   font-family: var(--gp-native-font-family, inherit);
   font-size: 14px !important;
   font-weight: 400 !important;
-  color: #d3564b !important;
+  color: var(--goal-progress-color, #d3564b) !important;
   line-height: normal;
   margin: 0 !important;
 }
@@ -468,16 +468,11 @@
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-session-sep {
   /* Keep middot visually centered between count and percentage (Figma: " • "). */
   font-weight: 400 !important;
-  color: #d3564b !important;
+  color: var(--goal-progress-color, #d3564b) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card,
-  #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
-    transition: none;
-  }
-
-  /* Lock width jumps when transitions are disabled. */
   #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
     transition: none !important;
   }
