@@ -1913,13 +1913,13 @@
   }
 
   /** Temporary trace for Goal → My Goals sidebar progress pipeline; set false after verification. */
-  const GP_MY_GOALS_SIDEBAR_DIAG = true;
+  const GP_MY_GOALS_SIDEBAR_DIAG = false;
 
   /**
    * Temporary: force obvious fill styles to isolate wrong-node vs width/CSS vs overwrite.
    * Set false after test. If red 80% bar does not appear → patched node is not on-screen.
    */
-  const GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST = true;
+  const GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST = false;
 
   function gpMyGoalsSidebarDiag(...args) {
     if (!GP_MY_GOALS_SIDEBAR_DIAG) return;
