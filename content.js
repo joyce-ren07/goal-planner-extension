@@ -3483,6 +3483,30 @@
     return '';
   }
 
+  /** Synthetic sessionAnchors from unified model when gp_goals rows lack them (multi-session slot match). */
+  async function enrichGoalRowWithUnifiedAnchors(goalRow, legacyGoals, chipDoneMap) {
+    if (!goalRow || goalRow.sessionAnchors?.length) return goalRow;
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model) return goalRow;
+    try {
+      let st = await Model.loadUnifiedState();
+      st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDoneMap || {});
+      const ug = st.goals.find((g) => String(g.id) === String(goalRow.id));
+      const calIds = goalRow.calEventIds || [];
+      const syn = [];
+      if (ug?.sessions?.length && calIds.length) {
+        for (const id of calIds) {
+          const s = ug.sessions.find((x) => x.eventId === id);
+          if (s?.startTime) syn.push({ eventId: id, isoStart: s.startTime });
+        }
+        if (syn.length) return { ...goalRow, sessionAnchors: syn };
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return goalRow;
+  }
+
   /**
    * Final planner event id for gp_chip_done — must exist in goal.calEventIds[].
    * Sync helpers cannot async; checkbox handler resolves asynchronously.
