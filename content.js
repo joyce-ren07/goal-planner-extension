@@ -1051,6 +1051,12 @@
     const confirmNameBox   = document.getElementById('gp-confirm-name-box');
     confirmNameInput.addEventListener('focus', () => confirmNameBox.classList.add('focused'));
     confirmNameInput.addEventListener('blur',  () => confirmNameBox.classList.remove('focused'));
+    confirmNameInput.addEventListener('input', scheduleGhostPreviewRefreshDebounced);
+
+    // Recurrence fields — ghost preview rerenders (presentation only).
+    const recOv = document.getElementById('gp-recurrence-overlay');
+    recOv.addEventListener('input', scheduleGhostPreviewRefreshDebounced);
+    recOv.addEventListener('change', scheduleGhostPreviewRefreshDebounced);
 
     // Screen 3 — schedule chips open recurrence modal directly
     document.getElementById('gp-confirm-schedule').addEventListener('click', openRecurrence);
