@@ -137,8 +137,8 @@
   }
 
   /**
+   * @param {GoalPlannerUnifiedState} state
    * @param {Goal} goal
-   * @returns {Goal}
    */
   function upsertGoal(state, goal) {
     var idx = state.goals.findIndex(function (g) { return g.id === goal.id; });
