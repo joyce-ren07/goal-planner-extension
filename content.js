@@ -1955,13 +1955,14 @@
 
   /**
    * Compare structure vs completion signatures; patch one card without touching siblings.
+   * @param {boolean} [force] When true (e.g. calendar session checkbox → sidebar), repaint progress even if sigs already match (avoids stale DOM vs dataset).
    * @returns {boolean} true if this card’s DOM was updated
    */
-  function syncSingleSidebarGoalCard(card, g, legacyById) {
+  function syncSingleSidebarGoalCard(card, g, legacyById, force) {
     const pair = goalSidebarCardSigs(g, legacyById);
     const prevS = card.dataset.gpSidebarStructSig;
     const prevP = card.dataset.gpSidebarProgSig;
-    if (prevS === pair.struct && prevP === pair.prog) return false;
+    if (!force && prevS === pair.struct && prevP === pair.prog) return false;
     if (prevS === pair.struct && prevP !== pair.prog) {
       patchSidebarGoalCardProgressOnly(card, g);
     } else {
