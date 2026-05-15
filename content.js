@@ -2690,6 +2690,11 @@
     for (const g of goals) {
       const ids = g.calEventIds || [];
       if (!ids.length) continue;
+      const domIds = g.calEventDomIds || [];
+      for (let di = 0; di < ids.length; di++) {
+        const dom = domIds[di];
+        if (dom && raw[String(dom)]) raw[String(ids[di])] = true;
+      }
       const idSet = new Set(ids.map((x) => String(x)));
       for (const calId of ids) {
         if (calId == null || calId === '') continue;
