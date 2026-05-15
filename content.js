@@ -850,7 +850,7 @@
     setCalendarPushed(false);
     closeCtxMenu();
     resetEditMode();
-    removeGhostEvents();
+    clearGoalCreationPreview();
   }
 
   // ── Screen routing ──
