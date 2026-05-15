@@ -1106,6 +1106,9 @@
       renderHomeScreen();
     } else if (name === 'form') {
       clearGoalCreationPreview();
+      scheduleGhostPreviewRefreshDebounced();
+    } else if (name === 'suggestions') {
+      scheduleGhostPreviewRefreshDebounced();
     }
   }
 
