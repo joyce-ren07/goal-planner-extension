@@ -80,6 +80,118 @@
     return Math.max(0, Math.min(100, Math.round(n)));
   }
 
+  var RRULE_DAY_MAP = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+
+  function parseYmdLocal(ymd) {
+    if (!ymd || typeof ymd !== 'string') return null;
+    var p = ymd.split('-').map(Number);
+    if (p.length < 3 || p.some(function (n) { return !Number.isFinite(n); })) return null;
+    return new Date(p[0], p[1] - 1, p[2], 0, 0, 0, 0);
+  }
+
+  function ymdFromDateLocal(d) {
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  /**
+   * Pure recurrence math — count session occurrences between start and end (inclusive).
+   * Does not read calendar DOM or API event lists.
+   * @param {GoalRecurrence} rec
+   * @param {string} startDateYmd `YYYY-MM-DD` (first session day)
+   * @returns {number} 0 when ends=never or inputs invalid (caller may fall back to slot count)
+   */
+  function computeTotalRecurringSessions(rec, startDateYmd) {
+    if (!rec) return 0;
+    if (rec.ends === 'after') {
+      var occ = parseInt(rec.occurrences, 10);
+      return Number.isFinite(occ) && occ > 0 ? occ : 0;
+    }
+    if (rec.ends === 'never') return 0;
+    if (rec.ends !== 'on' || !rec.endDate) return 0;
+
+    var start = parseYmdLocal(startDateYmd);
+    var end = parseYmdLocal(rec.endDate);
+    if (!start || !end || end < start) return 0;
+
+    var period = rec.period || 'week';
+    var every = Math.max(1, parseInt(rec.every, 10) || 1);
+    var days = Array.isArray(rec.days) ? rec.days : [];
+    var targetDows = new Set();
+    days.forEach(function (code) {
+      if (RRULE_DAY_MAP[code] !== undefined) targetDows.add(RRULE_DAY_MAP[code]);
+    });
+
+    var msDay = 86400000;
+    var msWeek = 7 * msDay;
+    end.setHours(23, 59, 59, 999);
+
+    var count = 0;
+    var cur = new Date(start.getTime());
+
+    if (period === 'day') {
+      while (cur <= end) {
+        var dayIdx = Math.round((cur.getTime() - start.getTime()) / msDay);
+        if (dayIdx % every === 0 && (!targetDows.size || targetDows.has(cur.getDay()))) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
+    }
+
+    if (period === 'month') {
+      while (cur <= end) {
+        var monthsSince =
+          (cur.getFullYear() - start.getFullYear()) * 12 +
+          (cur.getMonth() - start.getMonth());
+        if (monthsSince >= 0 && monthsSince % every === 0) {
+          if (!targetDows.size || targetDows.has(cur.getDay())) count++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
+    }
+
+    if (!targetDows.size) return 0;
+    while (cur <= end) {
+      if (targetDows.has(cur.getDay())) {
+        var weekIdx = Math.floor((cur.getTime() - start.getTime()) / msWeek);
+        if (weekIdx % every === 0) count++;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  }
+
+  /** First calendar day for recurrence counting (stored startDate → anchors → created). */
+  function deriveGoalStartDateYmd(legacyGoal) {
+    var lg = legacyGoal || {};
+    if (lg.startDate) return lg.startDate;
+    if (lg.sessionAnchors && lg.sessionAnchors.length) {
+      var best = null;
+      lg.sessionAnchors.forEach(function (a) {
+        if (!a || !a.isoStart) return;
+        var d = new Date(a.isoStart);
+        if (!Number.isFinite(d.getTime())) return;
+        var ymd = ymdFromDateLocal(d);
+        if (!best || ymd < best) best = ymd;
+      });
+      if (best) return best;
+    }
+    if (lg.created) return ymdFromDateLocal(new Date(lg.created));
+    return ymdFromDateLocal(new Date());
+  }
+
+  /** Total scope for progress UI; falls back to recurring slot count when open-ended. */
+  function resolveGoalTotalSessions(legacyGoal) {
+    var lg = legacyGoal || {};
+    var rec = lg.recurrence;
+    var slots = (lg.calEventIds || []).length;
+    if (!rec) return slots > 0 ? slots : 0;
+    var total = computeTotalRecurringSessions(rec, deriveGoalStartDateYmd(lg));
+    if (total > 0) return total;
+    return slots > 0 ? slots : 0;
+  }
+
   /** gp_chip_done keys are often strings; calEventIds may be stored as numbers — avoid strict key misses. */
   function lookupChipDone(doneMap, eventId) {
     if (!doneMap || eventId == null || eventId === '') return false;
