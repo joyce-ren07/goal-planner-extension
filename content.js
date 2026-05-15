@@ -1891,6 +1891,7 @@
       `</div>`;
     const goalColor = displayColor;
     card.style.setProperty('--goal-progress-color', goalColor);
+    card.style.setProperty('--goal-progress-pct', `${pctClamped}%`);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
     /* Card chrome + track tint from content.css via --goal-progress-color (Figma CAPSTONE Goal row). Avoid inline !important so stylesheet controls pill bar + casing. */
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
