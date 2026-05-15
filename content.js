@@ -1966,8 +1966,9 @@
           timeEl.textContent = formatDuration(durationMins);
           timeEl.style.display = containerH < 42 ? 'none' : 'block';
         }
-        syncExtGoalTimeFromContainer(chip, eventContainer);
       }
+      // Prefer live clock range from DOM when GCal exposes it (move + resize).
+      syncExtGoalTimeFromContainer(chip, eventContainer);
 
       // Debounced: persist final value once the drag settles
       clearTimeout(chip._resizeDebounce);
