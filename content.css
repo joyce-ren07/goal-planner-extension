@@ -112,7 +112,6 @@
   /* Map to Google Calendar Web GM3 surface tokens; solid fallbacks match M3 light baseline */
   --gp-m3-on-surface: var(--gm3-sys-color-on-surface, #1f1f1f);
   --gp-m3-on-surface-variant: var(--gm3-sys-color-on-surface-variant, #44474f);
-  --gp-m3-primary: var(--gm3-sys-color-primary, #0b57d0);
   /* State layers: solid fallbacks; refined when color-mix available */
   --gp-m3-state-hover: rgba(31, 31, 31, 0.08);
   --gp-m3-state-focus: rgba(31, 31, 31, 0.1);
