@@ -90,7 +90,7 @@
     return new Promise(function (resolve) {
       chrome.storage.local.get(['gp_goals', 'gp_chip_done'], function (raw) {
         resolve({
-          goals: raw.gp_goals || [],
+          goals: Array.isArray(raw.gp_goals) ? raw.gp_goals : [],
           doneMap: raw.gp_chip_done || {},
         });
       });

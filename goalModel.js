@@ -248,7 +248,7 @@
       prevById.set(g.id, g);
     });
     var nextGoals = [];
-    (legacyGoals || []).forEach(function (lg) {
+    (Array.isArray(legacyGoals) ? legacyGoals : []).forEach(function (lg) {
       var prev = prevById.get(lg.id);
       var ids = lg.calEventIds || [];
       var prevSessionsByEvent = new Map();
