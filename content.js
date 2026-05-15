@@ -2082,7 +2082,22 @@
     Model.subscribeGoalsState((evt) => {
       if (!evt?.state) return;
       queueMicrotask(() => {
-        applyGoalsSidebarFromUnifiedState(evt.state, null, evt.meta || {}).catch(() => {});
+        (async () => {
+          try {
+            const legacyGoals = await getGoals();
+            const chipDone = await new Promise((r) =>
+              chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+            );
+            const merged = Model.syncUnifiedWithLegacyGoals(
+              evt.state,
+              legacyGoals,
+              chipDone || {}
+            );
+            await applyGoalsSidebarFromUnifiedState(merged, null, evt.meta || {});
+          } catch (_) {
+            /* sidebar optional */
+          }
+        })();
       });
     });
   }
