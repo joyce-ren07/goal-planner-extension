@@ -229,7 +229,12 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1), color 200ms cubic-bezier(0.2, 0, 0, 1);
+  cursor: var(--gp-native-cursor, pointer);
+  transition: var(
+    --gp-native-icon-bg-transition,
+    background-color 200ms cubic-bezier(0.2, 0, 0, 1),
+    color 200ms cubic-bezier(0.2, 0, 0, 1)
+  );
 }
 .gp-gcal-sidebar-icon-btn:hover {
   background-color: var(--gp-m3-state-hover);
