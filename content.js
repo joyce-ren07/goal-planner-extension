@@ -2030,12 +2030,12 @@
     }
 
     if (meta?.reason === 'sessionCompletion' && meta.goalId) {
-      const g = goals.find((x) => x.id === meta.goalId);
       const gid = String(meta.goalId);
+      const g = goals.find((x) => String(x.id) === gid);
       const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(gid) : gid;
       const card = container.querySelector(`.gcal-ext-goal-card[data-goal-id="${esc}"]`);
       if (g && card) {
-        updateSidebarGoalCardElement(card, g, legacyById);
+        syncSingleSidebarGoalCard(card, g, legacyById);
         root.dataset.gpSidebarGoalsSig = sigJoined;
         return;
       }
@@ -2043,7 +2043,7 @@
 
     if (sigJoined !== root.dataset.gpSidebarGoalsSig) {
       for (let i = 0; i < goals.length; i++) {
-        updateSidebarGoalCardElement(existingCards[i], goals[i], legacyById);
+        syncSingleSidebarGoalCard(existingCards[i], goals[i], legacyById);
       }
       root.dataset.gpSidebarGoalsSig = sigJoined;
     }
