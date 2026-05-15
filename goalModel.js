@@ -35,7 +35,7 @@
 
   /** @typedef {{ eventId: string, goalId: string, startTime: string, endTime: string, completed: boolean }} GoalSession */
 
-  /** @typedef {{ id: string, title: string, scheduleLabel?: string, recurrence: GoalRecurrence | null, endDate?: string, created?: string, sessions: GoalSession[], progressPct: number }} Goal */
+  /** @typedef {{ id: string, title: string, scheduleLabel?: string, recurrence: GoalRecurrence | null, endDate?: string, startDate?: string, created?: string, sessions: GoalSession[], totalSessions?: number, progressPct: number }} Goal */
 
   /** @typedef {{ version: number, goals: Goal[] }} GoalPlannerUnifiedState */
 
