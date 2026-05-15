@@ -3043,9 +3043,12 @@
   async function persistGpGoalsAndUnified(goals) {
     if (!Array.isArray(goals)) return;
     const Model = globalThis.GoalPlannerModel;
-    const chipDone = await new Promise((r) =>
-      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
-    );
+    let chipDone = {};
+    try {
+      chipDone = await loadMergedChipDoneForSidebar(goals);
+    } catch (_) {
+      chipDone = {};
+    }
     if (Model?.syncUnifiedWithLegacyGoals) {
       try {
         const prev = await Model.loadUnifiedState();
