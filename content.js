@@ -1897,6 +1897,27 @@
     return card;
   }
 
+  /** Session completion / progress only: same card node, progress fill width + session count/pct spans. */
+  function patchSidebarGoalCardProgressOnly(card, g) {
+    if (!card || !g) return;
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const plainTitle = String(g.title || 'Untitled goal').trim();
+    card.setAttribute(
+      'aria-label',
+      `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
+    );
+    const sessWrap = card.querySelector('.gcal-ext-goal-sessions');
+    ensureSidebarGoalSessionsSpans(sessWrap);
+    const countSpan = sessWrap?.querySelector('.gcal-ext-goal-session-count');
+    const pctSpan = sessWrap?.querySelector('.gcal-ext-goal-session-pct');
+    if (countSpan) countSpan.textContent = `${completed} of ${total} sessions`;
+    if (pctSpan) pctSpan.textContent = `${pctClamped}%`;
+    else if (sessWrap) sessWrap.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
+
+    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
+    if (fillEl) fillEl.style.width = `${pctClamped}%`;
+  }
+
   function updateSidebarGoalCardElement(card, g, legacyById) {
     if (!card || !g) return;
     const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
@@ -1907,8 +1928,14 @@
     );
     const nameEl = card.querySelector('.gcal-ext-goal-name');
     if (nameEl) nameEl.innerHTML = escapeHtmlGp(g.title || 'Untitled goal');
-    const sessEl = card.querySelector('.gcal-ext-goal-sessions');
-    if (sessEl) sessEl.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
+    const sessWrap = card.querySelector('.gcal-ext-goal-sessions');
+    ensureSidebarGoalSessionsSpans(sessWrap);
+    const countSpan = sessWrap?.querySelector('.gcal-ext-goal-session-count');
+    const pctSpan = sessWrap?.querySelector('.gcal-ext-goal-session-pct');
+    if (countSpan) countSpan.textContent = `${completed} of ${total} sessions`;
+    if (pctSpan) pctSpan.textContent = `${pctClamped}%`;
+    else if (sessWrap) sessWrap.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
+
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
     if (fillEl) fillEl.style.width = `${pctClamped}%`;
     const legacy = legacyById.get(g.id);
@@ -1925,6 +1952,9 @@
     const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
     if (trackEl) trackEl.style.setProperty('background-color', hexToTint(displayColor, 0.25), 'important');
     if (fillEl) fillEl.style.setProperty('background-color', displayColor, 'important');
+    const pair = goalSidebarCardSigs(g, legacyById);
+    card.dataset.gpSidebarStructSig = pair.struct;
+    card.dataset.gpSidebarProgSig = pair.prog;
   }
 
   /**
