@@ -1624,7 +1624,7 @@
   function scheduleLeftSidebarGoalsMountAttempts() {
     const run = () => {
       mountLeftSidebarGoalsSection();
-      renderMyGoalsProgressPanel();
+      renderGoalsSidebar();
     };
     run();
     requestAnimationFrame(run);
