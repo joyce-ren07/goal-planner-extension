@@ -244,15 +244,32 @@
       ends: endsVal,
       endDate,
       occurrences,
-      time: '09:00',
     };
+  }
+
+  /** Parsed preferred time from Screen 3 (ghost preview only — not persisted). */
+  function prefTimeFromInputHMOrNull() {
+    const raw = document.getElementById('gp-pref-time-input')?.value?.trim();
+    if (!raw) return null;
+    const m = /^(\d{1,2}):(\d{2})$/.exec(raw);
+    if (!m) return null;
+    const h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    if (!Number.isFinite(h) || !Number.isFinite(min) || min < 0 || min > 59 || h < 0 || h > 23)
+      return null;
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
   }
 
   /** Recurrence shaping current ghost preview — overlay wins when open, else state.recurrence (+ defaults). */
   function resolveRecurrenceDraftForGhostPreview() {
+    const sugActive =
+      document.getElementById('gp-screen-suggestions')?.classList.contains('active');
+    const prefT = sugActive ? prefTimeFromInputHMOrNull() : null;
+    const fallbackTime = prefT || '09:00';
+
     const fromOv = readRecurrenceDraftFromOverlay();
-    if (fromOv) return fromOv;
-    if (state.recurrence) return { ...state.recurrence, time: state.recurrence.time || '09:00' };
+    if (fromOv) return { ...fromOv, time: fallbackTime };
+    if (state.recurrence) return { ...state.recurrence, time: fallbackTime };
     /** Form screen before “Done”: match goToSuggestions() default shape. */
     return {
       every: 1,
@@ -262,7 +279,7 @@
       ends: 'on',
       endDate: defaultEndDate(),
       occurrences: 13,
-      time: '09:00',
+      time: fallbackTime,
     };
   }
 
