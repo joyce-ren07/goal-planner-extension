@@ -281,6 +281,12 @@
   .gp-gcal-sidebar-chevron-icon {
     transition: none;
   }
+  .gp-gcal-sidebar-goals-root[data-gp-collapse-mode="css"] .gp-gcal-sidebar-section-body {
+    transition: none !important;
+  }
+  .gp-gcal-sidebar-goals-root[data-gp-collapse-mode="css"].gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body {
+    display: none;
+  }
 }
 
 .gp-gcal-sidebar-section-body {
@@ -288,8 +294,27 @@
   padding: 4px var(--gp-native-header-pr, 8px) 12px var(--gp-native-header-pl, 12px);
 }
 
-.gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body {
+/* Instant hide (default + fallback): matches common accordion “panel not in flow when closed” behavior */
+.gp-gcal-sidebar-goals-root[data-gp-collapse-mode="instant"].gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body,
+.gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed:not([data-gp-collapse-mode="css"]) .gp-gcal-sidebar-section-body {
   display: none;
+}
+
+/* Host-driven timing: mirror native pane transition when measured from Calendar (see syncMyGoalsSidebarChromeFromNative) */
+.gp-gcal-sidebar-goals-root[data-gp-collapse-mode="css"] .gp-gcal-sidebar-section-body {
+  overflow: var(--gp-native-pane-overflow, visible);
+  transition: var(--gp-native-pane-transition);
+  max-height: 10000px;
+  opacity: 1;
+}
+
+.gp-gcal-sidebar-goals-root[data-gp-collapse-mode="css"].gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden !important;
+  pointer-events: none;
 }
 
 /* M3 body small — empty hint */
