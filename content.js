@@ -3368,10 +3368,10 @@
     }
     const ids = goal.calEventIds || [];
     const viaResolve = resolvePlannerEventIdForChip(domId, [goal]);
-    if (viaResolve && ids.includes(viaResolve)) {
+    if (viaResolve && calEventIdsContain(ids, viaResolve)) {
       return { plannerEventId: viaResolve, goalId: goal.id };
     }
-    if (domId && ids.includes(domId)) {
+    if (domId && calEventIdsContain(ids, domId)) {
       return { plannerEventId: domId, goalId: goal.id };
     }
     const related = ids.filter((id) => {
