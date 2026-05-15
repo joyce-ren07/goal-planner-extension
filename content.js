@@ -3981,6 +3981,7 @@
   function initPrefTimePicker() {
     const input = document.getElementById('gp-pref-time-input');
     if (!input) return;
+    input.addEventListener('input', scheduleGhostPreviewRefreshDebounced);
     input.addEventListener('change', () => {
       if (!input.value) {
         // Restore algorithmically-chosen times
