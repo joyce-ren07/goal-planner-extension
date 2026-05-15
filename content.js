@@ -2494,6 +2494,7 @@
           created: new Date().toISOString(),
           calEventIds: eventIds,
           colorId: '9',
+          color: GP_GOAL_DEFAULT_UI_COLOR,
         });
       }
       await persistGpGoalsAndUnified(goals);

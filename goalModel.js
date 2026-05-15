@@ -250,6 +250,7 @@
         recurrence: lg.recurrence ? Object.assign({}, lg.recurrence) : null,
         endDate: lg.endDate || '',
         created: lg.created,
+        color: lg.color || '',
         sessions: sessions,
         progressPct: 0,
       });
