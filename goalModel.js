@@ -80,6 +80,12 @@
     return Math.max(0, Math.min(100, Math.round(n)));
   }
 
+  /** gp_chip_done keys are often strings; calEventIds may be stored as numbers — avoid strict key misses. */
+  function lookupChipDone(doneMap, eventId) {
+    if (!doneMap || eventId == null || eventId === '') return false;
+    return !!(doneMap[eventId] || doneMap[String(eventId)]);
+  }
+
   function computeProgressPct(goal) {
     var sessions = goal.sessions || [];
     if (!sessions.length) return 0;
