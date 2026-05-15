@@ -1939,19 +1939,25 @@
     }
   }
 
-  /** Reload unified state; hydrate sessions from storage when goals lack session rows. */
-  async function ensureAuthoritativeSidebarState(preloaded) {
+  /**
+   * Unified state for sidebar: always merge gp_goals + gp_chip_done + gp_goal_slot_done
+   * so session completions match what the calendar checkbox just wrote.
+   */
+  async function ensureAuthoritativeSidebarState(preloaded, meta) {
     const Model = globalThis.GoalPlannerModel;
     if (!Model) return preloaded?.goals ? preloaded : { goals: [] };
     let st = await loadAuthoritativeUnifiedForSidebar(preloaded);
     const legacyRows = await getGoals();
     const legacyArr = Array.isArray(legacyRows) ? legacyRows : [];
-    const needsHydrate = (st.goals || []).some(
-      (g) => !(Array.isArray(g.sessions) && g.sessions.length)
-    );
-    if (needsHydrate && legacyArr.length && Model.syncUnifiedWithLegacyGoals) {
-      const chipDone = await loadMergedChipDoneForSidebar(legacyArr);
-      st = Model.syncUnifiedWithLegacyGoals(st, legacyArr, chipDone);
+    if (!legacyArr.length || !Model.syncUnifiedWithLegacyGoals) return st;
+
+    const chipDone =
+      meta?.chipDoneOverride && typeof meta.chipDoneOverride === 'object'
+        ? meta.chipDoneOverride
+        : await loadMergedChipDoneForSidebar(legacyArr);
+    st = Model.syncUnifiedWithLegacyGoals(st, legacyArr, chipDone);
+
+  if (meta?.reason === 'sessionCompletion') {
       try {
         await Model.saveUnifiedState(st, { silent: true });
       } catch (_) {
