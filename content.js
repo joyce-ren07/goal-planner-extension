@@ -1164,6 +1164,7 @@
     let root = document.getElementById('gp-gcal-sidebar-goals-root');
     if (root && root.isConnected) {
       syncMyGoalsSidebarChromeFromNative();
+      requestAnimationFrame(() => syncMyGoalsSidebarChromeFromNative());
       return root;
     }
 
