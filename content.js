@@ -1206,7 +1206,8 @@
     }
     if (plNum >= 8) plVal = `${Math.round(plNum)}px`;
     const maxPrAcross = maxNativeSidebarTrailingPaddingPx(scroll);
-    let prNum = Math.max(maxPrAcross, parseFloat(pcs.paddingRight) || 0);
+    const maxPrComputed = maxNativeSidebarHeaderPaddingRightPx(scroll);
+    let prNum = Math.max(maxPrAcross, maxPrComputed, parseFloat(pcs.paddingRight) || 0, parseFloat(cs.paddingRight) || 0);
     if (nestedClickables.length && rr.width > 0) {
       let maxIconRight = rr.left;
       for (const b of nestedClickables) {
