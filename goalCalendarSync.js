@@ -100,6 +100,10 @@
   /**
    * Ensure unified state has a GoalSession row for this Google event id (from gp_goals).
    */
+  var GEOM_PERSIST_DEBOUNCE_MS = 50;
+  /** @type {WeakMap<object, number>} */
+  var geomTimersByChip = new WeakMap();
+
   async function ensureSessionRow(Model, state, eventId) {
     if (Model.findSessionByEventId(state, eventId)) return;
     var legacy = await loadLegacyGoalsAndChipDone();
@@ -119,10 +123,7 @@
         goalStates: {},
       });
       migrated.goals.forEach(function (ng) {
-        var ix = state.goals.findIndex(function (og) {
-          return og.id === ng.id;
-        });
-        if (ix === -1) state.goals.push(ng);
+        Model.upsertGoal(state, ng);
       });
     }
     if (!Model.findSessionByEventId(state, eventId)) {
