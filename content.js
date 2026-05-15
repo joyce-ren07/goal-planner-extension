@@ -3126,6 +3126,110 @@
     return { plannerEventId: domId || fallback || '', goalId: goal.id };
   }
 
+  /** Match chip grid position → calendar API event id using saved suggestion timestamps (multi-session goals). */
+  function pickPlannerEventIdFromAnchors(chip, goal) {
+    const anchors = goal?.sessionAnchors;
+    if (!anchors?.length) return '';
+    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
+    if (!geo?.startTime) return '';
+    const target = Date.parse(geo.startTime);
+    if (!Number.isFinite(target)) return '';
+    let best = '';
+    let bestDelta = Infinity;
+    for (const a of anchors) {
+      if (!a?.eventId || !a?.isoStart) continue;
+      const ms = Date.parse(a.isoStart);
+      if (!Number.isFinite(ms)) continue;
+      const d = Math.abs(ms - target);
+      if (d < bestDelta) {
+        bestDelta = d;
+        best = a.eventId;
+      }
+    }
+    const allowed = goal.calEventIds || [];
+    if (best && allowed.includes(best) && bestDelta <= 8 * 60 * 60 * 1000) return best;
+    return '';
+  }
+
+  /** When unified sessions have startTime from geometry sync, pick best calEventId for this chip. */
+  async function pickPlannerEventIdFromUnifiedSessions(chip, goal, legacyGoals, chipDoneMap) {
+    const ids = goal?.calEventIds || [];
+    if (!ids.length) return '';
+    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
+    if (!geo?.startTime) return '';
+    const target = Date.parse(geo.startTime);
+    if (!Number.isFinite(target)) return '';
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model) return '';
+    let st;
+    try {
+      st = await Model.loadUnifiedState();
+    } catch (_) {
+      return '';
+    }
+    try {
+      st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDoneMap || {});
+    } catch (_) {
+      return '';
+    }
+    const ug = st.goals.find((g) => String(g.id) === String(goal.id));
+    const sessions = ug?.sessions || [];
+    let best = '';
+    let bestDelta = Infinity;
+    for (const s of sessions) {
+      if (!s?.eventId || !ids.includes(s.eventId) || !s.startTime) continue;
+      const ms = Date.parse(s.startTime);
+      if (!Number.isFinite(ms)) continue;
+      const d = Math.abs(ms - target);
+      if (d < bestDelta) {
+        bestDelta = d;
+        best = s.eventId;
+      }
+    }
+    if (best && bestDelta <= 8 * 60 * 60 * 1000) return best;
+    return '';
+  }
+
+  /**
+   * Final planner event id for gp_chip_done — must exist in goal.calEventIds[].
+   * Sync helpers cannot async; checkbox handler resolves asynchronously.
+   */
+  async function resolvePlannerEventIdForSidebarSync(chip, storageKey, legacyGoals, chipDoneMap) {
+    const domId =
+      chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || '';
+    const goal = findLegacyGoalForGoalChip(chip, legacyGoals);
+    let plannerEventId = '';
+    const quick = resolveChipCompletionTarget(chip, legacyGoals);
+    const ids = goal?.calEventIds || [];
+    if (quick.plannerEventId && ids.includes(quick.plannerEventId)) {
+      plannerEventId = quick.plannerEventId;
+    } else if (quick.plannerEventId && ids.includes(resolvePlannerEventIdForChip(quick.plannerEventId, [goal]))) {
+      plannerEventId = resolvePlannerEventIdForChip(quick.plannerEventId, [goal]);
+    }
+    if (!plannerEventId && goal) {
+      const fromAnchors = pickPlannerEventIdFromAnchors(chip, goal);
+      if (fromAnchors) plannerEventId = fromAnchors;
+    }
+    if (!plannerEventId && goal) {
+      const fromUnified = await pickPlannerEventIdFromUnifiedSessions(
+        chip,
+        goal,
+        legacyGoals,
+        chipDoneMap
+      );
+      if (fromUnified) plannerEventId = fromUnified;
+    }
+    if (!plannerEventId && goal && ids.length === 1) plannerEventId = ids[0];
+    if (!plannerEventId && domId && ids.includes(domId)) plannerEventId = domId;
+    if (!plannerEventId) {
+      const fb = resolvePlannerEventIdForChip(storageKey || domId, legacyGoals);
+      if (fb && ids.includes(fb)) plannerEventId = fb;
+    }
+    if (!plannerEventId) plannerEventId = quick.plannerEventId || storageKey || domId || '';
+    const metaGoalId = goal?.id != null && goal.id !== '' ? goal.id : quick.goalId;
+    return { plannerEventId, goalId: metaGoalId };
+  }
+
   /* Active session — coral accent; completed — Google muted grays (#5f6368 / #80868b) */
   const SVG_CHECK_ACTIVE  = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="#fff"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#D3564B" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const SVG_CIRCLE_ACTIVE = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="none"/></svg>';
