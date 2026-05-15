@@ -1798,7 +1798,7 @@
         `</div>` +
         `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>`;
 
-      const goalColor = color;
+      const goalColor = displayColor;
       card.style.setProperty('--goal-progress-color', goalColor);
       card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
       card.style.setProperty('background-color', hexToTint(goalColor, 0.12), 'important');
