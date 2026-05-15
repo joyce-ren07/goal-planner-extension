@@ -2049,20 +2049,27 @@
    */
   async function renderGoalsSidebar(preloadedUnified, meta) {
     const Model = globalThis.GoalPlannerModel;
-    let st = preloadedUnified;
-    if (!st || !Array.isArray(st.goals)) {
-      if (Model) {
+    let st =
+      preloadedUnified && Array.isArray(preloadedUnified.goals) ? preloadedUnified : null;
+    if (!Model) {
+      await applyGoalsSidebarFromUnifiedState(st || { goals: [] }, null, meta || {});
+      return;
+    }
+    if (!st) {
+      try {
         st = await Model.loadUnifiedState();
-        try {
-          const legacyGoals = await getGoals();
-          const chipDone = await new Promise((r) =>
-            chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
-          );
-          st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDone || {});
-        } catch (_) {
-          /* projection-only merge */
-        }
-      } else st = { goals: [] };
+      } catch (_) {
+        st = { goals: [] };
+      }
+    }
+    try {
+      const legacyGoals = await getGoals();
+      const chipDone = await new Promise((r) =>
+        chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+      );
+      st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDone || {});
+    } catch (_) {
+      /* projection-only merge */
     }
     await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
   }
