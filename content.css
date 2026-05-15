@@ -345,95 +345,110 @@
   pointer-events: none;
 }
 
-/* M3 body small — empty hint (no card chrome; sits on drawer like native accordion body) */
-.gp-gcal-mgg-empty {
+/* ── Left drawer: goal cards ("My goals" body) ── All selectors scoped under extension root */
+.gp-gcal-sidebar-goals-root .gp-gcal-sidebar-section-body.gcal-ext-goals-list {
+  padding: 4px var(--gp-native-header-pr, 16px) 8px var(--gp-native-header-pl, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goals-empty {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 0 4px;
   font-family: inherit;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
-  letter-spacing: 0.025em;
-  color: var(--gp-m3-on-surface-variant, #44474f);
-  margin: 0 0 6px;
-  padding: 4px 0 0 10px;
-  box-sizing: border-box;
-}
-.gp-gcal-mgg-empty strong {
-  font-weight: 500;
-  color: var(--gp-m3-on-surface, #1f1f1f);
+  color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant, #80868b));
 }
 
-/* Goal rows — flat list items (native Booking pages style: no bordered inner panel) */
-.gp-gcal-mgg-card {
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 6px 0 8px 10px;
-  margin: 0 0 4px;
-  box-sizing: border-box;
-}
-.gp-gcal-mgg-card:last-child {
-  margin-bottom: 0;
-}
-.gp-gcal-mgg-eyebrow {
-  font-family: var(
-    --gp-native-font-family,
-    'Google Sans',
-    Roboto,
-    sans-serif
-  );
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.00625em;
-  text-transform: none;
-  color: var(--gp-m3-on-surface-variant, #5f6368);
-  margin: 0 0 6px;
-  line-height: 16px;
-}
-.gp-gcal-mgg-card .gp-mgg-row-head {
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: stretch;
+  margin: 2px 8px;
+  padding: 10px 12px 10px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  position: relative;
+  box-sizing: border-box;
+  background-color: color-mix(in srgb, var(--goal-color, #4285f4) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--goal-color, #4285f4) 25%, transparent);
 }
-.gp-gcal-mgg-card .gp-mgg-title {
-  font-family: var(
-    --gp-native-font-family,
-    'Google Sans',
-    Roboto,
-    sans-serif
-  );
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gp-m3-on-surface, #202124);
-  line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-card:hover {
+  background-color: color-mix(in srgb, var(--goal-color, #4285f4) 18%, transparent);
+}
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-accent {
+  width: 4px;
+  border-radius: 2px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-body {
   flex: 1;
   min-width: 0;
 }
-.gp-gcal-mgg-card .gp-mgg-count {
-  font-family: var(
-    --gp-native-font-family,
-    'Google Sans',
-    Roboto,
-    sans-serif
-  );
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-name {
+  font-family: var(--gp-native-font-family, inherit);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gm3-sys-color-on-surface, var(--gp-m3-on-surface, #3c4043));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-track {
+  width: 100%;
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  min-width: 0%;
+  max-width: 100%;
+}
+
+.gp-gcal-sidebar-goals-root .gcal-ext-goal-sessions {
+  font-family: var(--gp-native-font-family, inherit);
   font-size: 12px;
   font-weight: 400;
-  color: var(--gp-m3-on-surface-variant, #5f6368);
-  white-space: nowrap;
-  flex-shrink: 0;
+  color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant, #80868b));
+  line-height: 1.3;
 }
-.gp-gcal-mgg-card .gp-progress-bar {
-  margin-top: 8px;
-  height: 2px;
-  background: var(--gm3-sys-color-outline-variant, #cac4d0);
-  border-radius: 1px;
+
+@media (prefers-color-scheme: dark) {
+  .gp-gcal-sidebar-goals-root .gcal-ext-goal-name {
+    color: var(--gm3-sys-color-on-surface, #e8eaed);
+  }
+  .gp-gcal-sidebar-goals-root .gcal-ext-goal-sessions {
+    color: var(--gm3-sys-color-on-surface-variant, #9aa0a6);
+  }
+  .gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-track {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
 }
-.gp-gcal-mgg-card .gp-progress-fill {
-  background: var(--gp-m3-focus-ring, #0b57d0);
-  border-radius: 1px;
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-gcal-sidebar-goals-root .gcal-ext-goal-card,
+  .gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-fill {
+    transition: none;
+  }
 }
 
 /* ── Goals list (populated state) ── */
