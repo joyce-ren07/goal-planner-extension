@@ -2123,7 +2123,8 @@
       }
       const sigJoined = goals
         .map((lg) => {
-          const slotArr = Array.isArray(slotPack[String(lg.id)]) ? slotPack[String(lg.id)] : [];
+          const slotRaw = slotPack[String(lg.id)] ?? slotPack[lg.id];
+          const slotArr = Array.isArray(slotRaw) ? slotRaw : [];
           const v = buildSidebarVirtualGoalFromExpanded(lg, expanded, slotArr);
           const p = goalSidebarCardSigs(v, legacyById);
           return `${p.struct}|${p.prog}`;
