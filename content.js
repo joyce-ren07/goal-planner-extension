@@ -1871,15 +1871,9 @@
     const goalColor = displayColor;
     card.style.setProperty('--goal-progress-color', goalColor);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
-    card.style.setProperty('background-color', hexToTint(goalColor, 0.12), 'important');
-    card.style.setProperty('border', `1.5px solid ${hexToTint(goalColor, 0.4)}`, 'important');
-    const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
-    if (trackEl) trackEl.style.setProperty('background-color', hexToTint(goalColor, 0.25), 'important');
+    /* Card chrome + track tint from content.css via --goal-progress-color (Figma CAPSTONE Goal row). Avoid inline !important so stylesheet controls pill bar + casing. */
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-    if (fillEl) {
-      fillEl.style.width = `${pctClamped}%`;
-      fillEl.style.setProperty('background-color', goalColor, 'important');
-    }
+    if (fillEl) fillEl.style.width = `${pctClamped}%`;
     const countSpan = card.querySelector('.gcal-ext-goal-session-count');
     const pctSpan = card.querySelector('.gcal-ext-goal-session-pct');
     if (countSpan) countSpan.textContent = `${completed} of ${total} sessions`;
