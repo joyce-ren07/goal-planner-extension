@@ -1768,7 +1768,10 @@
     queueMicrotask(patch);
     requestAnimationFrame(() => {
       patch();
-      requestAnimationFrame(patch);
+      requestAnimationFrame(() => {
+        patch();
+        globalThis.GoalCalendarSync?.flushPersistSessionGeometry?.(chip)?.catch?.(() => {});
+      });
     });
   }
 
