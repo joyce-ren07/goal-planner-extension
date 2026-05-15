@@ -2615,7 +2615,7 @@
     );
     const prev = await Model.loadUnifiedState();
     const next = Model.syncUnifiedWithLegacyGoals(prev, goals, chipDone || {});
-    await Model.saveUnifiedState(next);
+    await Model.saveUnifiedState(next, { reason: 'goalsSync' });
   }
 
   // ── Date helpers ──
