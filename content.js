@@ -1845,8 +1845,12 @@
 
   function computeGoalSidebarNumbers(g) {
     const sessions = g.sessions || [];
-    const total = sessions.length;
-    const completed = total ? sessions.filter((s) => !!s.completed).length : 0;
+    const slotCount = sessions.length;
+    const total =
+      typeof g.totalSessions === 'number' && g.totalSessions > 0
+        ? g.totalSessions
+        : slotCount;
+    const completed = slotCount ? sessions.filter((s) => !!s.completed).length : 0;
     const pctClamped =
       total > 0
         ? Math.max(0, Math.min(100, Math.round((completed / total) * 100)))
