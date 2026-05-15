@@ -32,7 +32,7 @@
 [role="menu"] [role="menuitem"][data-gp-create-menu-goal]:hover {
   background-color: rgba(32, 33, 36, 0.08);
 }
-[role="menu"] [role="menuitem"][data-gp-create-menu-goal"]:focus-visible {
+[role="menu"] [role="menuitem"][data-gp-create-menu-goal]:focus-visible {
   background-color: rgba(32, 33, 36, 0.1);
   outline: none;
 }
