@@ -888,11 +888,48 @@
     '11': '#dc2127',
   };
 
-  function gpCalendarColorHex(legacyGoal) {
-    const cid = legacyGoal?.colorId != null ? String(legacyGoal.colorId) : '';
-    if (cid && GP_CALENDAR_COLOR_ID_HEX[cid]) return GP_CALENDAR_COLOR_ID_HEX[cid];
-    if (legacyGoal?.color && /^#/i.test(String(legacyGoal.color))) return String(legacyGoal.color);
-    return '#5484ed';
+  /** Planner card / progress color (not GCal event `colorId`). */
+  const GP_GOAL_DEFAULT_UI_COLOR = '#E8705A';
+
+  /** Normalize #RGB / #RRGGBB → lowercase `#rrggbb` or `''`. */
+  function normalizePlannerGoalHex(c) {
+    if (c == null || c === '') return '';
+    let h = String(c).trim().replace(/\s/g, '');
+    if (!h.startsWith('#')) h = `#${h}`;
+    h = h.toLowerCase();
+    let body = h.slice(1);
+    if (body.length === 3 && /^[0-9a-f]{3}$/i.test(body)) {
+      body = body
+        .split('')
+        .map((ch) => ch + ch)
+        .join('');
+    }
+    if (body.length === 6 && /^[0-9a-f]{6}$/i.test(body)) return `#${body}`;
+    return '';
+  }
+
+  /** GCal UI / Calendar API palette hexes — treat as “wrong” for goal cards when stored as legacy `color`. */
+  let _gcalPaletteHexCache = null;
+  function isLikelyGcalDefaultGoalColor(hexNorm) {
+    if (!hexNorm) return true;
+    if (!_gcalPaletteHexCache) {
+      const set = new Set(
+        ['#039be5', '#4285f4', '#3f51b5', '#7986cb', '#a79b8e', '#616161'].map((x) => x.toLowerCase())
+      );
+      Object.values(GP_CALENDAR_COLOR_ID_HEX).forEach((hex) => {
+        const n = normalizePlannerGoalHex(hex);
+        if (n) set.add(n);
+      });
+      _gcalPaletteHexCache = set;
+    }
+    return _gcalPaletteHexCache.has(hexNorm);
+  }
+
+  /** Card chrome: use planner `goal.color`; never infer from `colorId` / GCal lavender-blue. */
+  function getGoalDisplayColor(legacyGoal) {
+    const n = normalizePlannerGoalHex(legacyGoal?.color);
+    if (n && !isLikelyGcalDefaultGoalColor(n)) return n;
+    return GP_GOAL_DEFAULT_UI_COLOR;
   }
 
   /** Blend a hex goal color toward white (avoids color-mix / CSP issues in injected styles). */
