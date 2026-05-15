@@ -1546,7 +1546,10 @@
       chevronBtn.setAttribute('aria-expanded', exp);
       if (chevronGlyph) chevronGlyph.textContent = collapsed ? 'expand_more' : 'expand_less';
       try {
-        chrome.storage.local.set({ [GP_LEFT_GOALS_COLLAPSED_KEY]: collapsed });
+        chrome.storage.local.set({
+          [GP_GOALS_ACCORDION_OPEN_KEY]: !collapsed,
+          [GP_LEFT_GOALS_COLLAPSED_KEY]: collapsed,
+        });
       } catch (_) {
         /* ignore */
       }
