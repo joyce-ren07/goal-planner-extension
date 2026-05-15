@@ -2048,8 +2048,18 @@
     const Model = globalThis.GoalPlannerModel;
     let st = preloadedUnified;
     if (!st || !Array.isArray(st.goals)) {
-      if (Model) st = await Model.loadUnifiedState();
-      else st = { goals: [] };
+      if (Model) {
+        st = await Model.loadUnifiedState();
+        try {
+          const legacyGoals = await getGoals();
+          const chipDone = await new Promise((r) =>
+            chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+          );
+          st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDone || {});
+        } catch (_) {
+          /* projection-only merge */
+        }
+      } else st = { goals: [] };
     }
     await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
   }
