@@ -1053,26 +1053,6 @@
     return { pt, pb };
   }
 
-  /** Tightest native header density (min padding-top/bottom across drawer accordions). */
-  function minNativeSidebarHeaderVerticalPaddingPx(scrollEl) {
-    if (!scrollEl) return { pt: 0, pb: 0 };
-    let minPt = Infinity;
-    let minPb = Infinity;
-    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
-      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
-      const t = normalizeSidebarRowText(row.textContent || '');
-      if (!t || t.length > 96) continue;
-      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
-      const { pt, pb } = nativeHeaderVerticalPaddingPx(row);
-      minPt = Math.min(minPt, pt);
-      minPb = Math.min(minPb, pb);
-    }
-    return {
-      pt: minPt === Infinity ? 0 : minPt,
-      pb: minPb === Infinity ? 0 : minPb,
-    };
-  }
-
   /** Max computed padding-right on native headers (row + inner pad container) — catches outer flex padding. */
   function maxNativeSidebarHeaderPaddingRightPx(scrollEl) {
     if (!scrollEl) return 0;
