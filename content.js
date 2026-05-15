@@ -895,6 +895,25 @@
     return '#5484ed';
   }
 
+  /** Blend a hex goal color toward white (avoids color-mix / CSP issues in injected styles). */
+  function hexToTint(hex, amount) {
+    let h = String(hex || '').trim();
+    if (h.startsWith('#')) h = h.slice(1);
+    if (h.length === 3) {
+      h = h
+        .split('')
+        .map((c) => c + c)
+        .join('');
+    }
+    if (!/^[0-9a-f]{6}$/i.test(h)) return '#fde8e4';
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    const t = typeof amount === 'number' && !isNaN(amount) ? Math.max(0, Math.min(1, amount)) : 0.12;
+    const blend = (c) => Math.round(c + (255 - c) * (1 - t));
+    return `rgb(${blend(r)}, ${blend(g)}, ${blend(b)})`;
+  }
+
   /** Sidebar cards: merge unified sessions with live gp_chip_done for instant checkbox UI */
   function gpSidebarSessionCompleted(sess, legacyDone) {
     return !!sess.completed || !!(sess.eventId && legacyDone[sess.eventId]);
