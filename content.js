@@ -2116,6 +2116,61 @@
     );
   }
 
+  function isElementVisibleForPatch(el) {
+    if (!el?.isConnected) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return false;
+    let n = el;
+    while (n && n !== document.documentElement) {
+      if (n.hidden) return false;
+      const st = getComputedStyle(n);
+      if (st.display === 'none' || st.visibility === 'hidden') return false;
+      n = n.parentElement;
+    }
+    return true;
+  }
+
+  /** Pick the on-screen My Goals card (avoids patching detached/hidden duplicate roots). */
+  function resolveVisibleSidebarGoalCard(goalId) {
+    const gid = String(goalId);
+    let best = null;
+    let bestArea = -1;
+    const roots = document.querySelectorAll('#gp-gcal-sidebar-goals-root');
+    for (const root of roots) {
+      if (!root.isConnected) continue;
+      const container =
+        root.querySelector('#gp-gcal-sidebar-goals-cards') ||
+        root.querySelector('.gcal-ext-goals-list');
+      if (!container) continue;
+      const card = findSidebarGoalCardById(container, gid);
+      if (!card) continue;
+      const r = card.getBoundingClientRect();
+      const area = r.width * r.height;
+      const visible = isElementVisibleForPatch(card);
+      const score = visible ? area + 1e9 : area;
+      if (score > bestArea) {
+        bestArea = score;
+        best = { card, container, root, visible, rect: { w: r.width, h: r.height } };
+      }
+    }
+    if (best) return best;
+    const root = document.getElementById('gp-gcal-sidebar-goals-root');
+    const container =
+      document.getElementById('gp-gcal-sidebar-goals-cards') ||
+      root?.querySelector('.gcal-ext-goals-list');
+    if (!container) return null;
+    const card = findSidebarGoalCardById(container, gid);
+    if (!card) return null;
+    const r = card.getBoundingClientRect();
+    return {
+      card,
+      container,
+      root,
+      visible: isElementVisibleForPatch(card),
+      rect: { w: r.width, h: r.height },
+    };
+  }
+
   function refreshSidebarGoalsSigDataset(goals, legacyById, root) {
     const sigJoined = goals
       .map((g) => {
