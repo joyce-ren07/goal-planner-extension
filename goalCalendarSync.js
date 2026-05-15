@@ -86,12 +86,81 @@
     };
   }
 
+  function gpChipDoneKeyMatchesCalEventId(calId, chipKey) {
+    if (!calId || chipKey == null || chipKey === '') return false;
+    var a = String(calId);
+    var b = String(chipKey);
+    if (a === b) return true;
+    var dec = b;
+    try {
+      dec = decodeURIComponent(b.replace(/\+/g, ' '));
+    } catch (_) {
+      dec = b;
+    }
+    if (a === dec) return true;
+    if (b.indexOf(a + '_') === 0 || dec.indexOf(a + '_') === 0) return true;
+    if (a.indexOf(b + '_') === 0) return true;
+    var aSeg = a.split('_')[0];
+    var bSeg = b.split('_')[0];
+    var decSeg = dec.split('_')[0];
+    if (aSeg.length >= 8 && (aSeg === bSeg || aSeg === decSeg)) return true;
+    return false;
+  }
+
+  function expandChipDoneOntoCalEventIds(chipDone, legacyGoals) {
+    var raw = chipDone && typeof chipDone === 'object' ? Object.assign({}, chipDone) : {};
+    var goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    for (var gi = 0; gi < goals.length; gi++) {
+      var g = goals[gi];
+      var ids = g.calEventIds || [];
+      if (!ids.length) continue;
+      var idSet = {};
+      for (var ii = 0; ii < ids.length; ii++) idSet[String(ids[ii])] = true;
+      for (var ci = 0; ci < ids.length; ci++) {
+        var calId = ids[ci];
+        if (!calId) continue;
+        var calStr = String(calId);
+        if (raw[calStr]) continue;
+        var keys = Object.keys(raw);
+        for (var ki = 0; ki < keys.length; ki++) {
+          var k = keys[ki];
+          if (!raw[k]) continue;
+          if (idSet[String(k)]) continue;
+          if (gpChipDoneKeyMatchesCalEventId(calStr, k)) {
+            raw[calStr] = true;
+            break;
+          }
+        }
+      }
+    }
+    return raw;
+  }
+
+  function injectSlotDoneIntoExpandedChipDone(expanded, legacyGoals, slotPack) {
+    var out = expanded && typeof expanded === 'object' ? Object.assign({}, expanded) : {};
+    var pack = slotPack && typeof slotPack === 'object' ? slotPack : {};
+    for (var gi = 0; gi < (legacyGoals || []).length; gi++) {
+      var g = legacyGoals[gi];
+      var ids = g.calEventIds || [];
+      var arr = pack[String(g.id)];
+      if (!Array.isArray(arr) || !ids.length) continue;
+      for (var ai = 0; ai < arr.length; ai++) {
+        var i = Number(arr[ai]);
+        if (Number.isFinite(i) && i >= 0 && i < ids.length) out[String(ids[i])] = true;
+      }
+    }
+    return out;
+  }
+
   function loadLegacyGoalsAndChipDone() {
     return new Promise(function (resolve) {
-      chrome.storage.local.get(['gp_goals', 'gp_chip_done'], function (raw) {
+      chrome.storage.local.get(['gp_goals', 'gp_chip_done', 'gp_goal_slot_done'], function (raw) {
+        var goals = Array.isArray(raw.gp_goals) ? raw.gp_goals : [];
+        var expanded = expandChipDoneOntoCalEventIds(raw.gp_chip_done || {}, goals);
+        var doneMap = injectSlotDoneIntoExpandedChipDone(expanded, goals, raw.gp_goal_slot_done || {});
         resolve({
-          goals: Array.isArray(raw.gp_goals) ? raw.gp_goals : [],
-          doneMap: raw.gp_chip_done || {},
+          goals: goals,
+          doneMap: doneMap,
         });
       });
     });
