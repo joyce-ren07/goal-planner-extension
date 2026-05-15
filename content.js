@@ -1249,8 +1249,12 @@
     if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
     setVar('--gp-native-header-align', cs.alignItems);
 
-    const mhPx = /([\d.]+)\s*px/i.exec(String(minH || `${Math.max(24, Math.round(rr.height))}px`));
-    const mhNum = (mhPx ? parseFloat(mhPx[1]) : Math.max(24, Math.round(rr.height))) || 48;
+    const rowH = Math.max(24, Math.round(rr.height));
+    let mhNum = rowH;
+    if (minH && minH !== 'auto') {
+      const m = parseFloat(String(minH).replace(/px$/i, ''));
+      if (Number.isFinite(m) && m <= rowH + 2) mhNum = m;
+    }
     const brToken = String(cs.borderRadius || '0').trim().split(/[\s/]/)[0];
     const brParsed = parseFloat(brToken.replace(/px$/i, '')) || 0;
     if (cs.borderRadius && cs.borderRadius !== '0px') {
