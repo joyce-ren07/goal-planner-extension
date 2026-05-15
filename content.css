@@ -447,6 +447,8 @@
 }
 
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
+  display: block !important;
+  box-sizing: border-box !important;
   height: 100% !important;
   border-radius: 16px !important;
   background-color: var(--goal-progress-color, #d3564b) !important;
