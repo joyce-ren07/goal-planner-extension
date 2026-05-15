@@ -1902,11 +1902,43 @@
     return card;
   }
 
+  let _gpSidebarPatchTraceSeq = 0;
+
+  function inspectSidebarGoalCardDom(card) {
+    if (!card) return null;
+    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
+    const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
+    const countSpan = card.querySelector('.gcal-ext-goal-session-count');
+    const pctSpan = card.querySelector('.gcal-ext-goal-session-pct');
+    const fillCs = fillEl ? getComputedStyle(fillEl) : null;
+    const trackCs = trackEl ? getComputedStyle(trackEl) : null;
+    return {
+      cardGoalId: card.dataset.goalId,
+      fillExists: !!fillEl,
+      trackExists: !!trackEl,
+      widthStyle: fillEl?.style?.width ?? '',
+      widthComputed: fillCs?.width ?? null,
+      maxWidth: fillCs?.maxWidth ?? null,
+      opacity: fillCs?.opacity ?? null,
+      transform: fillCs?.transform ?? null,
+      display: fillCs?.display ?? null,
+      flexGrow: fillCs?.flexGrow ?? null,
+      trackOverflow: trackCs?.overflow ?? null,
+      trackWidth: trackCs?.width ?? null,
+      countText: countSpan?.textContent ?? null,
+      pctText: pctSpan?.textContent ?? null,
+    };
+  }
+
   /** Session completion / progress only: same card node, progress fill width + session count/pct spans. */
-  function patchSidebarGoalCardProgressOnly(card, g) {
-    if (!card || !g) return;
-    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+  function patchSidebarGoalCardProgressOnly(card, g, traceId) {
+    if (!card || !g) return null;
+    const numbers = computeGoalSidebarNumbers(g);
+    const { total, completed, pctClamped } = numbers;
+    const widthAssign = `${pctClamped}%`;
     const plainTitle = String(g.title || 'Untitled goal').trim();
+    const before = inspectSidebarGoalCardDom(card);
+
     card.setAttribute(
       'aria-label',
       `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
@@ -1915,12 +1947,35 @@
     ensureSidebarGoalSessionsSpans(sessWrap);
     const countSpan = sessWrap?.querySelector('.gcal-ext-goal-session-count');
     const pctSpan = sessWrap?.querySelector('.gcal-ext-goal-session-pct');
-    if (countSpan) countSpan.textContent = `${completed} of ${total} sessions`;
-    if (pctSpan) pctSpan.textContent = `${pctClamped}%`;
-    else if (sessWrap) sessWrap.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
+    const countAssign = `${completed} of ${total} sessions`;
+    const pctAssign = `${pctClamped}%`;
+    if (countSpan) countSpan.textContent = countAssign;
+    if (pctSpan) pctSpan.textContent = pctAssign;
+    else if (sessWrap) sessWrap.textContent = `${countAssign} • ${pctAssign}`;
 
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-    if (fillEl) fillEl.style.width = `${pctClamped}%`;
+    if (fillEl) {
+      fillEl.style.width = widthAssign;
+      if (!fillEl.style.display) fillEl.style.display = 'block';
+    }
+
+    const after = inspectSidebarGoalCardDom(card);
+    if (GP_MY_GOALS_SIDEBAR_DIAG) {
+      gpMyGoalsSidebarDiag('3–4 DOM patch apply', {
+        traceId,
+        goalId: card.dataset.goalId,
+        numbers,
+        widthAssign,
+        countAssign,
+        pctAssign,
+        before,
+        after,
+        textChanged:
+          before?.countText !== after?.countText || before?.pctText !== after?.pctText,
+        widthChanged: before?.widthStyle !== after?.widthStyle,
+      });
+    }
+    return { numbers, widthAssign, countAssign, pctAssign, before, after, fillEl };
   }
 
   /** Temporary trace for Goal → My Goals sidebar progress pipeline; set false after verification. */
