@@ -2354,38 +2354,28 @@
    * @param {{ reason?: string, goalId?: string }} [meta] Hint for incremental projections
    */
   async function renderGoalsSidebar(preloadedUnified, meta) {
-    const Model = globalThis.GoalPlannerModel;
-    let st =
-      preloadedUnified && Array.isArray(preloadedUnified.goals) ? preloadedUnified : null;
-    if (!Model) {
-      await applyGoalsSidebarFromUnifiedState(st || { goals: [] }, null, meta || {});
+    meta = meta || {};
+    if (!goalPlannerModelAvailable()) {
+      const st = preloadedUnified?.goals ? preloadedUnified : { goals: [] };
+      await applyGoalsSidebarFromUnifiedState(st, null, meta);
       await reinforceMyGoalsSidebarProgressFromStorage();
       return;
     }
-    if (!st) {
-      try {
-        st = await Model.loadUnifiedState();
-      } catch (_) {
-        st = { goals: [] };
-      }
-    }
-    try {
-      const legacyGoalsRaw = await getGoals();
-      const legacyGoals = Array.isArray(legacyGoalsRaw) ? legacyGoalsRaw : [];
-      const chipDone = await loadMergedChipDoneForSidebar(legacyGoals);
-      st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDone);
-    } catch (_) {
-      /* projection-only merge */
-    }
-    await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
-    if (meta?.reason === 'sessionCompletion') {
-      await patchMyGoalsSidebarProgressRows(st, meta || {});
-    } else if (!Model) {
-      await reinforceMyGoalsSidebarProgressFromStorage();
-    }
+    const st = await loadAuthoritativeUnifiedForSidebar(preloadedUnified);
+    const applyMeta = isSidebarStructuralMeta(meta) ? meta : { reason: 'goalsSync' };
+    await applyGoalsSidebarFromUnifiedState(st, null, applyMeta);
+    await patchMyGoalsSidebarProgressRows(st, meta);
   }
 
   async function reinforceMyGoalsSidebarProgressFromStorage() {
+    if (goalPlannerModelAvailable()) {
+      if (GP_MY_GOALS_SIDEBAR_DIAG) {
+        gpMyGoalsSidebarDiag('reinforce blocked — unified state is sole progress authority', {
+          stack: new Error().stack?.split('\n').slice(1, 4),
+        });
+      }
+      return;
+    }
     try {
       const goals = await getGoals();
       if (!Array.isArray(goals) || !goals.length) return;
