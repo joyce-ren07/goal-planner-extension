@@ -2280,6 +2280,23 @@
     return false;
   }
 
+  /** Locate gp_goals row id when calendar DOM id differs from planner calEventIds entries. */
+  function legacyGoalIdForPlannerEventCandidates(legacyGoals, ...idCandidates) {
+    const cand = [...new Set((idCandidates || []).filter(Boolean).map((x) => String(x)))];
+    if (!cand.length) return '';
+    const goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    for (const lg of goals) {
+      const ids = lg.calEventIds || [];
+      for (const ce of ids) {
+        const ces = String(ce);
+        for (const c of cand) {
+          if (ces === c || gpChipDoneMirrorStrictPair(ces, c)) return String(lg.id);
+        }
+      }
+    }
+    return '';
+  }
+
   /** Keys to set/remove together on toggle so My Goals (calEventIds) and chips (often DOM ids) share completion state. */
   function mirrorGpChipDoneKeysForSession(plannerEventId, allowedIds) {
     const keys = new Set();
