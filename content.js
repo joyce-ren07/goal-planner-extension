@@ -1251,8 +1251,13 @@
         if (br.right > maxIconRight) maxIconRight = br.right;
       }
       prNum = Math.max(prNum, Math.round(rr.right - maxIconRight));
+      if (root.isConnected) {
+        const rootR = root.getBoundingClientRect();
+        prNum = Math.max(prNum, Math.round(rootR.right - maxIconRight));
+      }
+    } else {
+      prNum = Math.max(prNum, scrPadR);
     }
-    prNum = Math.max(prNum, scrPadR);
     if (prNum >= 4) prVal = `${Math.round(prNum)}px`;
     setVar('--gp-native-header-pl', plVal);
     setVar('--gp-native-header-pr', prVal);
