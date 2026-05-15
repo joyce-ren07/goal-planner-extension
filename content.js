@@ -2310,6 +2310,7 @@
               cancelAnimationFrame(c._gpLabelSyncRaf);
               c._gpLabelSyncRaf = null;
             }
+            if (c._gpGoalDragEndHandler) c._gpGoalDragEndHandler();
           });
         });
       }
