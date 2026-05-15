@@ -3637,10 +3637,14 @@
       const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
       const storageKey = liveEid || canonicalEventKey;
 
-      chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
+      chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], (d) => {
         void (async () => {
           const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : [];
           const chipDoneSnapshot = { ...(d.gp_chip_done || {}) };
+          const slotPackPrev =
+            d.gp_goal_slot_done && typeof d.gp_goal_slot_done === 'object'
+              ? { ...d.gp_goal_slot_done }
+              : {};
           let plannerEventId = '';
           let goalId = null;
           try {
