@@ -1767,18 +1767,65 @@
     });
   }
 
+  /** Regex for clock-style ranges in GCal aria labels and chip text. */
+  const GP_TIME_RANGE_RE =
+    /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i;
+
+  function extractTimeRangeLabelForGoalChip(chip, eventContainer) {
+    if (!chip || !eventContainer) return null;
+    const tryStr = (s) => {
+      if (s == null || s === '') return null;
+      const m = String(s).match(GP_TIME_RANGE_RE);
+      return m ? m[1] : null;
+    };
+    for (const el of [eventContainer, chip]) {
+      const hit =
+        tryStr(el.getAttribute?.('aria-label')) ||
+        tryStr(el.getAttribute?.('data-tooltip')) ||
+        tryStr(el.getAttribute?.('title'));
+      if (hit) return hit;
+    }
+    const walker = document.createTreeWalker(eventContainer, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.parentElement) return NodeFilter.FILTER_REJECT;
+        if (node.parentElement.closest('.ext-goal-root')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    let node;
+    while ((node = walker.nextNode())) {
+      const hit = tryStr(node.textContent.trim());
+      if (hit) return hit;
+    }
+    const jsNameEl =
+      eventContainer.querySelector('[jsname="tKELmd"]') ||
+      eventContainer.querySelector('[jsname="r4nke"]') ||
+      eventContainer.querySelector('.gVNoLb') ||
+      eventContainer.querySelector('.Jmftzc');
+    if (jsNameEl && !jsNameEl.closest('.ext-goal-root')) {
+      const hit = tryStr(jsNameEl.textContent.trim());
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function goalChipTimeLabelMutationRelevant(m) {
+    const t = m.target;
+    if (t.nodeType === Node.TEXT_NODE) {
+      return !t.parentElement?.closest('.ext-goal-root');
+    }
+    if (t.nodeType === Node.ELEMENT_NODE) {
+      return !t.closest('.ext-goal-root');
+    }
+    return true;
+  }
+
   /** Keep .ext-goal-time in sync with GCal’s live aria/tooltip (always inject the span). */
   function syncExtGoalTimeFromContainer(chip, eventContainer) {
     const timeEl = chip.querySelector('.ext-goal-time');
     if (!timeEl || !eventContainer) return;
-    const label =
-      eventContainer.getAttribute('aria-label') ||
-      eventContainer.getAttribute('data-tooltip') ||
-      '';
-    const timeMatch = label.match(
-      /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i
-    );
-    if (timeMatch) timeEl.textContent = timeMatch[1];
+    const extracted = extractTimeRangeLabelForGoalChip(chip, eventContainer);
+    if (extracted && timeEl.textContent !== extracted) timeEl.textContent = extracted;
     const h = chip.getBoundingClientRect().height;
     timeEl.style.display = h > 0 && h < 42 ? 'none' : 'block';
   }
