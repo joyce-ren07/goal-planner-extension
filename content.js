@@ -4276,10 +4276,12 @@
     const allowed = goalRow?.calEventIds || [];
     if (!allowed.length) return -1;
 
-    let idx = resolveSlotIndexByAnchorTime(chip, goalRow);
-    if (idx >= 0) return idx;
+    let idx = resolveDomSlotIndexFromGoalRow(goalRow, storageKey);
+    if (idx < 0) idx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow);
+    if (idx < 0) idx = resolveSlotIndexByAnchorTime(chip, goalRow);
+    if (idx < 0) idx = resolveSlotIndexByAnchorTime(chip, goalRow);
 
-    idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
+    if (idx < 0) idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
     if (idx >= 0) return idx;
 
     const probes = [...(mirrorKeys || []), plannerEventId, storageKey]
