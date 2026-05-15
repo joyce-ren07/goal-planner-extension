@@ -1730,9 +1730,10 @@
         'role',
         'button'
       );
+      const plainTitle = String(g.title || 'Untitled goal').trim();
       card.setAttribute(
         'aria-label',
-        `${g.title || 'Untitled goal'}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
+        `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
       );
       card.tabIndex = 0;
       card.innerHTML =
