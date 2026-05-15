@@ -2882,7 +2882,7 @@
       const Model = globalThis.GoalPlannerModel;
       if (!Model?.syncUnifiedWithLegacyGoals) return;
       const goals = await getGoals();
-      if (!goals.length) return;
+      if (!Array.isArray(goals) || !goals.length) return;
       const chipDone = await new Promise((r) =>
         chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
       );
