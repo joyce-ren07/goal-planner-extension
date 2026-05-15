@@ -3000,13 +3000,13 @@
       const titleEsc = escapeHtmlGp(g.title || 'Untitled goal');
       const schedRaw = g.scheduleLabel || '';
       const subLine = schedRaw ? `${escapeHtmlGp(schedRaw)} · ${daysLeft}d left` : `${daysLeft}d left`;
-      return `<div class="gp-goal-row" data-goal-id="${g.id}">
+      const accent = getGoalDisplayColor(g);
+      return `<div class="gp-goal-row" data-goal-id="${g.id}" style="--gp-goal-accent:${accent};">
         <div class="gp-goal-row-main">
           <div class="gp-goal-row-info">
             <p class="gp-goal-chip-name">${titleEsc}</p>
             <p class="gp-goal-chip-sub">${subLine}</p>
           </div>
-          <span class="gp-goal-row-chevron material-symbols-outlined gp-ms-icon" aria-hidden="true">chevron_right</span>
           <button class="gp-goal-kebab" data-goal-id="${g.id}" aria-label="More options" title="More options">
             <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">more_vert</span>
           </button>
