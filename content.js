@@ -2663,6 +2663,7 @@
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       setTimeout(inject, 1000);
+      setTimeout(scheduleLeftSidebarGoalsMount, 800);
       // Re-render ghost events after GCal week/month navigation
       setTimeout(() => {
         const screen = document.getElementById('gp-screen-suggestions');
