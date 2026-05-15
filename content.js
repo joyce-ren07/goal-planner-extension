@@ -82,6 +82,7 @@
     orange: 'orange',
     teal: 'teal',
     grey: 'grey',
+    custom: 'custom',
   };
   const MYTASKS_MESSAGE_SOURCE = 'mytasks-kanban-extension';
   const KANBAN_LIST_MATCHERS = [
@@ -100,18 +101,45 @@
     }));
   }
 
+  function normalizeHexColor(s) {
+    if (s == null || typeof s !== 'string') return '';
+    let t = s.trim();
+    if (!t) return '';
+    if (!t.startsWith('#')) t = `#${t}`;
+    if (t.length === 4 && /^#[0-9a-f]{3}$/i.test(t)) {
+      t = `#${t[1]}${t[1]}${t[2]}${t[2]}${t[3]}${t[3]}`;
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(t)) return '';
+    return t.toLowerCase();
+  }
+
   function normalizeTags(raw) {
     const fallback = getDefaultTags();
     if (!Array.isArray(raw) || raw.length === 0) {
       return fallback.map((t) => ({ ...t }));
     }
 
-    return raw.map((t, i) => ({
-      id: String(t?.id || `tag-${i}`),
-      label: String(t?.label || `Tag ${i + 1}`).trim() || `Tag ${i + 1}`,
-      colorKey: TAG_PALETTE_KEYS.includes(t?.colorKey) ? t.colorKey : 'blue',
-      hidden: Boolean(t?.hidden),
-    }));
+    return raw.map((t, i) => {
+      const id = String(t?.id || `tag-${i}`);
+      const label = String(t?.label || `Tag ${i + 1}`).trim() || `Tag ${i + 1}`;
+      const hidden = Boolean(t?.hidden);
+      const customHex = normalizeHexColor(t?.customHex);
+      const isCustom = t?.colorKey === 'custom' && customHex;
+      const colorKey = isCustom
+        ? 'custom'
+        : (TAG_PALETTE_KEYS.includes(t?.colorKey) ? t.colorKey : 'blue');
+      const out = { id, label, colorKey, hidden };
+      if (colorKey === 'custom') out.customHex = customHex;
+      return out;
+    });
+  }
+
+  function tagResolvedHex(tag) {
+    if (!tag) return '#5f6368';
+    if (tag.colorKey === 'custom' && normalizeHexColor(tag.customHex)) {
+      return normalizeHexColor(tag.customHex);
+    }
+    return TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368';
   }
 
   function findTagByLabel(tags, label) {
@@ -1114,7 +1142,7 @@
     };
   }
 
-  const KANBAN_CHIP_COLOR_KEYS = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'teal', 'grey'];
+  const KANBAN_CHIP_COLOR_KEYS = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'teal', 'grey', 'custom'];
 
   function resolveKanbanChipColor(chip, chipColor, legacyCourseKey) {
     if (chipColor && KANBAN_CHIP_COLOR_KEYS.includes(chipColor)) {
@@ -1134,6 +1162,252 @@
     return `${year}-${month}-${day}`;
   }
 
+  function parseDueDateIsoLocal(iso) {
+    if (!iso || typeof iso !== 'string') return null;
+    const d = new Date(`${iso}T12:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatCreateTaskDateLong(iso) {
+    const d = parseDueDateIsoLocal(iso);
+    if (!d) return 'Select date';
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  function formatTimeCompact12(hhmm) {
+    if (!hhmm || typeof hhmm !== 'string') return '';
+    const m = hhmm.trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return '';
+    const h = Number(m[1]);
+    const min = Number(m[2]);
+    if (Number.isNaN(h) || Number.isNaN(min) || h > 23 || min > 59) return '';
+    const dt = new Date(2000, 0, 1, h, min);
+    return dt
+      .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      .replace(/\s/g, '')
+      .toLowerCase();
+  }
+
+  function normalizeDueHm(v) {
+    if (!v || typeof v !== 'string') return '';
+    const s = v.trim();
+    return /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : '';
+  }
+
+  /** Accepts 24h (18:30), 12h with minutes (6:30pm), or hour-only (6pm). Returns '' if invalid. */
+  function parseFlexibleTimeToHm(raw) {
+    if (raw == null) return '';
+    const s = String(raw).trim().toLowerCase().replace(/\./g, '');
+    if (!s) return '';
+    let m = s.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if (m) {
+      const h = Number(m[1]);
+      const min = Number(m[2]);
+      if (h > 23 || min > 59) return '';
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    }
+    m = s.match(/^([1-9]|1[0-2]):([0-5]\d)\s*([ap])m$/);
+    if (m) {
+      let h = Number(m[1]);
+      const min = Number(m[2]);
+      const ap = m[3];
+      if (ap === 'a' && h === 12) h = 0;
+      else if (ap === 'p' && h !== 12) h += 12;
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    }
+    m = s.match(/^([1-9]|1[0-2])\s*([ap])m$/);
+    if (m) {
+      let h = Number(m[1]);
+      const ap = m[2];
+      if (ap === 'a' && h === 12) h = 0;
+      else if (ap === 'p' && h !== 12) h += 12;
+      return `${String(h).padStart(2, '0')}:00`;
+    }
+    return '';
+  }
+
+  function fitCreateTaskTimeInputWidth(el) {
+    if (!(el instanceof HTMLInputElement) || !el.isConnected) return;
+    let probe = document.getElementById('gp-ct-time-width-probe');
+    if (!probe) {
+      probe = document.createElement('span');
+      probe.id = 'gp-ct-time-width-probe';
+      probe.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(probe);
+    }
+    const cs = getComputedStyle(el);
+    probe.className = 'gp-ct-time-width-probe';
+    probe.style.cssText = [
+      'position:absolute',
+      'left:-9999px',
+      'top:0',
+      'visibility:hidden',
+      'pointer-events:none',
+      'white-space:pre',
+      'padding:0',
+      'margin:0',
+      'border:0',
+      `font-family:${cs.fontFamily}`,
+      `font-size:${cs.fontSize}`,
+      `font-weight:${cs.fontWeight}`,
+      `letter-spacing:${cs.letterSpacing}`,
+    ].join(';');
+    const raw = (el.value && el.value.trim()) ? el.value : (el.getAttribute('placeholder') || '0:00pm');
+    probe.textContent = raw || '\u00a0';
+    const textW = probe.getBoundingClientRect().width;
+    const pad = 14;
+    const w = Math.ceil(textW) + pad;
+    el.style.width = `${Math.max(44, Math.min(w, 132))}px`;
+  }
+
+  function fitCreateTaskTimeInputsBoth() {
+    fitCreateTaskTimeInputWidth(document.getElementById('gp-ct-time-start'));
+    fitCreateTaskTimeInputWidth(document.getElementById('gp-ct-time-end'));
+  }
+
+  function setCreateTaskTimeFieldsFromHm(startHm, endHm) {
+    const si = document.getElementById('gp-ct-time-start');
+    const ei = document.getElementById('gp-ct-time-end');
+    const sh = normalizeDueHm(startHm) || '18:30';
+    const eh = normalizeDueHm(endHm) || '19:30';
+    if (si) {
+      si.value = formatTimeCompact12(sh);
+      si.classList.remove('gp-ct-time-txt--invalid');
+    }
+    if (ei) {
+      ei.value = formatTimeCompact12(eh);
+      ei.classList.remove('gp-ct-time-txt--invalid');
+    }
+    requestAnimationFrame(() => fitCreateTaskTimeInputsBoth());
+  }
+
+  function normalizeCreateTaskTimeInputOnBlur(el) {
+    if (!(el instanceof HTMLInputElement)) return;
+    const hm = parseFlexibleTimeToHm(el.value);
+    if (hm) {
+      el.value = formatTimeCompact12(hm);
+      el.classList.remove('gp-ct-time-txt--invalid');
+    } else if (el.value.trim()) {
+      el.classList.add('gp-ct-time-txt--invalid');
+    } else {
+      el.value = '';
+      el.classList.remove('gp-ct-time-txt--invalid');
+    }
+    fitCreateTaskTimeInputWidth(el);
+  }
+
+  function formatKanbanDueWithTimes(isoDate, startHm, endHm) {
+    const base = formatKanbanDueLabel(isoDate);
+    const a = formatTimeCompact12(normalizeDueHm(startHm));
+    const b = formatTimeCompact12(normalizeDueHm(endHm));
+    if (a && b) return `${base} · ${a}–${b}`;
+    if (a) return `${base} · ${a}`;
+    return base;
+  }
+
+  let gpCtCalViewMonth = null;
+
+  function getCreateTaskDueIso() {
+    return document.getElementById('gp-ct-due-date')?.value || '';
+  }
+
+  function setCreateTaskDueIso(iso) {
+    const inp = document.getElementById('gp-ct-due-date');
+    if (inp) inp.value = iso || '';
+    const label = document.getElementById('gp-ct-date-btn-label');
+    if (label) label.textContent = formatCreateTaskDateLong(inp?.value || '');
+  }
+
+  function closeCreateTaskCalendar() {
+    const pop = document.getElementById('gp-ct-cal-pop');
+    const btn = document.getElementById('gp-ct-date-btn');
+    if (pop) pop.hidden = true;
+    if (btn) {
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function positionCreateTaskCalendar() {
+    const btn = document.getElementById('gp-ct-date-btn');
+    const pop = document.getElementById('gp-ct-cal-pop');
+    if (!btn || !pop || pop.hidden) return;
+    const r = btn.getBoundingClientRect();
+    const w = 288;
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    pop.style.left = `${left}px`;
+    pop.style.top = `${r.bottom + 4}px`;
+  }
+
+  function openCreateTaskCalendar() {
+    const pop = document.getElementById('gp-ct-cal-pop');
+    const btn = document.getElementById('gp-ct-date-btn');
+    const iso = getCreateTaskDueIso();
+    const base = parseDueDateIsoLocal(iso) || new Date();
+    gpCtCalViewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+    renderCreateTaskCalendar();
+    if (pop) pop.hidden = false;
+    if (btn) {
+      btn.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+    requestAnimationFrame(() => positionCreateTaskCalendar());
+  }
+
+  function renderCreateTaskCalendar() {
+    const pop = document.getElementById('gp-ct-cal-pop');
+    const grid = document.getElementById('gp-ct-cal-grid');
+    const mo = document.getElementById('gp-ct-cal-month-label');
+    if (!pop || !grid || !mo) return;
+
+    const selIso = getCreateTaskDueIso();
+    const selected = parseDueDateIsoLocal(selIso);
+
+    const view = gpCtCalViewMonth && !Number.isNaN(gpCtCalViewMonth.getTime())
+      ? gpCtCalViewMonth
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    mo.textContent = view.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const y = view.getFullYear();
+    const m = view.getMonth();
+    const firstDow = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const prevTail = firstDow;
+    const prevMonthLast = new Date(y, m, 0).getDate();
+
+    grid.innerHTML = '';
+    const totalCells = Math.ceil((prevTail + daysInMonth) / 7) * 7;
+    for (let i = 0; i < totalCells; i += 1) {
+      const dayNum = i - prevTail + 1;
+      let cellDate;
+      let muted = false;
+      if (i < prevTail) {
+        cellDate = new Date(y, m - 1, prevMonthLast - prevTail + i + 1);
+        muted = true;
+      } else if (dayNum > daysInMonth) {
+        cellDate = new Date(y, m + 1, dayNum - daysInMonth);
+        muted = true;
+      } else {
+        cellDate = new Date(y, m, dayNum);
+      }
+
+      const iso = formatDueDateIso(cellDate);
+      const isSel = selected
+        && cellDate.getFullYear() === selected.getFullYear()
+        && cellDate.getMonth() === selected.getMonth()
+        && cellDate.getDate() === selected.getDate();
+
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gp-ct-cal-cell';
+      if (muted) b.classList.add('is-muted');
+      if (isSel) b.classList.add('is-selected');
+      b.textContent = String(cellDate.getDate());
+      b.dataset.iso = iso;
+      grid.appendChild(b);
+    }
+  }
+
   function getTaskDueDateFromCard(card) {
     if (card?.dueDate) {
       const parsed = new Date(`${card.dueDate}T12:00:00`);
@@ -1150,9 +1424,16 @@
       || '2026-05-21';
 
     let chipColor = resolveKanbanChipColor(chip, card?.chipColor, card?.courseKey);
+    let chipCustomHex = normalizeHexColor(card?.chipCustomHex);
     const tagMatch = findTagByLabel(tags, chip);
     if (tagMatch && !tagMatch.hidden) {
       chipColor = chipClassForColorKey(tagMatch.colorKey);
+      if (tagMatch.colorKey === 'custom') {
+        const hx = normalizeHexColor(tagMatch.customHex);
+        chipCustomHex = hx || undefined;
+      } else {
+        chipCustomHex = undefined;
+      }
     }
 
     const subtasks = Array.isArray(card?.subtasks)
@@ -1163,17 +1444,23 @@
       })).filter((s) => s.title)
       : [];
 
-    return {
+    const dueTimeStart = normalizeDueHm(card?.dueTimeStart || '');
+    const dueTimeEnd = normalizeDueHm(card?.dueTimeEnd || '');
+    const out = {
       id: card?.id || fallbackId,
       title: card?.title || 'Project Outline',
       dueDate,
-      due: card?.due || formatKanbanDueLabel(dueDate),
+      due: card?.due || formatKanbanDueWithTimes(dueDate, dueTimeStart, dueTimeEnd),
       chip,
       chipColor,
       starred: Boolean(card?.starred),
       notes: String(card?.notes || '').trim(),
       subtasks,
     };
+    if (dueTimeStart) out.dueTimeStart = dueTimeStart;
+    if (dueTimeEnd) out.dueTimeEnd = dueTimeEnd;
+    if (chipCustomHex) out.chipCustomHex = chipCustomHex;
+    return out;
   }
 
   function getDefaultKanbanState() {
@@ -1344,7 +1631,7 @@
     const tagMeta = findTagByLabel(tags, task.chip);
     if (!courseChipClass && tagMeta) {
       courseChip.classList.add('gp-course-chip--custom');
-      courseChip.style.setProperty('--gp-tag-fg', TAG_HEX_BY_KEY[tagMeta.colorKey] || '#5f6368');
+      courseChip.style.setProperty('--gp-tag-fg', tagResolvedHex(tagMeta));
     }
 
     const statusChip = document.createElement('div');
@@ -1507,6 +1794,11 @@
     card.draggable = false;
     card.dataset.cardId = task.id;
     card.dataset.chipColor = task.chipColor || resolveKanbanChipColor(task.chip, task.chipColor, task.courseKey);
+    if (task.chipCustomHex) {
+      card.dataset.chipCustomHex = task.chipCustomHex;
+    } else {
+      delete card.dataset.chipCustomHex;
+    }
     card.dataset.starred = task.starred ? 'true' : 'false';
     if (task.dueDate) {
       card.dataset.dueDate = task.dueDate;
@@ -1547,6 +1839,9 @@
     const chip = document.createElement('span');
     chip.className = `mk-chip mk-chip--${card.dataset.chipColor}`;
     chip.textContent = task.chip;
+    if (card.dataset.chipColor === 'custom' && card.dataset.chipCustomHex) {
+      chip.style.setProperty('--gp-mk-chip-fg', card.dataset.chipCustomHex);
+    }
 
     footer.appendChild(chip);
     card.appendChild(header);
@@ -1591,6 +1886,7 @@
           due: cardEl.querySelector('.mk-card-due')?.textContent || 'Due Thurs, May 21',
           chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
           chipColor: cardEl.dataset.chipColor || 'blue',
+          chipCustomHex: cardEl.dataset.chipCustomHex || undefined,
           starred: cardEl.dataset.starred === 'true',
           notes: cardEl.dataset.notes || '',
           subtasks: Array.isArray(subtasks) ? subtasks : [],
@@ -1818,9 +2114,38 @@
             </svg>
           </span>
           <div class="gp-ct-date-cluster">
-            <input class="gp-ct-date-native" name="dueDate" type="date" required aria-label="Due date">
-            <input class="gp-ct-time-native" name="dueTime" type="time" aria-label="Due time">
-            <button type="button" class="gp-ct-pill gp-ct-pill--ghost" id="gp-ct-time-toggle" aria-pressed="false">No time</button>
+            <div class="gp-ct-datetime-bar">
+              <div class="gp-ct-date-anchor">
+                <button type="button" class="gp-ct-date-btn" id="gp-ct-date-btn" aria-expanded="false" aria-haspopup="dialog" aria-label="Due date">
+                  <span id="gp-ct-date-btn-label"></span>
+                </button>
+                <input type="hidden" name="dueDate" id="gp-ct-due-date" value="">
+                <div class="gp-ct-cal-pop" id="gp-ct-cal-pop" hidden role="dialog" aria-label="Choose date">
+                  <div class="gp-ct-cal-head">
+                    <span class="gp-ct-cal-mo" id="gp-ct-cal-month-label"></span>
+                    <div class="gp-ct-cal-nav">
+                      <button type="button" class="gp-ct-cal-nav-btn" id="gp-ct-cal-prev" aria-label="Previous month">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      </button>
+                      <button type="button" class="gp-ct-cal-nav-btn" id="gp-ct-cal-next" aria-label="Next month">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="gp-ct-cal-weekdays" aria-hidden="true">
+                    <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                  </div>
+                  <div class="gp-ct-cal-grid" id="gp-ct-cal-grid"></div>
+                </div>
+              </div>
+              <span class="gp-ct-time-dash" aria-hidden="true">—</span>
+              <div class="gp-ct-time-slot">
+                <input type="text" class="gp-ct-time-txt" name="dueTimeStart" id="gp-ct-time-start" inputmode="text" autocomplete="off" spellcheck="false" placeholder="6:30pm" aria-label="Start time">
+              </div>
+              <div class="gp-ct-time-slot">
+                <input type="text" class="gp-ct-time-txt" name="dueTimeEnd" id="gp-ct-time-end" inputmode="text" autocomplete="off" spellcheck="false" placeholder="7:30pm" aria-label="End time">
+              </div>
+            </div>
           </div>
         </div>
         <div class="gp-ct-row gp-ct-row--repeat">
@@ -1965,25 +2290,22 @@
       gpResumeCreateTaskLayerAfterTags = false;
       gpManageTagsDraft = null;
 
-      const due = form.querySelector('[name="dueDate"]');
+      const due = document.getElementById('gp-ct-due-date');
       if (due && !due.value) {
         due.value = formatDueDateIso(new Date());
       }
+      setCreateTaskDueIso(due?.value || formatDueDateIso(new Date()));
 
-      const timeToggle = document.getElementById('gp-ct-time-toggle');
-      const timeInput = form.querySelector('[name="dueTime"]');
-      if (timeInput) {
-        timeInput.value = '';
-        timeInput.classList.add('gp-ct-time-native--hidden');
-      }
-      if (timeToggle) {
-        timeToggle.setAttribute('aria-pressed', 'false');
-        timeToggle.textContent = 'No time';
-      }
+      setCreateTaskTimeFieldsFromHm('18:30', '19:30');
+      closeCreateTaskCalendar();
 
       root.hidden = false;
       layer.hidden = false;
       document.body.classList.add('gp-task-modals-open');
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => fitCreateTaskTimeInputsBoth());
+      });
 
       const kr = getActiveKanbanRoot();
       if (kr) kr.classList.add('is-modal-open');
@@ -1995,6 +2317,7 @@
   }
 
   function closeGlobalCreateTaskModal() {
+    closeCreateTaskCalendar();
     const root = getGlobalTaskModalsRoot();
     const layer = document.getElementById('gp-ct-layer');
     const mt = document.getElementById('gp-mt-layer');
@@ -2036,7 +2359,7 @@
       btn.classList.toggle('is-selected', selected);
       const dot = document.createElement('span');
       dot.className = 'gp-ct-chip-dot';
-      dot.style.background = TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368';
+      dot.style.background = tagResolvedHex(tag);
       btn.appendChild(dot);
       btn.appendChild(document.createTextNode(tag.label));
       row.appendChild(btn);
@@ -2057,6 +2380,18 @@
     }
   }
 
+  function applyInlineNewTagCustomColorFromPicker(rawHex) {
+    const hex = normalizeHexColor(rawHex);
+    if (!hex) return;
+    const dot = document.getElementById('gp-ct-new-tag-dot');
+    if (!dot) return;
+    dot.dataset.colorKey = 'custom';
+    dot.dataset.customHex = hex;
+    dot.style.background = hex;
+    document.querySelectorAll('#gp-ct-color-pop .gp-ct-color-swatch').forEach((s) => s.classList.remove('is-selected'));
+    document.getElementById('gp-ct-color-custom-wrap')?.classList.add('is-selected');
+  }
+
   function openInlineNewTagEditor() {
     const box = document.getElementById('gp-ct-new-tag');
     const input = document.getElementById('gp-ct-new-tag-input');
@@ -2066,11 +2401,27 @@
 
     box.hidden = false;
     input.value = '';
+    delete dot.dataset.customHex;
     const firstKey = TAG_PALETTE_KEYS[0];
     dot.dataset.colorKey = firstKey;
     dot.style.background = TAG_HEX_BY_KEY[firstKey];
     pop.hidden = false;
     pop.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'gp-ct-color-custom-wrap';
+    wrap.id = 'gp-ct-color-custom-wrap';
+    const lab = document.createElement('span');
+    lab.className = 'gp-ct-color-custom-label';
+    lab.textContent = 'Custom color';
+    const nat = document.createElement('input');
+    nat.type = 'color';
+    nat.id = 'gp-ct-tag-color-native';
+    nat.className = 'gp-ct-tag-color-native';
+    nat.value = TAG_HEX_BY_KEY[firstKey];
+    nat.setAttribute('aria-label', 'Custom tag color');
+    wrap.appendChild(lab);
+    wrap.appendChild(nat);
+    pop.appendChild(wrap);
     TAG_PALETTE_KEYS.forEach((key) => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -2130,8 +2481,17 @@
     const form = document.getElementById('gp-ct-form');
     if (!form) return;
 
+    const ts = document.getElementById('gp-ct-time-start');
+    const te = document.getElementById('gp-ct-time-end');
+    if (ts) normalizeCreateTaskTimeInputOnBlur(ts);
+    if (te) normalizeCreateTaskTimeInputOnBlur(te);
+    fitCreateTaskTimeInputsBoth();
+
     const title = form.querySelector('[name="title"]')?.value.trim();
-    const dueDate = form.querySelector('[name="dueDate"]')?.value;
+    const dueDate = document.getElementById('gp-ct-due-date')?.value
+      || form.querySelector('[name="dueDate"]')?.value;
+    const dueTimeStart = parseFlexibleTimeToHm(form.querySelector('[name="dueTimeStart"]')?.value || '');
+    const dueTimeEnd = parseFlexibleTimeToHm(form.querySelector('[name="dueTimeEnd"]')?.value || '');
     const chip = document.getElementById('gp-ct-chip')?.value?.trim() || (getDefaultTags()[0]?.label || 'PSYC101');
     const columnId = document.getElementById('gp-ct-column')?.value || 'todo';
     const notes = form.querySelector('[name="notes"]')?.value.trim() || '';
@@ -2142,18 +2502,24 @@
     const state = await loadKanbanState();
     const tag = findTagByLabel(state.tags, chip);
     const chipColor = tag ? chipClassForColorKey(tag.colorKey) : resolveKanbanChipColor(chip, null, null);
+    const chipCustomHex = (tag?.colorKey === 'custom' && normalizeHexColor(tag?.customHex))
+      ? normalizeHexColor(tag.customHex)
+      : undefined;
 
     const card = {
       id: `task-${Date.now()}`,
       title,
       dueDate,
-      due: formatKanbanDueLabel(dueDate),
+      due: formatKanbanDueWithTimes(dueDate, dueTimeStart, dueTimeEnd),
       chip,
       chipColor,
       starred: false,
       notes,
       subtasks,
     };
+    if (dueTimeStart) card.dueTimeStart = dueTimeStart;
+    if (dueTimeEnd) card.dueTimeEnd = dueTimeEnd;
+    if (chipCustomHex) card.chipCustomHex = chipCustomHex;
 
     state.columns[columnId] = [...(state.columns[columnId] || []), card];
     await saveKanbanState(state);
@@ -2178,7 +2544,7 @@
       row.dataset.index = String(index);
       row.innerHTML = `
         <button type="button" class="gp-mt-color-hit" aria-label="Choose color" data-index="${index}">
-          <span class="gp-mt-dot" style="background:${TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368'}"></span>
+          <span class="gp-mt-dot" style="background:${escapeHtmlAttr(tagResolvedHex(tag))}"></span>
         </button>
         <input class="gp-mt-input" type="text" value="${escapeHtmlAttr(tag.label)}" aria-label="Tag name">
         <button type="button" class="gp-mt-icon-btn" data-action="hide" aria-label="Toggle visibility" title="Show in picker">
@@ -2191,7 +2557,7 @@
       `;
       const hit = row.querySelector('.gp-mt-color-hit');
       const dot = hit?.querySelector('.gp-mt-dot');
-      if (dot) dot.style.background = TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368';
+      if (dot) dot.style.background = tagResolvedHex(tag);
       const hideBtn = row.querySelector('[data-action="hide"]');
       if (hideBtn) {
         hideBtn.classList.toggle('is-muted', tag.hidden);
@@ -2305,23 +2671,85 @@
       });
     });
 
-    document.getElementById('gp-ct-time-toggle')?.addEventListener('click', () => {
-      const form = document.getElementById('gp-ct-form');
-      const timeInput = form?.querySelector('[name="dueTime"]');
-      const btn = document.getElementById('gp-ct-time-toggle');
-      if (!timeInput || !btn) return;
-      const pressed = btn.getAttribute('aria-pressed') === 'true';
-      if (pressed) {
-        btn.setAttribute('aria-pressed', 'false');
-        btn.textContent = 'No time';
-        timeInput.value = '';
-        timeInput.classList.add('gp-ct-time-native--hidden');
-      } else {
-        btn.setAttribute('aria-pressed', 'true');
-        btn.textContent = 'Time';
-        timeInput.classList.remove('gp-ct-time-native--hidden');
-        timeInput.focus();
+    document.getElementById('gp-ct-date-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const pop = document.getElementById('gp-ct-cal-pop');
+      if (pop && !pop.hidden) closeCreateTaskCalendar();
+      else openCreateTaskCalendar();
+    });
+
+    document.getElementById('gp-ct-cal-prev')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const v = gpCtCalViewMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      gpCtCalViewMonth = new Date(v.getFullYear(), v.getMonth() - 1, 1);
+      renderCreateTaskCalendar();
+    });
+
+    document.getElementById('gp-ct-cal-next')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const v = gpCtCalViewMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      gpCtCalViewMonth = new Date(v.getFullYear(), v.getMonth() + 1, 1);
+      renderCreateTaskCalendar();
+    });
+
+    document.getElementById('gp-ct-cal-grid')?.addEventListener('click', (e) => {
+      const cell = e.target.closest('.gp-ct-cal-cell');
+      if (!cell?.dataset?.iso) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setCreateTaskDueIso(cell.dataset.iso);
+      const picked = parseDueDateIsoLocal(cell.dataset.iso);
+      if (picked) {
+        gpCtCalViewMonth = new Date(picked.getFullYear(), picked.getMonth(), 1);
       }
+      closeCreateTaskCalendar();
+    });
+
+    document.getElementById('gp-ct-time-start')?.addEventListener('blur', (e) => {
+      normalizeCreateTaskTimeInputOnBlur(e.target);
+    });
+    document.getElementById('gp-ct-time-end')?.addEventListener('blur', (e) => {
+      normalizeCreateTaskTimeInputOnBlur(e.target);
+    });
+    const onTimeFieldInput = (e) => {
+      const t = e.target;
+      if (t && t.classList && t.classList.contains('gp-ct-time-txt--invalid')) {
+        t.classList.remove('gp-ct-time-txt--invalid');
+      }
+      fitCreateTaskTimeInputWidth(t);
+    };
+    document.getElementById('gp-ct-time-start')?.addEventListener('input', onTimeFieldInput);
+    document.getElementById('gp-ct-time-end')?.addEventListener('input', onTimeFieldInput);
+    document.getElementById('gp-ct-time-start')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.target.blur();
+      }
+    });
+    document.getElementById('gp-ct-time-end')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.target.blur();
+      }
+    });
+
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        const pop = document.getElementById('gp-ct-cal-pop');
+        if (!pop || pop.hidden) return;
+        if (e.target.closest('.gp-ct-date-anchor')) return;
+        closeCreateTaskCalendar();
+      },
+      true,
+    );
+
+    window.addEventListener('resize', () => {
+      const cal = document.getElementById('gp-ct-cal-pop');
+      if (cal && !cal.hidden) positionCreateTaskCalendar();
     });
 
     document.querySelector('.gp-ct-segmented')?.addEventListener('click', (e) => {
@@ -2410,9 +2838,17 @@
         const label = input?.value.trim();
         if (!label) return;
         const colorKey = dot?.dataset.colorKey || 'blue';
+        const customHex = colorKey === 'custom' ? normalizeHexColor(dot?.dataset.customHex) : '';
         const state = await loadKanbanState();
         const id = `tag-${Date.now()}`;
-        state.tags = normalizeTags([...(state.tags || []), { id, label, colorKey, hidden: false }]);
+        const tagPayload = { id, label, hidden: false };
+        if (colorKey === 'custom' && customHex) {
+          tagPayload.colorKey = 'custom';
+          tagPayload.customHex = customHex;
+        } else {
+          tagPayload.colorKey = TAG_PALETTE_KEYS.includes(colorKey) ? colorKey : 'blue';
+        }
+        state.tags = normalizeTags([...(state.tags || []), tagPayload]);
         await saveKanbanState(state);
         const chipInput = document.getElementById('gp-ct-chip');
         if (chipInput) chipInput.value = label;
@@ -2431,12 +2867,22 @@
       const key = sw.dataset.colorKey;
       const dot = document.getElementById('gp-ct-new-tag-dot');
       if (dot && key) {
+        delete dot.dataset.customHex;
         dot.dataset.colorKey = key;
         dot.style.background = TAG_HEX_BY_KEY[key] || '#5f6368';
+        const nat = document.getElementById('gp-ct-tag-color-native');
+        if (nat) nat.value = TAG_HEX_BY_KEY[key] || '#1a73e8';
       }
       document.querySelectorAll('#gp-ct-color-pop .gp-ct-color-swatch').forEach((s) => {
         s.classList.toggle('is-selected', s === sw);
       });
+      document.getElementById('gp-ct-color-custom-wrap')?.classList.remove('is-selected');
+    });
+
+    document.getElementById('gp-ct-color-pop')?.addEventListener('input', (e) => {
+      const nat = e.target.closest('#gp-ct-tag-color-native');
+      if (!nat || nat.type !== 'color') return;
+      applyInlineNewTagCustomColorFromPicker(nat.value);
     });
 
     document.getElementById('gp-mt-cancel')?.addEventListener('click', () => {
@@ -2485,20 +2931,31 @@
       }
       if (colorHit && row && gpManageTagsDraft) {
         const idx = Number(row.dataset.index);
-        const order = TAG_PALETTE_KEYS;
         const cur = gpManageTagsDraft[idx].colorKey;
-        const ni = (order.indexOf(cur) + 1) % order.length;
-        gpManageTagsDraft[idx].colorKey = order[ni];
+        const order = TAG_PALETTE_KEYS;
+        if (cur === 'custom') {
+          gpManageTagsDraft[idx].colorKey = order[0];
+          delete gpManageTagsDraft[idx].customHex;
+        } else {
+          const ni = (order.indexOf(cur) + 1) % order.length;
+          gpManageTagsDraft[idx].colorKey = order[ni];
+          delete gpManageTagsDraft[idx].customHex;
+        }
         renderManageTagRows();
       }
     });
 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      const pop = document.getElementById('gp-ct-color-pop');
       const newTag = document.getElementById('gp-ct-new-tag');
       if (newTag && !newTag.hidden) {
         closeInlineNewTagEditor();
+        e.preventDefault();
+        return;
+      }
+      const calPop = document.getElementById('gp-ct-cal-pop');
+      if (calPop && !calPop.hidden) {
+        closeCreateTaskCalendar();
         e.preventDefault();
         return;
       }

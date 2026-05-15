@@ -540,6 +540,11 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   color: #b06000;
 }
 
+.mytasks-kanban .mk-chip--custom {
+  background: color-mix(in srgb, var(--gp-mk-chip-fg, #5f6368) 14%, #fff);
+  color: var(--gp-mk-chip-fg, #5f6368);
+}
+
 .mytasks-kanban__modal {
   position: absolute;
   inset: 0;
@@ -1442,31 +1447,233 @@ body.gp-sidebar-open .gp-mt-layer {
 }
 
 .gp-ct-date-cluster {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
-.gp-ct-date-native,
-.gp-ct-time-native {
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 14px;
-  color: #1f1f1f;
-  border: none;
-  background: #f1f3f4;
-  border-radius: 999px;
-  padding: 8px 12px;
+.gp-ct-datetime-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
-.gp-ct-time-native--hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
+.gp-ct-date-anchor {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gp-ct-date-btn {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 12px 10px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: #202124;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 8px 8px 0 0;
+  background: #f1f3f4;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.gp-ct-date-btn:hover {
+  background: #e8eaed;
+}
+
+.gp-ct-date-btn.is-open {
+  outline: none;
+  color: #fff;
+  background: color-mix(in srgb, #1a73e8 88%, #fff);
+  border-bottom-color: #1a73e8;
+}
+
+.gp-ct-date-btn:focus-visible:not(.is-open) {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+#gp-ct-date-btn-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gp-ct-cal-pop {
+  position: fixed;
+  z-index: 2147483646;
+  width: 288px;
+  padding: 12px 12px 14px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #202124 22%, transparent),
+    0 4px 16px color-mix(in srgb, #202124 18%, transparent);
+  font-family: 'Google Sans', Roboto, sans-serif;
+}
+
+.gp-ct-cal-pop[hidden] {
+  display: none !important;
+}
+
+.gp-ct-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.gp-ct-cal-mo {
+  font-size: 14px;
+  font-weight: 500;
+  color: #3c4043;
+}
+
+.gp-ct-cal-nav {
+  display: flex;
+  gap: 2px;
+}
+
+.gp-ct-cal-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+}
+
+.gp-ct-cal-nav-btn:hover {
+  background: #f1f3f4;
+}
+
+.gp-ct-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  margin-bottom: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #70757a;
+}
+
+.gp-ct-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px 0;
+}
+
+.gp-ct-cal-cell {
+  margin: 0;
+  padding: 0;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: #202124;
+  cursor: pointer;
+}
+
+.gp-ct-cal-cell:hover:not(.is-selected) {
+  background: #f1f3f4;
+}
+
+.gp-ct-cal-cell.is-muted {
+  color: #9aa0a6;
+}
+
+.gp-ct-cal-cell.is-selected {
+  background: #1a73e8;
+  color: #fff;
+  font-weight: 500;
+}
+
+.gp-ct-time-dash {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: #5f6368;
+  user-select: none;
+}
+
+.gp-ct-time-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  height: 36px;
+  padding: 0 2px;
+  border-radius: 8px;
+  background: #f1f3f4;
+  box-sizing: border-box;
+}
+
+.gp-ct-time-txt {
+  display: block;
+  width: 72px;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.25;
+  color: #202124;
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
+  field-sizing: content;
+}
+
+.gp-ct-time-txt::placeholder {
+  color: #9aa0a6;
+}
+
+.gp-ct-time-txt:focus {
+  box-shadow: inset 0 0 0 2px #1a73e8;
+  background: #fff;
+}
+
+.gp-ct-time-txt--invalid {
+  color: #c5221f;
+  box-shadow: inset 0 0 0 1px #c5221f;
+}
+
+.gp-ct-time-txt--invalid:focus {
+  box-shadow: inset 0 0 0 2px #c5221f;
 }
 
 .gp-ct-pill {
@@ -1586,6 +1793,11 @@ body.gp-sidebar-open .gp-mt-layer {
   flex-shrink: 0;
 }
 
+/* `hidden` must win over display:flex (otherwise new-tag UI shows without clicking + New). */
+#gp-ct-new-tag[hidden] {
+  display: none !important;
+}
+
 .gp-ct-new-tag {
   display: flex;
   flex-wrap: wrap;
@@ -1627,6 +1839,10 @@ body.gp-sidebar-open .gp-mt-layer {
     0 4px 12px color-mix(in srgb, #1d1b20 14%, transparent);
 }
 
+#gp-ct-color-pop[hidden] {
+  display: none !important;
+}
+
 .gp-ct-color-swatch {
   width: 28px;
   height: 28px;
@@ -1639,6 +1855,42 @@ body.gp-sidebar-open .gp-mt-layer {
 .gp-ct-color-swatch.is-selected {
   border-color: #1a73e8;
   box-shadow: 0 0 0 1px #fff inset;
+}
+
+.gp-ct-color-custom-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex-basis: 100%;
+  margin-bottom: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f3f4;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.gp-ct-color-custom-wrap.is-selected {
+  box-shadow: 0 0 0 2px #1a73e8;
+}
+
+.gp-ct-color-custom-label {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #5f6368;
+}
+
+.gp-ct-tag-color-native {
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+  box-sizing: border-box;
 }
 
 .gp-ct-text-btn {
