@@ -1174,6 +1174,7 @@
     root = buildLeftSidebarGoalsSection();
     insertGoalsSectionIntoSidebarScroll(scroll, root);
     syncMyGoalsSidebarChromeFromNative();
+    requestAnimationFrame(() => syncMyGoalsSidebarChromeFromNative());
     return root;
   }
 
