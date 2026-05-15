@@ -1,3 +1,5 @@
+importScripts('goalModel.js');
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_AUTH_TOKEN') {
     chrome.identity.getAuthToken({ interactive: true }, token => {
