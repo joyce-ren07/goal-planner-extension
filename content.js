@@ -1229,8 +1229,6 @@
     root.style.removeProperty('--gp-native-header-min-height');
     let minH = '';
     if (cs.minHeight && cs.minHeight !== '0px' && cs.minHeight !== 'auto') minH = cs.minHeight;
-    else if (pcs.minWidth && pcs.minHeight && pcs.minHeight !== '0px' && pcs.minHeight !== 'auto')
-      minH = pcs.minHeight.replace(/\s*min-content\s*/i, '').trim();
     else if (pcs.minHeight && pcs.minHeight !== '0px' && pcs.minHeight !== 'auto')
       minH = pcs.minHeight.replace(/\s*min-content\s*/i, '').trim();
     if (minH && minH !== 'auto') {
