@@ -2425,6 +2425,7 @@
           endDate: r.endDate || '',
           created: new Date().toISOString(),
           calEventIds: eventIds,
+          colorId: '9',
         });
       }
       await saveGoals(goals);
