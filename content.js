@@ -1952,9 +1952,25 @@
     const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
     if (trackEl) trackEl.style.setProperty('background-color', hexToTint(displayColor, 0.25), 'important');
     if (fillEl) fillEl.style.setProperty('background-color', displayColor, 'important');
+  }
+
+  /**
+   * Compare structure vs completion signatures; patch one card without touching siblings.
+   * @returns {boolean} true if this card’s DOM was updated
+   */
+  function syncSingleSidebarGoalCard(card, g, legacyById) {
     const pair = goalSidebarCardSigs(g, legacyById);
+    const prevS = card.dataset.gpSidebarStructSig;
+    const prevP = card.dataset.gpSidebarProgSig;
+    if (prevS === pair.struct && prevP === pair.prog) return false;
+    if (prevS === pair.struct && prevP !== pair.prog) {
+      patchSidebarGoalCardProgressOnly(card, g);
+    } else {
+      updateSidebarGoalCardElement(card, g, legacyById);
+    }
     card.dataset.gpSidebarStructSig = pair.struct;
     card.dataset.gpSidebarProgSig = pair.prog;
+    return true;
   }
 
   /**
