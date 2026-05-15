@@ -888,7 +888,7 @@
     '11': '#dc2127',
   };
 
-  function gpCalendarColorHex(goalId, legacyGoal) {
+  function gpCalendarColorHex(legacyGoal) {
     const cid = legacyGoal?.colorId != null ? String(legacyGoal.colorId) : '';
     if (cid && GP_CALENDAR_COLOR_ID_HEX[cid]) return GP_CALENDAR_COLOR_ID_HEX[cid];
     if (legacyGoal?.color && /^#/i.test(String(legacyGoal.color))) return String(legacyGoal.color);
