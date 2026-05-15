@@ -2022,11 +2022,16 @@
       return;
     }
 
-    if (meta?.reason === 'sessionCompletion' && meta.goalId) {
+    if (meta?.reason === 'sessionCompletion' && meta.goalId != null && meta.goalId !== '') {
       const gid = String(meta.goalId);
       const g = goals.find((x) => String(x.id) === gid);
       const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(gid) : gid;
-      const card = container.querySelector(`.gcal-ext-goal-card[data-goal-id="${esc}"]`);
+      let card = container.querySelector(`.gcal-ext-goal-card[data-goal-id="${esc}"]`);
+      if (!card) {
+        card = [...container.children].find(
+          (el) => el.matches?.('.gcal-ext-goal-card[data-goal-id]') && String(el.dataset.goalId) === gid
+        );
+      }
       if (g && card) {
         syncSingleSidebarGoalCard(card, g, legacyById);
         root.dataset.gpSidebarGoalsSig = sigJoined;
