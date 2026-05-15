@@ -2065,6 +2065,7 @@
       preloadedUnified && Array.isArray(preloadedUnified.goals) ? preloadedUnified : null;
     if (!Model) {
       await applyGoalsSidebarFromUnifiedState(st || { goals: [] }, null, meta || {});
+      await reinforceMyGoalsSidebarProgressFromStorage();
       return;
     }
     if (!st) {
