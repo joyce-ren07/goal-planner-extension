@@ -1752,7 +1752,17 @@
   function scheduleLeftSidebarGoalsMountAttempts() {
     const run = () => {
       mountLeftSidebarGoalsSection();
-      renderGoalsSidebar();
+      const cards = document.getElementById('gp-gcal-sidebar-goals-cards');
+      const hasCards = !!cards?.querySelector?.('.gcal-ext-goal-card[data-goal-id]');
+      if (!hasCards) {
+        renderGoalsSidebar();
+        return;
+      }
+      if (goalPlannerModelAvailable()) {
+        loadAuthoritativeUnifiedForSidebar(null).then((st) =>
+          patchMyGoalsSidebarProgressRows(st, { reason: 'mountPreserve' })
+        );
+      }
     };
     run();
     requestAnimationFrame(run);
