@@ -2052,7 +2052,16 @@
         widthChanged: before?.widthStyle !== after?.widthStyle,
       });
     }
-    return { numbers, widthAssign, countAssign, pctAssign, before, after, fillEl };
+    return {
+      numbers,
+      widthAssign,
+      countAssign,
+      pctAssign,
+      before,
+      after,
+      fillEl,
+      forceVisualTest: !!(GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST && fillEl),
+    };
   }
 
   function goalUnifiedProgressSnapshot(g) {
