@@ -2176,19 +2176,13 @@
       root.dataset.gpSidebarGoalsSig = sigJoined;
     }
 
-    /** Checkbox on calendar ↔ My goals counts — repaint even if sig matched prior reinforce/session noise. */
+    /** Session completion: patch only affected row(s); never rebuild accordion/cards. */
     if (meta?.reason === 'sessionCompletion') {
-      const escAvail = typeof CSS !== 'undefined' && CSS.escape;
-      for (const g of goals) {
-        const gid = String(g.id);
-        const esc = escAvail ? CSS.escape(gid) : gid;
-        let card = container.querySelector(`.gcal-ext-goal-card[data-goal-id="${esc}"]`);
-        if (!card) {
-          card = [...container.children].find(
-            (el) =>
-              el.matches?.('.gcal-ext-goal-card[data-goal-id]') && String(el.dataset.goalId) === gid
-          );
-        }
+      const narrowId =
+        meta.goalId != null && meta.goalId !== '' ? String(meta.goalId) : null;
+      const targets = narrowId ? goals.filter((g) => String(g.id) === narrowId) : goals;
+      for (const g of targets) {
+        const card = findSidebarGoalCardById(container, g.id);
         if (card) syncSingleSidebarGoalCard(card, g, legacyById, true);
       }
       root.dataset.gpSidebarGoalsSig = sigJoined;
