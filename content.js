@@ -1017,13 +1017,17 @@
     titleInput.addEventListener('focus', () => nameBox.classList.add('focused'));
     titleInput.addEventListener('blur', () => nameBox.classList.remove('focused'));
     titleInput.addEventListener('input', updateFormBtns);
+    titleInput.addEventListener('input', scheduleGhostPreviewRefreshDebounced);
 
     // Open recurrence modal
     document.getElementById('gp-open-recurrence').addEventListener('click', openRecurrence);
 
     // Day buttons (in body-level modal)
     document.querySelectorAll('#gp-recurrence-overlay .gp-day-btn').forEach(btn => {
-      btn.addEventListener('click', () => btn.classList.toggle('selected'));
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('selected');
+        scheduleGhostPreviewRefreshDebounced();
+      });
     });
 
     // Recurrence modal — Cancel / Done / backdrop click
