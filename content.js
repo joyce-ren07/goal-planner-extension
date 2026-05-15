@@ -1774,7 +1774,7 @@
       const pct =
         total > 0 ? Math.round((completed / total) * 100) : typeof g.progressPct === 'number' ? g.progressPct : 0;
       const pctClamped = Math.max(0, Math.min(100, pct));
-      const color = gpCalendarColorHex(legacy);
+      const displayColor = getGoalDisplayColor(legacy);
       const name = escapeHtmlGp(g.title || 'Untitled goal');
 
       const card = document.createElement('div');

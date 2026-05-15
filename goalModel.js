@@ -183,6 +183,7 @@
         recurrence: g.recurrence ? Object.assign({}, g.recurrence) : null,
         endDate: g.endDate || '',
         created: g.created,
+        color: g.color || '',
         sessions: sessions,
         progressPct: 0,
       });
