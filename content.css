@@ -350,7 +350,7 @@
   padding: 4px var(--gp-native-header-pr, 16px) 8px var(--gp-native-header-pl, 24px);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 .gp-gcal-sidebar-goals-root .gcal-ext-goals-empty {
