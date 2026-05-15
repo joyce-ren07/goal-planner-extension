@@ -2469,8 +2469,26 @@
               legacyGoals,
               chipDone
             );
-            await applyGoalsSidebarFromUnifiedState(merged, null, evt.meta || {});
-            await reinforceMyGoalsSidebarProgressFromStorage();
+            const meta = evt.meta || {};
+            if (meta.reason === 'sessionCompletion') {
+              const snap = meta.goalId
+                ? (() => {
+                    const g = merged.goals?.find((x) => String(x.id) === String(meta.goalId));
+                    return g ? goalUnifiedProgressSnapshot(g) : null;
+                  })()
+                : null;
+              if (meta.goalId && snap) {
+                gpMyGoalsSidebarDiag('reactive Goal state → sidebar', {
+                  goalId: meta.goalId,
+                  completedSessions: snap.completedSessions,
+                  progressPct: snap.progressPct,
+                });
+              }
+              await patchMyGoalsSidebarProgressRows(merged, meta);
+            } else {
+              await applyGoalsSidebarFromUnifiedState(merged, null, meta);
+              await reinforceMyGoalsSidebarProgressFromStorage();
+            }
           } catch (_) {
             /* sidebar optional */
           }
@@ -2479,26 +2497,78 @@
     });
   }
 
-  function setupMyGoalsUnifiedBinding() {
+  /**
+   * Cross-context fallback + diagnostic verification for Goal → My Goals sidebar progress.
+   * Primary path remains: calendar → unified state (subscribeGoalsState) → patchMyGoalsSidebarProgressRows.
+   */
+  function setupMyGoalsSidebarStorageSync() {
     if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+    if (globalThis.__gpMyGoalsSidebarStorageSync) return;
+    globalThis.__gpMyGoalsSidebarStorageSync = true;
     try {
       chrome.storage.onChanged.addListener((changes, area) => {
         if (area !== 'local') return;
+
+        const unifiedCh = changes.goalPlannerUnifiedState;
+        if (unifiedCh?.newValue && typeof unifiedCh.newValue === 'object') {
+          queueMicrotask(() => {
+            (async () => {
+              try {
+                const diffs = diffUnifiedGoalProgressChanges(
+                  unifiedCh.oldValue,
+                  unifiedCh.newValue
+                );
+                if (!diffs.length) return;
+                gpMyGoalsSidebarDiag('storage goalPlannerUnifiedState', {
+                  goalIds: diffs.map((d) => d.goalId),
+                });
+                const Model = globalThis.GoalPlannerModel;
+                let merged = unifiedCh.newValue;
+                if (Model?.syncUnifiedWithLegacyGoals) {
+                  const legacyGoalsRaw = await getGoals();
+                  const legacyGoals = Array.isArray(legacyGoalsRaw) ? legacyGoalsRaw : [];
+                  const chipDone = await loadMergedChipDoneForSidebar(legacyGoals);
+                  merged = Model.syncUnifiedWithLegacyGoals(
+                    merged,
+                    legacyGoals,
+                    chipDone
+                  );
+                }
+                for (const d of diffs) {
+                  await patchMyGoalsSidebarProgressRows(merged, {
+                    reason: 'storageSync',
+                    goalId: d.goalId,
+                    progressDiffs: [d],
+                  });
+                }
+              } catch (_) {
+                /* sidebar optional */
+              }
+            })();
+          });
+          return;
+        }
+
         if (changes.gp_goals) {
           renderGoalsSidebar(undefined, { reason: 'goalsStructure' });
+          return;
         }
-        if (changes.goalPlannerUnifiedState?.newValue && typeof changes.goalPlannerUnifiedState.newValue === 'object') {
-          const meta =
-            changes.gp_chip_done || changes.gp_goal_slot_done
-              ? { reason: 'sessionCompletion' }
-              : { reason: 'storage' };
-          renderGoalsSidebar(changes.goalPlannerUnifiedState.newValue, meta);
-        }
-        if (changes.gp_chip_done && !changes.goalPlannerUnifiedState) {
-          renderGoalsSidebar(undefined, { reason: 'sessionCompletion' });
-        }
-        if (changes.gp_goal_slot_done && !changes.goalPlannerUnifiedState) {
-          renderGoalsSidebar(undefined, { reason: 'sessionCompletion' });
+
+        if (changes.gp_chip_done || changes.gp_goal_slot_done) {
+          queueMicrotask(() => {
+            (async () => {
+              try {
+                gpMyGoalsSidebarDiag('storage chip/slot fallback (cross-context)', {
+                  keys: Object.keys(changes).filter(
+                    (k) => k === 'gp_chip_done' || k === 'gp_goal_slot_done'
+                  ),
+                });
+                await reinforceMyGoalsSidebarProgressFromStorage();
+              } catch (_) {
+                /* ignore */
+              }
+            })();
+          });
         }
       });
     } catch (_) {
