@@ -2001,7 +2001,12 @@
       return;
     }
 
-    const sigJoined = goals.map(goalSidebarMetricToken).join('||');
+    const sigJoined = goals
+      .map((g) => {
+        const p = goalSidebarCardSigs(g, legacyById);
+        return `${p.struct}|${p.prog}`;
+      })
+      .join('||');
     const orderedIds = goals.map((g) => g.id);
     const existingCards = [...container.children].filter((el) =>
       el.matches?.('.gcal-ext-goal-card[data-goal-id]')
