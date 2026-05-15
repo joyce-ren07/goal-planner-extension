@@ -1229,9 +1229,15 @@
     root.style.removeProperty('--gp-native-header-min-height');
     let minH = '';
     if (cs.minHeight && cs.minHeight !== '0px' && cs.minHeight !== 'auto') minH = cs.minHeight;
+    else if (pcs.minWidth && pcs.minHeight && pcs.minHeight !== '0px' && pcs.minHeight !== 'auto')
+      minH = pcs.minHeight.replace(/\s*min-content\s*/i, '').trim();
     else if (pcs.minHeight && pcs.minHeight !== '0px' && pcs.minHeight !== 'auto')
       minH = pcs.minHeight.replace(/\s*min-content\s*/i, '').trim();
-    if (minH && minH !== 'auto') setVar('--gp-native-header-min-height', minH);
+    if (minH && minH !== 'auto') {
+      const minHp = parseFloat(String(minH).replace(/px$/i, ''));
+      const rh = Math.round(rr.height);
+      if (!Number.isFinite(minHp) || minHp <= rh + 2) setVar('--gp-native-header-min-height', minH);
+    }
 
     root.style.removeProperty('--gp-native-body-pad-top');
     root.style.removeProperty('--gp-native-body-pad-bottom');
