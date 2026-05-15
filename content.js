@@ -336,6 +336,7 @@
 
     wireEvents();
     setupMyGoalsUnifiedBinding();
+    setupGoalsSidebarReactiveBinding();
     setupLeftSidebarGoalsMountObserver();
     renderHomeScreen();
     scheduleLeftSidebarGoalsMountAttempts();
