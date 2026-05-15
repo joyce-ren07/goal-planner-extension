@@ -260,6 +260,7 @@
   font-size: var(--gp-native-add-icon-font-size, var(--gp-native-icon-font-size, 24px));
   line-height: var(--gp-native-add-icon-lh, var(--gp-native-icon-lh, 1));
   font-weight: var(--gp-native-add-icon-weight, 400);
+  font-variation-settings: var(--gp-native-add-icon-fvs, var(--gp-native-icon-fvs));
 }
 
 .gp-gcal-sidebar-icon-btn:hover {
