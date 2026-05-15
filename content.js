@@ -1251,6 +1251,7 @@
       }
       prNum = Math.max(prNum, Math.round(rr.right - maxIconRight));
     }
+    prNum = Math.max(prNum, scrPadR);
     if (prNum >= 4) prVal = `${Math.round(prNum)}px`;
     setVar('--gp-native-header-pl', plVal);
     setVar('--gp-native-header-pr', prVal);
