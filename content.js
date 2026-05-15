@@ -926,7 +926,7 @@
 
   function normalizeSidebarRowText(s) {
     return String(s || '')
-      .replace(/\s +/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
