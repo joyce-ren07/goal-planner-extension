@@ -1977,8 +1977,10 @@
       if (calIds.length) {
         sessions = calIds.map((eventId, idx) => {
           const ps = prevByEvent.get(eventId) || prevByEvent.get(String(eventId));
+          const domKey = domIds[idx];
           const completed = !!(
             isEventIdMarkedDoneInChipMap(eventId, chipDone) ||
+            (domKey && (chipDone[String(domKey)] || chipDone[domKey])) ||
             slotSet.has(idx) ||
             (ps && ps.completed)
           );
