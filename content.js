@@ -1951,16 +1951,9 @@
 
     if (meta?.reason === 'sessionCompletion' && meta.goalId) {
       const g = goals.find((x) => x.id === meta.goalId);
-      let card = null;
-      try {
-        card = container.querySelector(
-          `.gcal-ext-goal-card[data-goal-id="${CSS.escape(String(meta.goalId))}"]`
-        );
-      } catch (_) {
-        card = container.querySelector(
-          `.gcal-ext-goal-card[data-goal-id="${String(meta.goalId).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`
-        );
-      }
+      const gid = String(meta.goalId);
+      const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(gid) : gid;
+      const card = container.querySelector(`.gcal-ext-goal-card[data-goal-id="${esc}"]`);
       if (g && card) {
         updateSidebarGoalCardElement(card, g, legacyById);
         root.dataset.gpSidebarGoalsSig = sigJoined;
