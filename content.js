@@ -956,6 +956,43 @@
     return null;
   }
 
+  /** Left inset (px) from native row edge to section title — used to align “My goals” with Booking / Calendars. */
+  function nativeSidebarTitleLeftInsetPx(rowEl) {
+    if (!rowEl) return 0;
+    const rr = rowEl.getBoundingClientRect();
+    if (rr.width <= 0) return 0;
+    for (const el of rowEl.querySelectorAll('span, div')) {
+      if (!rowEl.contains(el) || el === rowEl) continue;
+      const t = normalizeSidebarRowText(el.textContent || '');
+      if (!t || t.length > 48 || el.querySelector('span, div, svg, button')) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      const tr = el.getBoundingClientRect();
+      return Math.max(0, Math.round(tr.left - rr.left));
+    }
+    let padEl = rowEl;
+    const rcs = getComputedStyle(rowEl);
+    if (rcs.paddingLeft === '0px' && rcs.paddingRight === '0px' && rowEl.firstElementChild) {
+      const sub = getComputedStyle(rowEl.firstElementChild);
+      if (sub.paddingLeft !== '0px' || sub.paddingRight !== '0px') padEl = rowEl.firstElementChild;
+    }
+    const pl = parseFloat(getComputedStyle(padEl).paddingLeft);
+    return Number.isFinite(pl) ? Math.round(pl) : 0;
+  }
+
+  /** Max title left inset across all native section headers in the drawer (parity when probe row is atypical). */
+  function maxNativeSidebarTitleLeftInsetPx(scrollEl) {
+    if (!scrollEl) return 0;
+    let m = 0;
+    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      m = Math.max(m, nativeSidebarTitleLeftInsetPx(row));
+    }
+    return m;
+  }
+
   function findNativeSectionContentSibling(headerRef, scrollEl) {
     if (!headerRef || !scrollEl) return null;
     let sib = headerRef.nextElementSibling;
