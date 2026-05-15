@@ -1950,6 +1950,28 @@
     }
   }
 
+  /** Reload unified state; hydrate sessions from storage when goals lack session rows. */
+  async function ensureAuthoritativeSidebarState(preloaded) {
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model) return preloaded?.goals ? preloaded : { goals: [] };
+    let st = await loadAuthoritativeUnifiedForSidebar(preloaded);
+    const legacyRows = await getGoals();
+    const legacyArr = Array.isArray(legacyRows) ? legacyRows : [];
+    const needsHydrate = (st.goals || []).some(
+      (g) => !(Array.isArray(g.sessions) && g.sessions.length)
+    );
+    if (needsHydrate && legacyArr.length && Model.syncUnifiedWithLegacyGoals) {
+      const chipDone = await loadMergedChipDoneForSidebar(legacyArr);
+      st = Model.syncUnifiedWithLegacyGoals(st, legacyArr, chipDone);
+      try {
+        await Model.saveUnifiedState(st, { silent: true });
+      } catch (_) {
+        /* non-fatal */
+      }
+    }
+    return st;
+  }
+
   let _gpSidebarPatchTraceSeq = 0;
 
   function inspectSidebarGoalCardDom(card) {
