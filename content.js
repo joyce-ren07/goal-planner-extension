@@ -383,21 +383,30 @@
     const ovOpen = document.getElementById('gp-recurrence-overlay')?.classList.contains('open');
 
     if (
-      !(suggScr?.classList.contains('active')) &&
-      !(formScr?.classList.contains('active')) &&
+      !suggScr?.classList.contains('active') &&
+      !formScr?.classList.contains('active') &&
       !ovOpen
     ) {
       return false;
     }
 
-    if (suggScr?.classList.contains('active') && state.suggestions?.length)
-      return { sessions: state.suggestions.slice(), markNonPersisted: false };
+    /** Screen 3 — prefer smart suggestions when loaded; else ephemeral grid from recurrence draft. */
+    if (suggScr?.classList.contains('active')) {
+      if (state.suggestions?.length)
+        return { sessions: state.suggestions.slice(), markNonPersisted: true };
+      const rDraft = resolveRecurrenceDraftForGhostPreview();
+      if (rDraft.period !== 'day' && (!rDraft.days || !rDraft.days.length))
+        return { sessions: [], markNonPersisted: true };
+      return {
+        sessions: computeEphemeralGhostSessionsForVisibleDays(rDraft),
+        markNonPersisted: true,
+      };
+    }
 
     const r = resolveRecurrenceDraftForGhostPreview();
-    if (!r) return [];
-
-    /** Modal open with incomplete weekday picks — suppress until at least one day (weekly/monthly). */
-    if ((r.period === 'week' || r.period === 'month') && (!r.days || !r.days.length)) return [];
+    if (!r) return { sessions: [], markNonPersisted: true };
+    if (r.period !== 'day' && (!r.days || !r.days.length))
+      return { sessions: [], markNonPersisted: true };
 
     const sessions = computeEphemeralGhostSessionsForVisibleDays(r);
     return { sessions, markNonPersisted: true };
