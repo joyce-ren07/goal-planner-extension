@@ -2385,7 +2385,7 @@
    */
   function syncSingleSidebarGoalCard(card, g, legacyById, force) {
     if (goalPlannerModelAvailable()) {
-      patchSidebarGoalCardProgressOnly(card, g);
+      patchSidebarGoalCardProgressOnly(card, g, null, legacyById);
       const pair = goalSidebarCardSigs(g, legacyById);
       card.dataset.gpSidebarStructSig = pair.struct;
       card.dataset.gpSidebarProgSig = pair.prog;
