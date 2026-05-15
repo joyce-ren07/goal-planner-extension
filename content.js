@@ -2288,6 +2288,8 @@
     for (const cid of ids) {
       if (gpChipDoneMirrorStrictPair(cid, p)) keys.add(cid);
     }
+    const narrowed = resolvePlannerEventIdForChip(p, [{ calEventIds: allowedIds }]);
+    if (narrowed && calEventIdsContain(allowedIds, narrowed)) keys.add(String(narrowed));
     return [...keys];
   }
 
