@@ -207,6 +207,57 @@
     });
   }
 
+  /**
+   * Rewrite unified.goals from gp_goals while preserving session geometry/completion where event ids match.
+   * Call after every gp_goals write so sidebar + chips stay aligned with legacy storage.
+   * @param {GoalPlannerUnifiedState} prevState
+   * @param {object[]} legacyGoals gp_goals rows (calEventIds, title, …)
+   * @param {Record<string, boolean>} chipDone gp_chip_done map
+   * @returns {GoalPlannerUnifiedState}
+   */
+  function syncUnifiedWithLegacyGoals(prevState, legacyGoals, chipDone) {
+    chipDone = chipDone || {};
+    var prevById = new Map();
+    (prevState.goals || []).forEach(function (g) {
+      prevById.set(g.id, g);
+    });
+    var nextGoals = [];
+    (legacyGoals || []).forEach(function (lg) {
+      var prev = prevById.get(lg.id);
+      var ids = lg.calEventIds || [];
+      var prevSessionsByEvent = new Map();
+      if (prev && prev.sessions) {
+        prev.sessions.forEach(function (s) {
+          prevSessionsByEvent.set(s.eventId, s);
+        });
+      }
+      var sessions = ids.map(function (eventId) {
+        var ps = prevSessionsByEvent.get(eventId);
+        var completed = !!(chipDone[eventId] || (ps && ps.completed));
+        return {
+          eventId: eventId,
+          goalId: lg.id,
+          startTime: ps ? ps.startTime : '',
+          endTime: ps ? ps.endTime : '',
+          completed: completed,
+        };
+      });
+      nextGoals.push({
+        id: lg.id,
+        title: lg.title || '',
+        scheduleLabel: lg.scheduleLabel,
+        recurrence: lg.recurrence ? Object.assign({}, lg.recurrence) : null,
+        endDate: lg.endDate || '',
+        created: lg.created,
+        sessions: sessions,
+        progressPct: 0,
+      });
+    });
+    var out = Object.assign({}, prevState);
+    out.goals = nextGoals;
+    return recomputeAllProgress(out);
+  }
+
   function loadUnifiedState() {
     return new Promise(function (resolve) {
       chrome.storage.local.get(
