@@ -1961,6 +1961,7 @@
     const goals = (st.goals || []).map((g) => {
       const lg = legacyById.get(g.id) || legacyById.get(String(g.id));
       const calIds = lg?.calEventIds || [];
+      const domIds = lg?.calEventDomIds || [];
       const slotRaw = pack[String(g.id)] ?? pack[g.id];
       const slotArr = Array.isArray(slotRaw) ? slotRaw : [];
       const slotSet = new Set(
