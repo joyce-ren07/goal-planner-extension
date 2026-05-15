@@ -228,31 +228,6 @@
     });
   }
 
-  /**
-   * Persist unified model and mirror completion into legacy gp_chip_done for existing UI
-   * until content.js is migrated (optional compatibility write).
-   * @param {GoalPlannerUnifiedState} state
-   */
-  function saveUnifiedStateWithLegacyChipMirror(state) {
-    var doneMap = {};
-    state.goals.forEach(function (g) {
-      (g.sessions || []).forEach(function (s) {
-        if (s.completed) doneMap[s.eventId] = true;
-      });
-    });
-    state.version = MODEL_VERSION;
-    recomputeAllProgress(state);
-    return new Promise(function (resolve) {
-      chrome.storage.local.set(
-        {
-          goalPlannerUnifiedState: state,
-          gp_chip_done: doneMap,
-        },
-        resolve
-      );
-    });
-  }
-
   var GoalPlannerModel = {
     STORAGE_KEY: STORAGE_KEY,
     MODEL_VERSION: MODEL_VERSION,
