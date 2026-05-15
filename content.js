@@ -4378,6 +4378,7 @@
                 legacyGoals,
                 slotPackPrev
               ),
+              slotPackOverride: slotPackPrev,
             };
             if (goalId != null && goalId !== '') metaSidebar.goalId = goalId;
             try {
