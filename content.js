@@ -2046,7 +2046,7 @@
         );
       }
       if (g && card) {
-        syncSingleSidebarGoalCard(card, g, legacyById);
+        syncSingleSidebarGoalCard(card, g, legacyById, true);
         root.dataset.gpSidebarGoalsSig = sigJoined;
         return;
       }
