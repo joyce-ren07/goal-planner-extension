@@ -1243,15 +1243,17 @@
       }
     }
 
-    if (addBtnHost && addBtnHost !== iconProbe) {
-      const ar = addBtnHost.getBoundingClientRect();
-      const abcs = getComputedStyle(addBtnHost);
-      setVar('--gp-native-add-btn-w', `${Math.round(ar.width)}px`);
-      setVar('--gp-native-add-btn-h', `${Math.round(ar.height)}px`);
-      setVar('--gp-native-add-btn-br', abcs.borderRadius);
-      setVar('--gp-native-add-btn-margin', abcs.margin);
-      if (abcs.transition && gpMaxTransitionDurationMs(abcs.transitionDuration) > 0) {
-        setVar('--gp-native-add-bg-transition', abcs.transition);
+    if (addBtnHost) {
+      if (addBtnHost !== iconProbe) {
+        const ar = addBtnHost.getBoundingClientRect();
+        const abcs = getComputedStyle(addBtnHost);
+        setVar('--gp-native-add-btn-w', `${Math.round(ar.width)}px`);
+        setVar('--gp-native-add-btn-h', `${Math.round(ar.height)}px`);
+        setVar('--gp-native-add-btn-br', abcs.borderRadius);
+        setVar('--gp-native-add-btn-margin', abcs.margin);
+        if (abcs.transition && gpMaxTransitionDurationMs(abcs.transitionDuration) > 0) {
+          setVar('--gp-native-add-bg-transition', abcs.transition);
+        }
       }
       const ag = addBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
       if (ag) {
