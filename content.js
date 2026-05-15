@@ -1941,11 +1941,7 @@
     const displayColor = getGoalDisplayColor(colorSource);
     card.style.setProperty('--goal-progress-color', displayColor);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(displayColor, 0.18));
-    card.style.setProperty('background-color', hexToTint(displayColor, 0.12), 'important');
-    card.style.setProperty('border', `1.5px solid ${hexToTint(displayColor, 0.4)}`, 'important');
-    const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
-    if (trackEl) trackEl.style.setProperty('background-color', hexToTint(displayColor, 0.25), 'important');
-    if (fillEl) fillEl.style.setProperty('background-color', displayColor, 'important');
+    if (fillEl) fillEl.style.width = `${pctClamped}%`;
   }
 
   /**
