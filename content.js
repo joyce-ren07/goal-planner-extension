@@ -915,6 +915,151 @@
     } else scrollEl.appendChild(root);
   }
 
+  /** Labels for native accordion section headers (Calendar locale / naming). */
+  const NATIVE_SIDEBAR_SECTION_LABEL_RES = [
+    /^My calendars$/i,
+    /^Other calendars$/i,
+    /booking\s*pages/i,
+    /booking\s*insights?/i,
+    /time\s*insights?/i,
+  ];
+
+  function normalizeSidebarRowText(s) {
+    return String(s || '')
+      .replace(/\s +/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Find a native left-drawer accordion header row to mirror (same computed layout as Booking / Calendars).
+   * Preference order: role="button" rows whose visible text matches known section titles.
+   */
+  function findNativeCalendarSidebarAccordionRow(scrollEl) {
+    if (!scrollEl) return null;
+    const roleEls = scrollEl.querySelectorAll('[role="button"], button');
+    for (const row of roleEls) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent);
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      return row;
+    }
+    for (const el of scrollEl.querySelectorAll('span, div')) {
+      if (el.closest('#gp-gcal-sidebar-goals-root')) continue;
+      if (el.children.length) continue;
+      const t = normalizeSidebarRowText(el.textContent || '');
+      if (!t || t.length > 40) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      const row = el.closest('[role="button"]') || el.closest('button');
+      if (row && scrollEl.contains(row) && row !== scrollEl) return row;
+    }
+    return null;
+  }
+
+  /**
+   * Copy computed layout + typography from a native sidebar accordion row onto our root as CSS variables.
+   * Does not alter native DOM or change goal/calendar behavior — visual alignment only.
+   */
+  function syncMyGoalsSidebarChromeFromNative() {
+    const root = document.getElementById('gp-gcal-sidebar-goals-root');
+    const scroll = findGCalLeftSidebarScrollEl();
+    if (!root || !root.isConnected || !scroll) return;
+
+    const ref = findNativeCalendarSidebarAccordionRow(scroll);
+    if (!ref) return;
+
+    const setVar = (name, val) => {
+      if (val == null || val === '' || val === 'auto' || val === 'normal') return;
+      root.style.setProperty(name, String(val));
+    };
+
+    const cs = getComputedStyle(ref);
+    let padEl = ref;
+    if (cs.paddingLeft === '0px' && cs.paddingRight === '0px' && ref.firstElementChild) {
+      const sub = getComputedStyle(ref.firstElementChild);
+      if (sub.paddingLeft !== '0px' || sub.paddingRight !== '0px') padEl = ref.firstElementChild;
+    }
+    const pcs = getComputedStyle(padEl);
+
+    setVar('--gp-native-font-family', cs.fontFamily);
+
+    setVar('--gp-native-header-pt', pcs.paddingTop);
+    setVar('--gp-native-header-pr', pcs.paddingRight);
+    setVar('--gp-native-header-pb', pcs.paddingBottom);
+    setVar('--gp-native-header-pl', pcs.paddingLeft);
+
+    setVar('--gp-native-header-min-height', Math.max(parseFloat(cs.minHeight) || 0, parseFloat(pcs.minHeight) || 0) ? (parseFloat(cs.minHeight) > 0 ? cs.minHeight : pcs.minHeight) : '');
+    if (!root.style.getPropertyValue('--gp-native-header-min-height')) {
+      setVar('--gp-native-header-min-height', cs.minHeight !== '0px' ? cs.minHeight : pcs.minHeight);
+    }
+
+    if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
+    setVar('--gp-native-header-align', cs.alignItems);
+    if (cs.borderRadius && cs.borderRadius !== '0px') setVar('--gp-native-header-br', cs.borderRadius);
+
+    let titleEl = null;
+    const innerSpans = ref.querySelectorAll('span, div');
+    for (const el of innerSpans) {
+      if (!ref.contains(el) || el === ref) continue;
+      const t = normalizeSidebarRowText(el.textContent || '');
+      if (!t || t.length > 48 || el.querySelector('span, div, svg, button')) continue;
+      titleEl = el;
+      break;
+    }
+    if (titleEl) {
+      const ts = getComputedStyle(titleEl);
+      setVar('--gp-native-title-font-size', ts.fontSize);
+      setVar('--gp-native-title-font-weight', ts.fontWeight);
+      setVar('--gp-native-title-line-height', ts.lineHeight);
+      setVar('--gp-native-title-letter-spacing', ts.letterSpacing);
+      setVar('--gp-native-title-font-family', ts.fontFamily);
+    } else {
+      setVar('--gp-native-title-font-size', cs.fontSize);
+      setVar('--gp-native-title-font-weight', cs.fontWeight);
+      setVar('--gp-native-title-line-height', cs.lineHeight);
+      setVar('--gp-native-title-letter-spacing', cs.letterSpacing);
+    }
+
+    const nestedClickables = [...ref.querySelectorAll('[role="button"], button')].filter(
+      (n) => n !== ref && ref.contains(n)
+    );
+    const iconHost =
+      nestedClickables.find((b) => {
+        const r = b.getBoundingClientRect();
+        return r.width >= 20 && r.width <= 52 && r.height >= 20 && r.height <= 52;
+      }) || nestedClickables[0];
+
+    if (iconHost) {
+      const r = iconHost.getBoundingClientRect();
+      const bcs = getComputedStyle(iconHost);
+      setVar('--gp-native-icon-btn-w', `${Math.round(r.width)}px`);
+      setVar('--gp-native-icon-btn-h', `${Math.round(r.height)}px`);
+      setVar('--gp-native-icon-btn-br', bcs.borderRadius);
+      setVar('--gp-native-icon-btn-margin', bcs.margin);
+      const glyph = iconHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
+      if (glyph) {
+        const gcs = getComputedStyle(glyph);
+        if (gcs.fontSize && gcs.fontSize !== '0px') setVar('--gp-native-icon-font-size', gcs.fontSize);
+        if (gcs.lineHeight && gcs.lineHeight !== '0px') setVar('--gp-native-icon-lh', gcs.lineHeight);
+        if (gcs.fontWeight) setVar('--gp-native-icon-font-weight', gcs.fontWeight);
+      }
+    }
+
+    const cluster =
+      nestedClickables.length && nestedClickables[0].parentElement !== ref
+        ? nestedClickables[0].parentElement
+        : null;
+    if (cluster && ref.contains(cluster)) {
+      const cls = getComputedStyle(cluster);
+      if (cls.display === 'flex' || cls.display === 'inline-flex') {
+        if (cls.gap && cls.gap !== 'normal') setVar('--gp-native-actions-gap', cls.gap);
+        setVar('--gp-native-actions-align', cls.alignItems);
+      }
+    }
+
+    root.dataset.gpNativeSidebarSyncTs = String(Date.now());
+  }
+
   function buildLeftSidebarGoalsSection() {
     const root = document.createElement('div');
     root.id = 'gp-gcal-sidebar-goals-root';
