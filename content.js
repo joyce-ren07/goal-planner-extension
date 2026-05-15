@@ -3703,9 +3703,9 @@
           }
           const goalRow = findLegacyGoalForGoalChip(chip, legacyGoals);
           const allowed = goalRow?.calEventIds || [];
-          if (allowed.length && plannerEventId && !allowed.includes(plannerEventId)) {
+          if (allowed.length && plannerEventId && !calEventIdsContain(allowed, plannerEventId)) {
             const alt = resolvePlannerEventIdForChip(storageKey || plannerEventId, legacyGoals);
-            if (alt && allowed.includes(alt)) plannerEventId = alt;
+            if (alt && calEventIdsContain(allowed, alt)) plannerEventId = alt;
           }
           if (!plannerEventId && allowed.length === 1) plannerEventId = allowed[0];
           if (!plannerEventId) plannerEventId = storageKey || canonicalEventKey || '';
