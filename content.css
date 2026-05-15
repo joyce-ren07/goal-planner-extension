@@ -370,7 +370,7 @@
     Roboto,
     sans-serif
   );
-  font-size: var(--gp-native-title-font-size, 13px);
+  font-size: 13px;
   font-weight: 500;
   color: var(--gp-m3-on-surface, #202124);
   line-height: 18px;
