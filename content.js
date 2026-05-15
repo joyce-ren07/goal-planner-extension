@@ -3718,7 +3718,9 @@
           boundChipHeight(chip);
           const eidAttr = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
           const prevDatasetKey = chip.dataset.gpChipKey;
+          const target = resolveChipCompletionTarget(chip, goals);
           const canonicalPlannerId =
+            target.plannerEventId ||
             resolvePlannerEventIdForChip(eidAttr || prevDatasetKey || '', goals) ||
             eidAttr ||
             prevDatasetKey;
