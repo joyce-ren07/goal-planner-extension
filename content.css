@@ -278,8 +278,8 @@
     ) + 4px
   );
   line-height: var(--gp-native-add-icon-lh, var(--gp-native-icon-lh, 1));
-  font-weight: 400;
-  font-variation-settings: var(--gp-native-add-icon-fvs, var(--gp-native-icon-fvs));
+  font-weight: 350;
+  font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 20;
 }
 
 .gp-gcal-sidebar-icon-btn:hover {
