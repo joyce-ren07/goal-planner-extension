@@ -3084,9 +3084,7 @@
       if (!Model?.syncUnifiedWithLegacyGoals) return;
       const goals = await getGoals();
       if (!Array.isArray(goals) || !goals.length) return;
-      const chipDone = await new Promise((r) =>
-        chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
-      );
+      const chipDone = await loadMergedChipDoneForSidebar(goals);
       const prev = await Model.loadUnifiedState();
       const merged = Model.syncUnifiedWithLegacyGoals(prev, goals, chipDone || {});
       let changed = false;
