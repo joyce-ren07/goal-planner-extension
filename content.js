@@ -3595,13 +3595,19 @@
           }
           if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
 
+          const mirrorKeys = mirrorGpChipDoneKeysForSession(plannerEventId, allowed);
           const map = { ...chipDoneSnapshot };
-          if (nextDone) map[plannerEventId] = true;
-          else delete map[plannerEventId];
+          if (nextDone) {
+            for (const k of mirrorKeys) map[k] = true;
+          } else {
+            for (const k of mirrorKeys) delete map[k];
+          }
 
           chrome.storage.local.set({ gp_chip_done: map }, async () => {
             try {
-              await globalThis.GoalCalendarSync?.persistSessionCompleted?.(plannerEventId, nextDone);
+              const persistId =
+                allowed.find((id) => mirrorKeys.includes(String(id))) || plannerEventId;
+              await globalThis.GoalCalendarSync?.persistSessionCompleted?.(persistId, nextDone);
             } catch (_) {
               /* ignore */
             }
