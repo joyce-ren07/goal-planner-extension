@@ -4341,7 +4341,10 @@
       if (norm && calEventIdsContain(ids, norm)) plannerEventId = norm;
     }
 
-    const anchorGoal = await enrichGoalRowWithUnifiedAnchors(goal, legacyGoals, chipDoneMap);
+    const anchorGoal =
+      anchorGoal && anchorGoal !== goal
+        ? anchorGoal
+        : await enrichGoalRowWithUnifiedAnchors(goal, legacyGoals, chipDoneMap);
 
     if (!plannerEventId && anchorGoal) {
       const fromAnchors = pickPlannerEventIdFromAnchors(chip, anchorGoal);
