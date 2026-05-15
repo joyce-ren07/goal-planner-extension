@@ -3628,25 +3628,33 @@
         }
       }
 
-      // Create new events and collect their IDs
+      const r = state.recurrence;
+
+      // One recurring master per suggestion slot; GCal expands instances across future weeks.
       const eventIds = [];
       for (const s of state.suggestions) {
+        const eventBody = {
+          summary: `🎯 ${state.goalTitle}`,
+          description: `Goal Planner session for: "${state.goalTitle}"`,
+          start: { dateTime: s.isoStart, timeZone: tz },
+          end: { dateTime: s.isoEnd, timeZone: tz },
+          colorId: '9',
+        };
+        const rrules = buildRecurrenceRrulesForSession(r, s.isoStart);
+        if (rrules.length) eventBody.recurrence = rrules;
+
         const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            summary: `🎯 ${state.goalTitle}`,
-            description: `Goal Planner session for: "${state.goalTitle}"`,
-            start: { dateTime: s.isoStart, timeZone: tz },
-            end:   { dateTime: s.isoEnd,   timeZone: tz },
-            colorId: '9',
-          }),
+          body: JSON.stringify(eventBody),
         });
         const data = await resp.json();
+        if (!resp.ok) {
+          console.error('GoalPlanner: Calendar event create failed', data);
+          throw new Error(data?.error?.message || 'Calendar API error');
+        }
         if (data.id) eventIds.push(data.id);
       }
-
-      const r = state.recurrence;
       const dayNames = { SU:'Sun', MO:'Mon', TU:'Tue', WE:'Wed', TH:'Thu', FR:'Fri', SA:'Sat' };
       const dayStr = r.days.map(d => dayNames[d]).join(', ');
       const schedLabel = r.every === 1 ? `Weekly on ${dayStr}` : `Every ${r.every} ${r.period}s`;
