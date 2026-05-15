@@ -1342,7 +1342,11 @@
       const glyph = iconProbe.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
       if (glyph) {
         const gcs = getComputedStyle(glyph);
-        if (gcs.fontSize && gcs.fontSize !== '0px') setVar('--gp-native-icon-font-size', gcs.fontSize);
+        if (gcs.fontSize && gcs.fontSize !== '0px') {
+          const px = parseFloat(gcs.fontSize);
+          const capped = Number.isFinite(px) ? Math.min(Math.round(px), 20) : 20;
+          setVar('--gp-native-icon-font-size', `${capped}px`);
+        }
         if (gcs.lineHeight && gcs.lineHeight !== '0px') setVar('--gp-native-icon-lh', gcs.lineHeight);
       }
     }
