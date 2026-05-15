@@ -217,8 +217,10 @@
     for (var gi = 0; gi < (legacyGoals || []).length; gi++) {
       var g = legacyGoals[gi];
       var ids = g.calEventIds || [];
-      var arr = pack[String(g.id)];
-      if (!Array.isArray(arr) || !ids.length) continue;
+      var arrRaw = pack[String(g.id)];
+      if (!Array.isArray(arrRaw)) arrRaw = pack[g.id];
+      var arr = Array.isArray(arrRaw) ? arrRaw : [];
+      if (!ids.length) continue;
       for (var ai = 0; ai < arr.length; ai++) {
         var i = Number(arr[ai]);
         if (Number.isFinite(i) && i >= 0 && i < ids.length) out[String(ids[i])] = true;
