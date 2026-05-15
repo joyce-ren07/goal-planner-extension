@@ -956,6 +956,35 @@
     return null;
   }
 
+  function findNativeSectionContentSibling(headerRef, scrollEl) {
+    if (!headerRef || !scrollEl) return null;
+    let sib = headerRef.nextElementSibling;
+    if (sib && scrollEl.contains(sib) && !gpSkipForSidebarScan(sib) && sib.id !== 'gp-gcal-sidebar-goals-root') {
+      return sib;
+    }
+    const p = headerRef.parentElement;
+    if (p && scrollEl.contains(p) && p !== scrollEl) {
+      const kids = [...p.children];
+      const idx = kids.indexOf(headerRef);
+      if (idx >= 0 && kids[idx + 1] && scrollEl.contains(kids[idx + 1])) return kids[idx + 1];
+    }
+    return null;
+  }
+
+  /** Largest duration (ms) from a computed transition-duration (may be comma-separated). */
+  function gpMaxTransitionDurationMs(transitionDuration) {
+    if (!transitionDuration || transitionDuration === '0s') return 0;
+    return Math.max(
+      ...transitionDuration.split(',').map((x) => {
+        const s = x.trim();
+        if (s.endsWith('ms')) return parseFloat(s) || 0;
+        if (s.endsWith('s')) return (parseFloat(s) || 0) * 1000;
+        return 0;
+      }),
+      0
+    );
+  }
+
   /**
    * Copy computed layout + typography from a native sidebar accordion row onto our root as CSS variables.
    * Does not alter native DOM or change goal/calendar behavior — visual alignment only.
