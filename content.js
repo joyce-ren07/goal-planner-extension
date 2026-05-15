@@ -2,6 +2,14 @@
   'use strict';
 
   const PANEL_WIDTH_PX = 341;
+  const GP_SIDEBAR_INSET_ATTR = 'data-gp-sidebar-inset';
+  const GP_SIDEBAR_INSET_STYLE_KEYS = {
+    layout: ['padding-right', 'margin-right', 'max-width', 'min-width', 'box-sizing'],
+    rail: ['padding-right', 'margin-right', 'max-width', 'box-sizing'],
+    kanban: ['min-width', 'max-width', 'overflow'],
+    board: ['overflow-x', 'overflow-y', 'max-width', 'width', 'box-sizing'],
+  };
+  let gpSidebarInsetReflowTimer = null;
   const MAIN_MARGIN_TRANSITION = 'margin-right 0.2s ease';
   const TASK_COMPLETE_ANIM_MS = 1200;
   const TASK_STATUSES = {
@@ -422,12 +430,92 @@
     mainEl.style.marginRight = open ? `${PANEL_WIDTH_PX}px` : '';
   }
 
+  function clearGpSidebarInset() {
+    document.querySelectorAll(`[${GP_SIDEBAR_INSET_ATTR}]`).forEach((el) => {
+      const role = el.getAttribute(GP_SIDEBAR_INSET_ATTR);
+      el.removeAttribute(GP_SIDEBAR_INSET_ATTR);
+      const keys = GP_SIDEBAR_INSET_STYLE_KEYS[role];
+      if (keys) keys.forEach((k) => el.style.removeProperty(k));
+    });
+  }
+
+  function applyGpSidebarTaskSurfaceInsets() {
+    const inset = `${PANEL_WIDTH_PX}px`;
+    /* Cap Kanban width to viewport minus fixed sidebar so the board moves even when
+       padding on an ancestor (or the Tasks "rail" root from findVisibleGoogleTasksPanel)
+       does not shrink the flex row that holds our layout. */
+    const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px))`;
+
+    document.querySelectorAll('.mytasks-native-tasks-layout').forEach((el) => {
+      if (el.closest('#gp-panel')) return;
+      el.setAttribute(GP_SIDEBAR_INSET_ATTR, 'layout');
+      el.style.setProperty('padding-right', inset, 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+    });
+
+    document.querySelectorAll('.mytasks-kanban').forEach((kanban) => {
+      if (kanban.closest('#gp-panel')) return;
+      const board = kanban.querySelector(':scope > .mytasks-kanban__board');
+      if (!board) return;
+      kanban.setAttribute(GP_SIDEBAR_INSET_ATTR, 'kanban');
+      kanban.style.setProperty('min-width', '0', 'important');
+      kanban.style.setProperty('max-width', kanbanMaxWidth, 'important');
+      kanban.style.setProperty('overflow', 'hidden', 'important');
+      board.setAttribute(GP_SIDEBAR_INSET_ATTR, 'board');
+      board.style.setProperty('max-width', '100%', 'important');
+      board.style.setProperty('overflow-x', 'auto', 'important');
+      board.style.setProperty('overflow-y', 'auto', 'important');
+      board.style.setProperty('box-sizing', 'border-box', 'important');
+    });
+  }
+
+  function scheduleGpSidebarInsetReflow() {
+    if (gpSidebarInsetReflowTimer) clearTimeout(gpSidebarInsetReflowTimer);
+    gpSidebarInsetReflowTimer = setTimeout(() => {
+      gpSidebarInsetReflowTimer = null;
+      const panel = document.getElementById('gp-panel');
+      if (!panel?.classList.contains('open')) return;
+      clearGpSidebarInset();
+      applyGpSidebarTaskSurfaceInsets();
+      if (activeNativeTasksHost?.isConnected) {
+        syncKanbanHostSize(activeNativeTasksHost);
+      }
+    }, 50);
+  }
+
+  function syncGpSidebarLayout() {
+    const panel = document.getElementById('gp-panel');
+    const isOpen = Boolean(panel?.classList.contains('open'));
+
+    if (!isOpen && gpSidebarInsetReflowTimer) {
+      clearTimeout(gpSidebarInsetReflowTimer);
+      gpSidebarInsetReflowTimer = null;
+    }
+
+    clearGpSidebarInset();
+    document.body.classList.toggle('gp-sidebar-open', isOpen);
+
+    if (isOpen) {
+      applyGpSidebarTaskSurfaceInsets();
+      scheduleGpSidebarInsetReflow();
+    }
+
+    requestAnimationFrame(() => {
+      if (activeNativeTasksHost?.isConnected) {
+        syncKanbanHostSize(activeNativeTasksHost);
+      }
+    });
+  }
+
   function setupCalendarPushObserver() {
     const reapply = () => {
       const panel = document.getElementById('gp-panel');
-      if (panel && panel.classList.contains('open')) {
+      if (panel?.classList.contains('open')) {
         setCalendarPushed(true);
+      } else {
+        setCalendarPushed(false);
       }
+      syncGpSidebarLayout();
     };
 
     const scheduleReapply = () => {
@@ -1730,9 +1818,57 @@
     await saveKanbanState(state);
   }
 
+  function normalizeWheelPixels(delta, deltaMode, sizeRef) {
+    if (deltaMode === 1) {
+      return delta * 16;
+    }
+    if (deltaMode === 2) {
+      return delta * (sizeRef || 1);
+    }
+    return delta;
+  }
+
+  function onKanbanBoardWheel(event) {
+    const board = event.currentTarget;
+    const maxScrollLeft = board.scrollWidth - board.clientWidth;
+    if (maxScrollLeft <= 1) return;
+
+    const dxRaw = normalizeWheelPixels(event.deltaX, event.deltaMode, board.clientWidth);
+    const dyRaw = normalizeWheelPixels(event.deltaY, event.deltaMode, board.clientHeight);
+
+    let horizontalDelta = 0;
+    if (event.shiftKey) {
+      horizontalDelta = Math.abs(dyRaw) >= Math.abs(dxRaw) ? dyRaw : dxRaw;
+    } else if (Math.abs(dxRaw) >= Math.abs(dyRaw) && Math.abs(dxRaw) >= 0.5) {
+      horizontalDelta = dxRaw;
+    } else {
+      return;
+    }
+
+    if (Math.abs(horizontalDelta) < 0.5) return;
+
+    const before = board.scrollLeft;
+    const next = Math.min(maxScrollLeft, Math.max(0, before + horizontalDelta));
+    if (next === before) {
+      return;
+    }
+
+    board.scrollLeft = next;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function wireKanbanBoardWheelScroll(board) {
+    if (!board || board.dataset.gpBoardWheelWired === 'true') return;
+    board.dataset.gpBoardWheelWired = 'true';
+    board.addEventListener('wheel', onKanbanBoardWheel, { passive: false });
+  }
+
   function wireKanbanInteractions(root) {
     if (!root || root.dataset.interactionsWired === 'true') return;
     root.dataset.interactionsWired = 'true';
+
+    wireKanbanBoardWheelScroll(root.querySelector('.mytasks-kanban__board'));
 
     root.addEventListener('click', (event) => {
       const starBtn = event.target.closest('.mk-star-btn');
@@ -2576,6 +2712,7 @@
       await loadKanbanBoard(existingRoot);
       observeNativeTasksHost(host);
       activeNativeTasksHost = host;
+      syncGpSidebarLayout();
       return;
     }
 
@@ -2584,6 +2721,7 @@
     activeNativeTasksHost = host;
     await loadKanbanBoard(root);
     observeNativeTasksHost(host);
+    syncGpSidebarLayout();
   }
 
   async function syncNativeTasksKanban() {
@@ -2613,6 +2751,7 @@
       ensureNativeTasksNavShell(host);
       syncKanbanHostSize(host);
       activeNativeTasksHost = host;
+      syncGpSidebarLayout();
       return;
     }
 
@@ -2863,6 +3002,7 @@
     if (existing) {
       wireSidebarEvents(existing);
       void syncTaskViewsFromStorage();
+      syncGpSidebarLayout();
       return existing;
     }
 
@@ -2878,6 +3018,7 @@
     wireSidebarEvents(panel);
     void syncTaskViewsFromStorage();
     setupCalendarPushObserver();
+    syncGpSidebarLayout();
     return panel;
   }
 
@@ -2888,6 +3029,7 @@
     panel.setAttribute('aria-hidden', 'false');
     setCalendarPushed(true);
     requestAnimationFrame(() => setCalendarPushed(true));
+    syncGpSidebarLayout();
     syncRailButtonState();
     return true;
   }
@@ -2899,6 +3041,7 @@
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
     setCalendarPushed(false);
+    syncGpSidebarLayout();
     syncRailButtonState();
     return false;
   }

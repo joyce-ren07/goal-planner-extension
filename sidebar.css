@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
 
+:root {
+  --gp-panel-width: 341px;
+}
+
 #gp-panel.mytasks-sidebar {
   --m3-surface: #ffffff;
   --m3-on-surface: #1d1b20;
@@ -51,7 +55,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 341px;
+  width: var(--gp-panel-width);
   height: 100vh;
   z-index: 2147483646;
   display: flex;
@@ -202,6 +206,23 @@
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+/* When sidebar is open: Kanban max-width uses viewport minus panel so the board
+   clears the fixed sidebar even if Calendar main (add-ons) is moved separately. */
+body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban {
+  flex: 1 1 auto;
+  min-width: 0 !important;
+  max-width: min(100%, calc(100vw - var(--gp-panel-width))) !important;
+  overflow: hidden !important;
+}
+
+body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
+  width: 100%;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
 }
 
 .mytasks-kanban {
