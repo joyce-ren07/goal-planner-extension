@@ -2356,7 +2356,11 @@
           renderGoalsSidebar(undefined, { reason: 'goalsStructure' });
         }
         if (changes.goalPlannerUnifiedState?.newValue && typeof changes.goalPlannerUnifiedState.newValue === 'object') {
-          renderGoalsSidebar(changes.goalPlannerUnifiedState.newValue, { reason: 'storage' });
+          const meta =
+            changes.gp_chip_done || changes.gp_goal_slot_done
+              ? { reason: 'sessionCompletion' }
+              : { reason: 'storage' };
+          renderGoalsSidebar(changes.goalPlannerUnifiedState.newValue, meta);
         }
         if (changes.gp_chip_done && !changes.goalPlannerUnifiedState) {
           renderGoalsSidebar(undefined, { reason: 'sessionCompletion' });
