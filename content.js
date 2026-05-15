@@ -952,6 +952,7 @@
     return `rgb(${blend(r)}, ${blend(g)}, ${blend(b)})`;
   }
 
+  function gpSkipForSidebarScan(el) {
     return el && el.closest && el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback');
   }
 
