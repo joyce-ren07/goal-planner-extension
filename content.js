@@ -4514,6 +4514,15 @@
               slotGoalRow = goalRow;
             }
           }
+          const calApiId = await resolveCalEventIdForChipSession(
+            chip,
+            slotGoalRow,
+            legacyGoals,
+            chipDoneSnapshot
+          );
+          if (calApiId && calEventIdsContain(allowed, calApiId)) {
+            plannerEventId = calApiId;
+          }
           let slotIdx = await resolveSlotIndexForGoalToggle(
             chip,
             slotGoalRow,
