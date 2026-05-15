@@ -1066,12 +1066,13 @@
     if (!el || !root) return;
 
     const goals = unifiedState && Array.isArray(unifiedState.goals) ? unifiedState.goals : [];
+    root.hidden = false;
+
     if (!goals.length) {
-      root.hidden = true;
-      el.innerHTML = '';
+      el.innerHTML =
+        '<p class="gp-gcal-mgg-empty">No goals yet. Use <strong>+</strong> above to create one in Goal Planner.</p>';
       return;
     }
-    root.hidden = false;
 
     el.innerHTML = goals
       .map((g) => {
