@@ -275,7 +275,7 @@
 
 .gp-gcal-sidebar-section-body {
   box-sizing: border-box;
-  padding: 4px var(--gp-native-header-pr, 8px) 12px var(--gp-native-header-pl, 16px);
+  padding: 4px var(--gp-native-header-pr, 8px) 12px var(--gp-native-header-pl, 12px);
 }
 
 .gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body {
