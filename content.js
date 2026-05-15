@@ -1823,11 +1823,12 @@
   /** Keep .ext-goal-time in sync with GCal’s live aria/tooltip (always inject the span). */
   function syncExtGoalTimeFromContainer(chip, eventContainer) {
     const timeEl = chip.querySelector('.ext-goal-time');
-    if (!timeEl || !eventContainer) return;
+    if (!timeEl || !eventContainer) return '';
     const extracted = extractTimeRangeLabelForGoalChip(chip, eventContainer);
     if (extracted && timeEl.textContent !== extracted) timeEl.textContent = extracted;
     const h = chip.getBoundingClientRect().height;
     timeEl.style.display = h > 0 && h < 42 ? 'none' : 'block';
+    return extracted || '';
   }
 
   // ── Write inner DOM structure into a chip element ──
