@@ -364,84 +364,70 @@
   color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant, #80868b));
 }
 
-.gp-gcal-sidebar-goals-root .gcal-ext-goal-card {
-  --gc: var(--goal-color, #e8705a);
-  display: flex;
-  flex-direction: column;
+/* Goal cards: hardcoded fallbacks + !important so GCal theme cannot override; per-goal tints come from JS (hexToTint). */
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-accent {
+  display: none !important;
+}
+
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card {
+  display: flex !important;
+  flex-direction: column !important;
   align-items: stretch;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin: 4px 8px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  margin: 4px 8px !important;
+  padding: 16px !important;
+  border-radius: 16px !important;
   cursor: pointer;
   box-sizing: border-box;
   transition: background-color 0.15s ease;
-  background-color: color-mix(in srgb, var(--gc) 12%, white);
-  border: 1.5px solid color-mix(in srgb, var(--gc) 35%, white);
+  background-color: #fde8e4 !important;
+  border: 1.5px solid #f0a898 !important;
 }
 
-.gp-gcal-sidebar-goals-root .gcal-ext-goal-card:hover {
-  background-color: color-mix(in srgb, var(--gc) 18%, white);
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card:hover {
+  background-color: var(--gp-card-bg-hover, #fad5cf) !important;
 }
 
-.gp-gcal-sidebar-goals-root .gcal-ext-goal-name {
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-name {
   font-family: var(--gp-native-font-family, inherit);
-  font-size: 14px;
-  font-weight: 700;
-  color: #c0392b;
-  margin: 0 0 10px 0;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #b03a2e !important;
+  margin: 0 0 10px 0 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
 }
 
-.gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-track {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-track {
+  width: 100% !important;
+  height: 6px !important;
+  border-radius: 3px !important;
   overflow: hidden;
-  margin: 0 0 10px 0;
-  background-color: color-mix(in srgb, var(--gc) 22%, white);
+  margin: 0 0 10px 0 !important;
+  flex-shrink: 0;
+  background-color: #f5c4bc !important;
 }
 
-.gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-fill {
-  height: 100%;
-  border-radius: 3px;
-  background-color: var(--gc);
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
+  height: 100% !important;
+  border-radius: 3px !important;
+  background-color: var(--goal-progress-color, #e8705a) !important;
   transition: width 0.3s ease;
   min-width: 0%;
   max-width: 100%;
 }
 
-.gp-gcal-sidebar-goals-root .gcal-ext-goal-sessions {
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-sessions {
   font-family: var(--gp-native-font-family, inherit);
-  font-size: 12px;
-  font-weight: 400;
-  color: #c9554a;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: #c0554a !important;
   line-height: 1.3;
-  margin: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-card {
-    background-color: color-mix(in srgb, var(--gc) 20%, #2d2d2d);
-    border-color: color-mix(in srgb, var(--gc) 45%, #2d2d2d);
-  }
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-card:hover {
-    background-color: color-mix(in srgb, var(--gc) 26%, #2d2d2d);
-  }
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-name {
-    color: #f4a99a;
-  }
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-sessions {
-    color: #e08070;
-  }
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-track {
-    background-color: color-mix(in srgb, var(--gc) 25%, #2d2d2d);
-  }
+  margin: 0 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
