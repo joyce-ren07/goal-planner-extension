@@ -1099,19 +1099,21 @@
 
     if (cs.cursor) setVar('--gp-native-cursor', cs.cursor);
 
+    let headerBgTrans = '';
     const headerDur = gpMaxTransitionDurationMs(cs.transitionDuration);
-    if (headerDur > 0) {
+    const headerTp = (cs.transitionProperty || '').toLowerCase();
+    const refTransIncludesBg =
+      headerDur > 0 &&
+      (/\b(all|background|background-color)\b/.test(headerTp) || headerTp.split(',').some((p) => !p.trim()));
+    if (headerDur > 0 && refTransIncludesBg) {
       if (cs.transition && !/^all\s+0s\b/i.test(cs.transition.trim())) {
-        setVar('--gp-native-header-bg-transition', cs.transition);
+        headerBgTrans = cs.transition;
       } else {
-        setVar(
-          '--gp-native-header-bg-transition',
-          [cs.transitionProperty, cs.transitionDuration, cs.transitionTimingFunction, cs.transitionDelay]
-            .filter(Boolean)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-        );
+        headerBgTrans = [cs.transitionProperty, cs.transitionDuration, cs.transitionTimingFunction, cs.transitionDelay]
+          .filter(Boolean)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
       }
     }
 
@@ -1120,11 +1122,11 @@
       const st = getComputedStyle(el);
       if (gpMaxTransitionDurationMs(st.transitionDuration) === 0) continue;
       const tp = (st.transitionProperty || '').toLowerCase();
-      if (/\btransform\b/.test(tp)) {
-        chevTrans = st.transition;
-        break;
-      }
+      if (!chevTrans && /\btransform\b/.test(tp)) chevTrans = st.transition;
+      if (!headerBgTrans && /\bbackground(-color)?\b/.test(tp)) headerBgTrans = st.transition;
+      if (chevTrans && headerBgTrans) break;
     }
+    if (headerBgTrans) setVar('--gp-native-header-bg-transition', headerBgTrans);
     if (chevTrans) setVar('--gp-native-chevron-transition', chevTrans);
 
     let collapseMode = 'instant';
