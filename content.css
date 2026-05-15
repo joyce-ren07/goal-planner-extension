@@ -240,23 +240,16 @@
   flex-shrink: 0;
   transition: var(--gp-native-icon-bg-transition, var(--gp-fallback-icon-btn-transition));
 }
-.gp-gcal-sidebar-icon-btn:hover {
-  background-color: var(--gp-m3-state-hover);
+.gp-gcal-sidebar-icon-btn:hover,
+.gp-gcal-sidebar-icon-btn:active {
+  background-color: transparent;
   color: var(--gp-m3-on-surface-variant);
 }
-.gp-gcal-sidebar-icon-btn:active {
-  background-color: var(--gp-m3-state-pressed);
-}
 
-/* M3 focus indicator (primary ring) */
-.gp-gcal-sidebar-label-btn:focus-visible {
-  outline: 2px solid var(--gp-m3-focus-ring);
-  outline-offset: 2px;
-  background-color: var(--gp-m3-state-focus);
-}
+/* M3 focus indicator — single ring on the full header row (matches native accordion hit target) */
+.gp-gcal-sidebar-label-btn:focus-visible,
 .gp-gcal-sidebar-icon-btn:focus-visible {
-  outline: 2px solid var(--gp-m3-focus-ring);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .gp-gcal-sidebar-header-icon {
