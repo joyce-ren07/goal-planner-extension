@@ -3418,7 +3418,7 @@
       }
     }
     const allowed = goal.calEventIds || [];
-    if (best && allowed.includes(best) && bestDelta <= 8 * 60 * 60 * 1000) return best;
+    if (best && calEventIdsContain(allowed, best) && bestDelta <= 8 * 60 * 60 * 1000) return best;
     return '';
   }
 
