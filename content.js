@@ -3462,6 +3462,15 @@
       if (sk && gpChipDoneMirrorStrictPair(String(ids[i]), sk)) return i;
     }
 
+    const narrowGoal = goalRow ? [{ calEventIds: ids }] : [];
+    for (const probe of [p, sk].filter(Boolean)) {
+      const hit = narrowGoal.length ? resolvePlannerEventIdForChip(probe, narrowGoal) : '';
+      if (hit && calEventIdsContain(ids, hit)) {
+        const jj = ids.findIndex((id) => String(id) === String(hit));
+        if (jj >= 0) return jj;
+      }
+    }
+
     if (ids.length === 1) return 0;
 
     const anchored = pickPlannerEventIdFromAnchors(chip, goalRow);
