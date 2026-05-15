@@ -4100,6 +4100,75 @@
     return -1;
   }
 
+  /** Previously saved DOM `data-eventid` for calEventIds[slot] on this goal row. */
+  function resolveDomSlotIndexFromGoalRow(goalRow, domId) {
+    const domIds = goalRow?.calEventDomIds || [];
+    const d = domId != null && domId !== '' ? String(domId) : '';
+    if (!d || !domIds.length) return -1;
+    let i = domIds.findIndex((x) => x && String(x) === d);
+    if (i >= 0) return i;
+    for (i = 0; i < domIds.length; i++) {
+      if (domIds[i] && gpChipDoneKeyMatchesCalEventId(String(domIds[i]), d)) return i;
+    }
+    return -1;
+  }
+
+  /**
+   * Which session slot (0..n-1) this chip is among all goal chips visible on the calendar grid.
+   * Works when DOM ids ≠ API calEventIds and anchors are missing.
+   */
+  function resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow) {
+    const allowed = goalRow?.calEventIds || [];
+    if (!allowed.length || !goalRow?.title) return -1;
+    const title = String(goalRow.title).trim();
+    if (!title) return -1;
+
+    const chips = [...document.querySelectorAll('[data-eventchip]')].filter((c) => {
+      if (!c.textContent?.includes('🎯')) return false;
+      const row =
+        findLegacyGoalForGoalChip(c, [goalRow]) ||
+        (() => {
+          const t =
+            c.querySelector('.ext-goal-title')?.textContent?.replace(/🎯\s*/g, '').trim() ||
+            '';
+          return t && (t.includes(title) || title.includes(t)) ? goalRow : null;
+        })();
+      return row && String(row.id) === String(goalRow.id);
+    });
+
+    if (!chips.length) return -1;
+    chips.sort((a, b) => {
+      const ra = (a.closest('[data-eventid]') || a).getBoundingClientRect();
+      const rb = (b.closest('[data-eventid]') || b).getBoundingClientRect();
+      return ra.top - rb.top || ra.left - rb.left;
+    });
+
+    const idx = chips.indexOf(chip);
+    if (idx >= 0 && idx < allowed.length) return idx;
+    return -1;
+  }
+
+  async function persistCalEventDomIdForGoalSlot(goalId, slotIdx, domId, legacyGoals) {
+    if (goalId == null || goalId === '' || slotIdx < 0 || !domId) return;
+    const goals = Array.isArray(legacyGoals) ? [...legacyGoals] : await getGoals();
+    const gi = goals.findIndex((g) => String(g.id) === String(goalId));
+    if (gi < 0) return;
+    const row = { ...goals[gi] };
+    const calIds = row.calEventIds || [];
+    if (!calIds.length || slotIdx >= calIds.length) return;
+    const domArr = Array.isArray(row.calEventDomIds) ? [...row.calEventDomIds] : [];
+    while (domArr.length < calIds.length) domArr.push('');
+    if (domArr[slotIdx] === domId) return;
+    domArr[slotIdx] = String(domId);
+    row.calEventDomIds = domArr;
+    goals[gi] = row;
+    try {
+      await persistGpGoalsAndUnified(goals);
+    } catch (_) {
+      /* non-fatal */
+    }
+  }
+
   /**
    * GCal DOM `data-eventid` (often base64) ≠ Calendar API ids in gp_goals.calEventIds[].
    * Match this chip to a session slot via sessionAnchors.isoStart ↔ grid geometry / chip time.
