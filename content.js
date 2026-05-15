@@ -3695,9 +3695,13 @@
         console.log('GOAL CHIP — extracted title:', title);
 
         // Derive a stable key: prefer GCal's event ID, then goal id + text
-        const eid  = chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
+        const eid =
+          chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
         const goal = goals.find(g => chip.textContent.includes(g.title));
-        const chipKey = eid || (goal ? goal.id + ':' + chip.textContent.trim().slice(0, 40) : 'tx:' + chip.textContent.trim().slice(0, 50));
+        const resolvedEid = eid ? resolvePlannerEventIdForChip(eid, goals) || eid : '';
+        const chipKey =
+          resolvedEid ||
+          (goal ? goal.id + ':' + chip.textContent.trim().slice(0, 40) : 'tx:' + chip.textContent.trim().slice(0, 50));
 
         const goalData = { title, time, chipKey, id: goal ? goal.id : null };
         const isDone = !!doneMap[chipKey];
