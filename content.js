@@ -2094,7 +2094,14 @@
       const raw = await new Promise((r) =>
         chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
       );
-      const expanded = expandChipDoneOntoCalEventIds(raw, goals);
+      const slotPack = await new Promise((r) =>
+        chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
+      );
+      const expanded = injectSlotDoneIntoExpandedChipDone(
+        expandChipDoneOntoCalEventIds(raw, goals),
+        goals,
+        slotPack
+      );
       const container = document.getElementById('gp-gcal-sidebar-goals-cards');
       const root = document.getElementById('gp-gcal-sidebar-goals-root');
       if (!container || !root) return;
