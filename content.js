@@ -1779,7 +1779,7 @@
   async function renderHomeScreen() {
     const Model = globalThis.GoalPlannerModel;
     const unifiedSnapshot = Model ? await Model.loadUnifiedState() : { goals: [] };
-    renderMyGoalsProgressPanelFromState(unifiedSnapshot);
+    await renderGoalsSidebar(unifiedSnapshot);
 
     const goals     = await getGoals();
     const completed = await new Promise(r => chrome.storage.local.get(['gp_chip_done'], d => r(d.gp_chip_done || {})));
