@@ -1253,8 +1253,17 @@
     if (cs.marginRight && cs.marginRight !== '0px') setVar('--gp-native-root-mr', cs.marginRight);
 
     const minVert = minNativeSidebarHeaderVerticalPaddingPx(scroll);
-    setVar('--gp-native-header-pt', `${minVert.pt}px`);
-    setVar('--gp-native-header-pb', `${minVert.pb}px`);
+    let headerPt = minVert.pt;
+    let headerPb = minVert.pb;
+    if (titleEl && rr.height > 0) {
+      const tr = titleEl.getBoundingClientRect();
+      const slackTop = Math.max(0, Math.round(tr.top - rr.top));
+      const slackBottom = Math.max(0, Math.round(rr.bottom - tr.bottom));
+      headerPt = Math.min(headerPt, slackTop);
+      headerPb = Math.min(headerPb, slackBottom);
+    }
+    setVar('--gp-native-header-pt', `${headerPt}px`);
+    setVar('--gp-native-header-pb', `${headerPb}px`);
 
     root.style.removeProperty('--gp-native-header-min-height');
     let minH = '';
