@@ -261,11 +261,12 @@
       if (prev && prev.sessions) {
         prev.sessions.forEach(function (s) {
           prevSessionsByEvent.set(s.eventId, s);
+          prevSessionsByEvent.set(String(s.eventId), s);
         });
       }
       var sessions = ids.map(function (eventId) {
-        var ps = prevSessionsByEvent.get(eventId);
-        var completed = !!(chipDone[eventId] || (ps && ps.completed));
+        var ps = prevSessionsByEvent.get(eventId) || prevSessionsByEvent.get(String(eventId));
+        var completed = !!(lookupChipDone(chipDone, eventId) || (ps && ps.completed));
         return {
           eventId: eventId,
           goalId: lg.id,
