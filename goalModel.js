@@ -42,6 +42,31 @@
   var STORAGE_KEY = 'goalPlannerUnifiedState';
   var MODEL_VERSION = 1;
 
+  /** @type {Set<function(import('.').GoalsStateEvt): void>} */
+  var _goalsStateSubscribers = new Set();
+
+  /**
+   * Subscribe to GoalPlannerUnifiedState persistence + in-process writes.
+   * @param {(evt: { state: GoalPlannerUnifiedState, meta: Record<string, unknown> }) => void} fn
+   * @returns {() => void} unsubscribe
+   */
+  function subscribeGoalsState(fn) {
+    _goalsStateSubscribers.add(fn);
+    return function unsubscribe() {
+      _goalsStateSubscribers.delete(fn);
+    };
+  }
+
+  function _emitGoalsState(detail) {
+    _goalsStateSubscribers.forEach(function (fn) {
+      try {
+        fn(detail);
+      } catch (_) {
+        /* ignore subscriber errors — sidebar is optional */
+      }
+    });
+  }
+
   var LEGACY_GOALS_KEY = 'gp_goals';
   var LEGACY_CHIP_DONE_KEY = 'gp_chip_done';
   var LEGACY_GOAL_STATES_KEY = 'goalStates';
