@@ -2362,7 +2362,7 @@
           renderGoalsSidebar(undefined, { reason: 'sessionCompletion' });
         }
         if (changes.gp_goal_slot_done && !changes.goalPlannerUnifiedState) {
-          renderGoalsSidebar();
+          renderGoalsSidebar(undefined, { reason: 'sessionCompletion' });
         }
       });
     } catch (_) {
