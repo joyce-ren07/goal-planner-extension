@@ -1160,9 +1160,6 @@
 
     root.style.removeProperty('--gp-native-root-ml');
     root.style.removeProperty('--gp-native-root-mr');
-    root.style.removeProperty('--gp-native-icon-fvs');
-    root.style.removeProperty('--gp-native-add-icon-fvs');
-    root.style.removeProperty('--gp-native-title-font-weight');
 
     const setVar = (name, val) => {
       if (val == null || val === '' || val === 'auto' || val === 'normal') return;
