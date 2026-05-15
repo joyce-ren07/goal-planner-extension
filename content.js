@@ -2219,7 +2219,11 @@
       /* projection-only merge */
     }
     await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
-    await reinforceMyGoalsSidebarProgressFromStorage();
+    if (meta?.reason === 'sessionCompletion') {
+      await patchMyGoalsSidebarProgressRows(st, meta || {});
+    } else {
+      await reinforceMyGoalsSidebarProgressFromStorage();
+    }
   }
 
   async function reinforceMyGoalsSidebarProgressFromStorage() {
