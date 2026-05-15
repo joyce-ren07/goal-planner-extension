@@ -3279,6 +3279,13 @@
   // Queries [data-eventchip] on each mutation, matches goal events by 🎯 in title,
   // injects .ext-goal-root decoration; checkbox clicks use GoalInteractionController (document capture delegation).
 
+  /** Loose membership: calEventIds may be numbers while DOM/API ids are strings (JSON/storage coercion). */
+  function calEventIdsContain(calIds, candidate) {
+    if (candidate == null || candidate === '') return false;
+    const c = String(candidate);
+    return (Array.isArray(calIds) ? calIds : []).some((id) => String(id) === c);
+  }
+
   /**
    * Align DOM `data-eventid` / transient chip keys with `gp_goals[].calEventIds[]` so `gp_chip_done` ↔ sidebar merge works.
    */
