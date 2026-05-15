@@ -425,7 +425,7 @@
   font-family: var(--gp-native-font-family, inherit);
   font-size: 16px !important;
   font-weight: 700 !important;
-  color: #d3564b !important;
+  color: var(--goal-progress-color, #d3564b) !important;
   /* 16px gap title → progress block (Figma auto-layout gap between title row and bar+stats column). */
   margin: 0 0 16px 0 !important;
   white-space: nowrap;
