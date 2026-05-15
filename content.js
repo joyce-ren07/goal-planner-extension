@@ -821,6 +821,7 @@
     document.getElementById('gp-sidebar-btn').classList.add('active');
     setCalendarPushed(true);
     requestAnimationFrame(() => setCalendarPushed(true));
+    renderMyGoalsProgressPanel();
   }
   function closePanel() {
     document.getElementById('gp-panel').classList.remove('open');
