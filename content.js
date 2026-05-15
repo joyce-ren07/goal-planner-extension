@@ -2326,8 +2326,9 @@
     if (pctSpan) pctSpan.textContent = `${pctClamped}%`;
     else if (sessWrap) sessWrap.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
 
+    card.style.setProperty('--goal-progress-pct', `${pctClamped}%`);
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-    if (fillEl) fillEl.style.width = `${pctClamped}%`;
+    if (fillEl) fillEl.style.removeProperty('width');
     const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
