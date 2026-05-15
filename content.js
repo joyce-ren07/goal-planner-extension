@@ -421,7 +421,7 @@
     }, 48);
   }
 
-  function paintGhostSessionsOnGrid(sessions, labelText, ghostFlags) {
+  function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
     removeGhostEvents();
     if (!sessions || !sessions.length) return false;
 
@@ -439,11 +439,7 @@
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
     const dayColumns = findDayColumnPositions();
-    const goalLabelRaw = ghostFlags?.markNonPersisted
-      ? `Preview · ${labelText}`
-      : labelText;
-    const goalLabel =
-      goalLabelRaw.length > 28 ? goalLabelRaw.slice(0, 27) + '…' : goalLabelRaw;
+    const goalLabel = finalLabel.length > 34 ? `${finalLabel.slice(0, 33)}…` : finalLabel;
 
     const contRect = scrollCont.getBoundingClientRect();
     const ghostData = [];
