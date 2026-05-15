@@ -2831,7 +2831,14 @@
   }
 
   // ── Storage ──
-  function getGoals() { return new Promise(r => chrome.storage.local.get(['gp_goals'], d => r(d.gp_goals || []))); }
+  function getGoals() {
+    return new Promise((r) =>
+      chrome.storage.local.get(['gp_goals'], (d) => {
+        const g = d.gp_goals;
+        r(Array.isArray(g) ? g : []);
+      })
+    );
+  }
   function saveGoals(g) { return new Promise(r => chrome.storage.local.set({ gp_goals: g }, r)); }
 
   /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
