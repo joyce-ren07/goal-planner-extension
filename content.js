@@ -906,7 +906,7 @@
   }
 
   function insertGoalsSectionIntoSidebarScroll(scrollEl, root) {
-    const booking = findSidebarSectionTopBlock(scrollEl, /Booking pages/i);
+    const booking = findSidebarSectionTopBlock(scrollEl, /Booking pages|Booking insights?/i);
     const other = findSidebarSectionTopBlock(scrollEl, /Other calendars/i);
     const after = booking || other;
     if (after && after.parentElement === scrollEl) {
