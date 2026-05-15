@@ -431,8 +431,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-card,
-  .gp-gcal-sidebar-goals-root .gcal-ext-goal-progress-fill {
+  #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card,
+  #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
     transition: none;
   }
 }
