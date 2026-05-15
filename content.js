@@ -2345,7 +2345,7 @@
     await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
     if (meta?.reason === 'sessionCompletion') {
       await patchMyGoalsSidebarProgressRows(st, meta || {});
-    } else {
+    } else if (!Model) {
       await reinforceMyGoalsSidebarProgressFromStorage();
     }
   }
