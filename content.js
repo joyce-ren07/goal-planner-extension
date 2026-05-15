@@ -3627,10 +3627,12 @@
   function openRecurrence() {
     closeDropdowns();
     document.getElementById('gp-recurrence-overlay').classList.add('open');
+    scheduleGhostPreviewRefreshDebounced();
   }
   function closeRecurrence() {
     closeDropdowns();
     document.getElementById('gp-recurrence-overlay').classList.remove('open');
+    scheduleGhostPreviewRefreshDebounced();
   }
   async function saveRecurrence() {
     const every = parseInt(document.getElementById('gp-freq-num').value) || 1;
