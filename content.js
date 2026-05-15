@@ -2182,6 +2182,10 @@
     if (a === dec) return true;
     if (b.startsWith(`${a}_`) || dec.startsWith(`${a}_`)) return true;
     if (a.startsWith(`${b}_`)) return true;
+    const aSeg = a.split('_')[0];
+    const bSeg = b.split('_')[0];
+    const decSeg = dec.split('_')[0];
+    if (aSeg.length >= 8 && (aSeg === bSeg || aSeg === decSeg)) return true;
     return false;
   }
 
