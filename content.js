@@ -2224,17 +2224,22 @@
     }
 
     const idsFromDiffs = (meta?.progressDiffs || []).map((d) => d.goalId);
-    const idsToPatch = [
+    let idsToPatch = [
       ...new Set(
         meta?.goalId != null && meta.goalId !== ''
           ? [String(meta.goalId)]
           : idsFromDiffs.length
             ? idsFromDiffs
-            : meta?.reason === 'sessionCompletion'
+            : meta?.reason === 'sessionCompletion' ||
+                meta?.reason === 'storageSync' ||
+                meta?.reason === 'mountPreserve'
               ? goals.map((g) => String(g.id))
               : []
       ),
     ];
+    if (!idsToPatch.length && goals.length) {
+      idsToPatch = goals.map((g) => String(g.id));
+    }
     if (!idsToPatch.length) return;
 
     const traceId = `gp-patch-${++_gpSidebarPatchTraceSeq}-${Date.now()}`;
