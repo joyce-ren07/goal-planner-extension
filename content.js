@@ -920,15 +920,40 @@
     root.id = 'gp-gcal-sidebar-goals-root';
     root.className = 'gp-gcal-sidebar-goals-root';
 
-    const headerBtn = document.createElement('div');
-    headerBtn.className = 'gp-gcal-sidebar-section-header';
-    headerBtn.setAttribute('role', 'button');
-    headerBtn.setAttribute('tabindex', '0');
-    headerBtn.setAttribute('aria-expanded', 'true');
-    headerBtn.setAttribute('aria-controls', 'gp-gcal-sidebar-goals-cards');
-    headerBtn.innerHTML =
-      '<span class="material-symbols-outlined gp-gcal-sidebar-chevron" aria-hidden="true">expand_more</span>' +
-      '<span class="gp-gcal-sidebar-heading">My goals</span>';
+    const header = document.createElement('div');
+    header.className = 'gp-gcal-sidebar-section-header';
+
+    const labelBtn = document.createElement('button');
+    labelBtn.type = 'button';
+    labelBtn.className = 'gp-gcal-sidebar-label-btn';
+    labelBtn.textContent = 'My goals';
+    labelBtn.setAttribute('aria-expanded', 'true');
+    labelBtn.setAttribute('aria-controls', 'gp-gcal-sidebar-goals-cards');
+
+    const actions = document.createElement('div');
+    actions.className = 'gp-gcal-sidebar-actions';
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'gp-gcal-sidebar-icon-btn gp-gcal-sidebar-add-btn';
+    addBtn.setAttribute('aria-label', 'Add goal');
+    addBtn.setAttribute('title', 'Add goal');
+    addBtn.innerHTML =
+      '<span class="material-symbols-outlined gp-gcal-sidebar-header-icon" aria-hidden="true"' +
+      ' style="font-size:20px">add</span>';
+
+    const chevronBtn = document.createElement('button');
+    chevronBtn.type = 'button';
+    chevronBtn.className = 'gp-gcal-sidebar-icon-btn gp-gcal-sidebar-chevron-btn';
+    chevronBtn.setAttribute('aria-label', 'Expand or collapse My goals');
+    chevronBtn.setAttribute('aria-expanded', 'true');
+    chevronBtn.setAttribute('aria-controls', 'gp-gcal-sidebar-goals-cards');
+    chevronBtn.innerHTML =
+      '<span class="material-symbols-outlined gp-gcal-sidebar-header-icon gp-gcal-sidebar-chevron-icon"' +
+      ' aria-hidden="true" style="font-size:20px">expand_more</span>';
+
+    actions.append(addBtn, chevronBtn);
+    header.append(labelBtn, actions);
 
     const body = document.createElement('div');
     body.className = 'gp-gcal-sidebar-section-body';
@@ -937,7 +962,9 @@
 
     function applyCollapsed(collapsed) {
       root.classList.toggle('gp-gcal-sidebar-collapsed', collapsed);
-      headerBtn.setAttribute('aria-expanded', String(!collapsed));
+      const exp = String(!collapsed);
+      labelBtn.setAttribute('aria-expanded', exp);
+      chevronBtn.setAttribute('aria-expanded', exp);
       try {
         chrome.storage.local.set({ [GP_LEFT_GOALS_COLLAPSED_KEY]: collapsed });
       } catch (_) {
@@ -948,8 +975,23 @@
     function toggle() {
       applyCollapsed(!root.classList.contains('gp-gcal-sidebar-collapsed'));
     }
-    headerBtn.addEventListener('click', toggle);
-    headerBtn.addEventListener('keydown', (e) => {
+
+    labelBtn.addEventListener('click', toggle);
+    chevronBtn.addEventListener('click', toggle);
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetEditMode();
+      showScreen('form');
+      openPanel();
+    });
+
+    labelBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+    chevronBtn.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         toggle();
@@ -961,7 +1003,7 @@
       if (d[GP_LEFT_GOALS_COLLAPSED_KEY]) applyCollapsed(true);
     });
 
-    root.append(headerBtn, body);
+    root.append(header, body);
     return root;
   }
 
