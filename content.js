@@ -4570,16 +4570,6 @@
             GoalInteractionController.applyGoalSessionCompletionUI(chip, !nextDone);
             return;
           }
-          if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
-
-          const mirrorKeys = mirrorGpChipDoneKeysForSession(plannerEventId, allowed);
-          const map = { ...chipDoneSnapshot };
-          if (nextDone) {
-            for (const k of mirrorKeys) map[k] = true;
-          } else {
-            for (const k of mirrorKeys) delete map[k];
-          }
-
           const gid = goalRow?.id != null ? String(goalRow.id) : '';
           let slotGoalRow = goalRow;
           if (goalRow) {
@@ -4593,23 +4583,52 @@
               slotGoalRow = goalRow;
             }
           }
-          const calApiId = await resolveCalEventIdForChipSession(
-            chip,
-            slotGoalRow,
-            legacyGoals,
-            chipDoneSnapshot
-          );
-          if (calApiId && calEventIdsContain(allowed, calApiId)) {
-            plannerEventId = calApiId;
+
+          let slotIdx = resolveDomSlotIndexFromGoalRow(slotGoalRow, storageKey);
+          if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, slotGoalRow);
+          if (slotIdx < 0) slotIdx = resolveSlotIndexByAnchorTime(chip, slotGoalRow);
+          if (slotIdx < 0) {
+            slotIdx = await resolveSlotIndexForGoalToggle(
+              chip,
+              slotGoalRow,
+              plannerEventId,
+              storageKey,
+              [],
+              legacyGoals
+            );
           }
-          let slotIdx = await resolveSlotIndexForGoalToggle(
-            chip,
-            slotGoalRow,
-            plannerEventId,
-            storageKey,
-            mirrorKeys,
-            legacyGoals
-          );
+
+          if (slotIdx >= 0 && allowed[slotIdx] != null) {
+            plannerEventId = String(allowed[slotIdx]);
+            chip.dataset.gpCalEventId = plannerEventId;
+            if (gid && storageKey) {
+              await persistCalEventDomIdForGoalSlot(gid, slotIdx, storageKey, legacyGoals);
+            }
+          } else {
+            const calApiId = await resolveCalEventIdForChipSession(
+              chip,
+              slotGoalRow,
+              legacyGoals,
+              chipDoneSnapshot
+            );
+            if (calApiId && calEventIdsContain(allowed, calApiId)) {
+              plannerEventId = calApiId;
+              slotIdx = allowed.findIndex((id) => String(id) === String(calApiId));
+            }
+          }
+
+          if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
+
+          const mirrorKeys = mirrorGpChipDoneKeysForSession(plannerEventId, allowed);
+          const map = { ...chipDoneSnapshot };
+          if (nextDone) {
+            if (storageKey) map[storageKey] = true;
+            for (const k of mirrorKeys) map[k] = true;
+          } else {
+            if (storageKey) delete map[storageKey];
+            for (const k of mirrorKeys) delete map[k];
+          }
+
           stampCalEventIdOnChipMap(map, allowed, slotIdx, nextDone);
           if (gid && slotIdx >= 0) {
             const prevArr = Array.isArray(slotPackPrev[gid]) ? slotPackPrev[gid] : [];
