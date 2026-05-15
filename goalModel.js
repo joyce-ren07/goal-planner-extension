@@ -350,9 +350,11 @@
         scheduleLabel: g.scheduleLabel,
         recurrence: g.recurrence ? Object.assign({}, g.recurrence) : null,
         endDate: g.endDate || '',
+        startDate: deriveGoalStartDateYmd(g),
         created: g.created,
         color: g.color || '',
         sessions: sessions,
+        totalSessions: resolveGoalTotalSessions(g),
         progressPct: 0,
       });
     });
