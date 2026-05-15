@@ -2134,16 +2134,21 @@
     }
   }
 
-  function buildSidebarVirtualGoalFromExpanded(lg, expandedDone) {
+  function buildSidebarVirtualGoalFromExpanded(lg, expandedDone, slotDoneIndices) {
     const ids = lg.calEventIds || [];
     const done = expandedDone && typeof expandedDone === 'object' ? expandedDone : {};
+    const slotSet = new Set(
+      Array.isArray(slotDoneIndices)
+        ? slotDoneIndices.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n >= 0)
+        : []
+    );
     return {
       id: lg.id,
       title: lg.title,
       color: lg.color,
-      sessions: ids.map((eventId) => ({
+      sessions: ids.map((eventId, idx) => ({
         eventId,
-        completed: !!done[String(eventId)],
+        completed: !!(done[String(eventId)] || slotSet.has(idx)),
       })),
       progressPct: 0,
     };
