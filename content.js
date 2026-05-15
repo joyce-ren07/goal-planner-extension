@@ -2715,21 +2715,21 @@
       const nextDone = !chip.classList.contains('ext-goal-completed');
       this.applyGoalSessionCompletionUI(chip, nextDone);
 
-      chrome.storage.local.get(['gp_chip_done'], d => {
+      chrome.storage.local.get(['gp_chip_done'], (d) => {
         const map = { ...(d.gp_chip_done || {}) };
         if (nextDone) map[chipKey] = true;
         else delete map[chipKey];
         const eventId =
           chip.closest('[data-eventid]')?.getAttribute('data-eventid') || chipKey;
-        chrome.storage.local.set({ gp_chip_done: map }, () => {
-          globalThis.GoalCalendarSync?.persistSessionCompleted?.(eventId, nextDone)?.catch?.(
+        chrome.storage.local.set({ gp_chip_done: map }, async () => {
+          await globalThis.GoalCalendarSync?.persistSessionCompleted?.(eventId, nextDone)?.catch?.(
             () => {}
           );
+          chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nextDone });
+          renderGoalsSidebar();
+          renderHomeScreen();
         });
-        chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nextDone });
       });
-
-      renderHomeScreen();
     },
   };
 
