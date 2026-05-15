@@ -2148,7 +2148,7 @@
       color: lg.color,
       sessions: ids.map((eventId, idx) => ({
         eventId,
-        completed: !!(done[String(eventId)] || slotSet.has(idx)),
+        completed: !!(done[String(eventId)] || done[eventId] || slotSet.has(idx)),
       })),
       progressPct: 0,
     };
