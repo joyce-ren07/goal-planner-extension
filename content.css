@@ -107,11 +107,12 @@
   text-align: center; margin: 0; line-height: 18px;
 }
 
-/* ── Collapsible “My goals” in Google Calendar’s left drawer (not the extension panel) ── */
+/* ── Collapsible “My goals” in Google Calendar’s left drawer (native-style row: label | + ⌄) ── */
 .gp-gcal-sidebar-goals-root {
   box-sizing: border-box;
   width: 100%;
-  margin-top: 2px;
+  margin-top: 0;
+  padding: 0 4px;
   font-family: 'Google Sans', Roboto, 'Product Sans', Arial, sans-serif;
   color: #3c4043;
 }
@@ -121,45 +122,97 @@
 .gp-gcal-sidebar-section-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px 6px 2px;
-  margin: 0 0 2px;
+  justify-content: space-between;
+  gap: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 0;
   border-radius: 4px;
-  cursor: pointer;
   user-select: none;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-  color: #3c4043;
 }
-.gp-gcal-sidebar-section-header:hover {
-  background-color: rgba(32, 33, 36, 0.04);
-}
-.gp-gcal-sidebar-heading {
+.gp-gcal-sidebar-label-btn {
   flex: 1;
   min-width: 0;
+  margin: 0;
+  padding: 8px 4px 8px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #3c4043;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  border-radius: 4px;
 }
-.gp-gcal-sidebar-chevron {
+.gp-gcal-sidebar-label-btn:hover {
+  background-color: rgba(32, 33, 36, 0.04);
+}
+.gp-gcal-sidebar-actions {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-  line-height: 20px;
-  color: #5f6368;
-  font-variation-settings: 'opsz' 20, 'wght' 400, 'FILL' 0, 'GRAD' 0;
-  transition: transform 0.15s ease;
+  gap: 0;
+  padding-right: 2px;
 }
-.gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-chevron {
+.gp-gcal-sidebar-icon-btn {
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  color: #444746;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.gp-gcal-sidebar-icon-btn:hover {
+  background-color: rgba(32, 33, 36, 0.08);
+}
+.gp-gcal-sidebar-icon-btn:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 1px;
+}
+.gp-gcal-sidebar-header-icon {
+  font-variation-settings: 'opsz' 20, 'wght' 300, 'FILL' 0, 'GRAD' 0;
+  line-height: 1;
+  user-select: none;
+}
+.gp-gcal-sidebar-chevron-icon {
+  transition: transform 0.15s ease;
+  color: #5f6368;
+}
+.gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-chevron-icon {
   transform: rotate(-90deg);
 }
 .gp-gcal-sidebar-section-body {
-  padding: 2px 4px 10px 22px;
+  padding: 2px 8px 10px 8px;
 }
 .gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body {
   display: none;
+}
+
+.gp-gcal-mgg-empty {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: #5f6368;
+  margin: 4px 0 8px;
+  padding: 0 4px 0 8px;
+}
+.gp-gcal-mgg-empty strong {
+  font-weight: 600;
+  color: #3c4043;
 }
 
 /* Goal progress card — white panel (matches Goal Planner mock) */
