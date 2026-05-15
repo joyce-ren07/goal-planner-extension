@@ -1282,8 +1282,8 @@
       const panCs = getComputedStyle(pane);
       const panPt = parseFloat(panCs.paddingTop) || 0;
       const panPb = parseFloat(panCs.paddingBottom) || 0;
-      setVar('--gp-native-body-pad-top', `${Math.min(panPt, minVert.pt)}px`);
-      setVar('--gp-native-body-pad-bottom', `${Math.min(panPb, minVert.pb)}px`);
+      setVar('--gp-native-body-pad-top', `${Math.min(panPt, headerPt)}px`);
+      setVar('--gp-native-body-pad-bottom', `${Math.min(panPb, headerPb)}px`);
     }
     if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
     setVar('--gp-native-header-align', cs.alignItems);
