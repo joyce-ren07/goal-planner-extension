@@ -336,7 +336,9 @@
 
     wireEvents();
     setupMyGoalsUnifiedBinding();
+    setupLeftSidebarGoalsMountObserver();
     renderHomeScreen();
+    scheduleLeftSidebarGoalsMountAttempts();
     setupCalendarPushObserver();
     setupNativeSidebarObserver();
     setupGoalEventObserver();
