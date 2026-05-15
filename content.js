@@ -786,7 +786,9 @@
 
     // Recurrence modal — Cancel / Done / backdrop click
     document.getElementById('gp-rec-cancel').addEventListener('click', closeRecurrence);
-    document.getElementById('gp-rec-done').addEventListener('click', saveRecurrence);
+    document.getElementById('gp-rec-done').addEventListener('click', () => {
+      void saveRecurrence();
+    });
     document.getElementById('gp-recurrence-overlay').addEventListener('click', e => {
       const inPicker = e.target.closest(
         '.gp-date-picker-wrapper,#gp-date-popover,#gp-cal-prev,#gp-cal-next'
