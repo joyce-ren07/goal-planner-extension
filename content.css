@@ -107,34 +107,59 @@
   text-align: center; margin: 0; line-height: 18px;
 }
 
-/* ── Collapsible “My goals” in Google Calendar’s left drawer (native-style row: label | + ⌄) ── */
+/* ── Left drawer: “My goals” row — Material Design 3 (inherits Calendar gm3-sys-* when available) ── */
 .gp-gcal-sidebar-goals-root {
+  /* Map to Google Calendar Web GM3 surface tokens; solid fallbacks match M3 light baseline */
+  --gp-m3-on-surface: var(--gm3-sys-color-on-surface, #1f1f1f);
+  --gp-m3-on-surface-variant: var(--gm3-sys-color-on-surface-variant, #44474f);
+  --gp-m3-primary: var(--gm3-sys-color-primary, #0b57d0);
+  --gp-m3-on-primary: var(--gm3-sys-color-on-primary, #ffffff);
+  --gp-m3-outline: var(--gm3-sys-color-outline, #747775);
+  --gp-m3-surface: var(--gm3-sys-color-surface, #ffffff);
+  /* State layers (M3): hover / pressed on container */
+  --gp-m3-state-hover: color-mix(in srgb, var(--gp-m3-on-surface) 8%, transparent);
+  --gp-m3-state-focus: color-mix(in srgb, var(--gp-m3-on-surface) 10%, transparent);
+  --gp-m3-state-pressed: color-mix(in srgb, var(--gp-m3-on-surface) 12%, transparent);
+  --gp-m3-focus-ring: var(--gm3-sys-color-primary, #0b57d0);
+
   box-sizing: border-box;
   width: 100%;
-  margin-top: 0;
-  padding: 0 4px;
-  font-family: 'Google Sans', Roboto, 'Product Sans', Arial, sans-serif;
-  color: #3c4043;
+  margin: 0;
+  padding: 0;
+  font-family:
+    'Google Sans Flex',
+    'Google Sans',
+    'Google Sans Text',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  color: var(--gp-m3-on-surface);
+  -webkit-font-smoothing: antialiased;
 }
 .gp-gcal-sidebar-goals-root[hidden] {
   display: none !important;
 }
+
 .gp-gcal-sidebar-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0;
-  min-height: 40px;
+  min-height: 48px;
   margin: 0;
   padding: 0;
-  border-radius: 4px;
+  border-radius: 8px;
   user-select: none;
 }
+
+/* M3 label-large: section title */
 .gp-gcal-sidebar-label-btn {
   flex: 1;
   min-width: 0;
   margin: 0;
-  padding: 8px 4px 8px 8px;
+  /* Align with Calendar list insets (~16dp leading) */
+  padding: 10px 8px 10px 16px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -142,81 +167,139 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
-  color: #3c4043;
+  letter-spacing: 0.00625em;
+  color: var(--gp-m3-on-surface);
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border-radius: 4px;
+  border-radius: 8px;
+  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 .gp-gcal-sidebar-label-btn:hover {
-  background-color: rgba(32, 33, 36, 0.04);
+  background-color: rgba(31, 31, 31, 0.08);
 }
+.gp-gcal-sidebar-label-btn:hover {
+  background-color: var(--gp-m3-state-hover, rgba(31, 31, 31, 0.08));
+}
+.gp-gcal-sidebar-label-btn:active {
+  background-color: var(--gp-m3-state-pressed, rgba(31, 31, 31, 0.12));
+}
+
+@supports (color: color-mix(in lch, black 50%, white)) {
+  .gp-gcal-sidebar-label-btn:hover {
+    background-color: var(--gp-m3-state-hover);
+  }
+  .gp-gcal-sidebar-label-btn:active {
+    background-color: var(--gp-m3-state-pressed);
+  }
+}
+
 .gp-gcal-sidebar-actions {
   display: flex;
   align-items: center;
   flex-shrink: 0;
   gap: 0;
-  padding-right: 2px;
+  padding-inline-end: 8px;
 }
+
+/* M3 standard icon button: 40×40 touch target, circular state layer */
 .gp-gcal-sidebar-icon-btn {
   box-sizing: border-box;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   margin: 0;
   border: none;
-  border-radius: 50%;
+  border-radius: 9999px;
   background: transparent;
   cursor: pointer;
-  color: #444746;
+  color: var(--gp-m3-on-surface-variant);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1), color 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 .gp-gcal-sidebar-icon-btn:hover {
-  background-color: rgba(32, 33, 36, 0.08);
+  background-color: rgba(31, 31, 31, 0.08);
+  color: var(--gp-m3-on-surface-variant);
 }
+.gp-gcal-sidebar-icon-btn:hover {
+  background-color: var(--gp-m3-state-hover, rgba(31, 31, 31, 0.08));
+}
+.gp-gcal-sidebar-icon-btn:active {
+  background-color: var(--gp-m3-state-pressed, rgba(31, 31, 31, 0.12));
+}
+
+@supports (color: color-mix(in lch, black 50%, white)) {
+  .gp-gcal-sidebar-icon-btn:hover {
+    background-color: var(--gp-m3-state-hover);
+  }
+  .gp-gcal-sidebar-icon-btn:active {
+    background-color: var(--gp-m3-state-pressed);
+  }
+}
+
+/* M3 focus indicator (primary ring) */
 .gp-gcal-sidebar-label-btn:focus-visible {
-  outline: 2px solid #1a73e8;
-  outline-offset: 1px;
+  outline: 2px solid var(--gp-m3-focus-ring);
+  outline-offset: 2px;
+  background-color: var(--gp-m3-state-focus, rgba(31, 31, 31, 0.1));
 }
 .gp-gcal-sidebar-icon-btn:focus-visible {
-  outline: 2px solid #1a73e8;
-  outline-offset: 1px;
+  outline: 2px solid var(--gp-m3-focus-ring);
+  outline-offset: 2px;
 }
+
+@supports (color: color-mix(in lch, black 50%, white)) {
+  .gp-gcal-sidebar-label-btn:focus-visible {
+    background-color: var(--gp-m3-state-focus);
+  }
+}
+
 .gp-gcal-sidebar-header-icon {
-  font-variation-settings: 'opsz' 20, 'wght' 300, 'FILL' 0, 'GRAD' 0;
+  font-size: 24px;
   line-height: 1;
   user-select: none;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
 }
+
 .gp-gcal-sidebar-chevron-icon {
-  transition: transform 0.15s ease;
-  color: #5f6368;
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  color: var(--gp-m3-on-surface-variant);
 }
+
 .gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-chevron-icon {
   transform: rotate(-90deg);
 }
+
 .gp-gcal-sidebar-section-body {
-  padding: 2px 8px 10px 8px;
+  padding: 4px 12px 12px 16px;
 }
+
 .gp-gcal-sidebar-goals-root.gp-gcal-sidebar-collapsed .gp-gcal-sidebar-section-body {
   display: none;
 }
 
+/* M3 body small — empty hint */
 .gp-gcal-mgg-empty {
-  font-family: 'Google Sans', Roboto, sans-serif;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
-  color: #5f6368;
-  margin: 4px 0 8px;
-  padding: 0 4px 0 8px;
+  letter-spacing: 0.025em;
+  color: var(--gp-m3-on-surface-variant, #44474f);
+  margin: 2px 0 10px;
+  padding: 0;
 }
 .gp-gcal-mgg-empty strong {
-  font-weight: 600;
-  color: #3c4043;
+  font-weight: 500;
+  color: var(--gp-m3-on-surface, #1f1f1f);
 }
 
 /* Goal progress card — white panel (matches Goal Planner mock) */
