@@ -988,10 +988,10 @@
     setVar('--gp-native-header-pb', pcs.paddingBottom);
     setVar('--gp-native-header-pl', pcs.paddingLeft);
 
-    setVar('--gp-native-header-min-height', Math.max(parseFloat(cs.minHeight) || 0, parseFloat(pcs.minHeight) || 0) ? (parseFloat(cs.minHeight) > 0 ? cs.minHeight : pcs.minHeight) : '');
-    if (!root.style.getPropertyValue('--gp-native-header-min-height')) {
-      setVar('--gp-native-header-min-height', cs.minHeight !== '0px' ? cs.minHeight : pcs.minHeight);
-    }
+    let minH = '';
+    if (cs.minHeight && cs.minHeight !== '0px') minH = cs.minHeight;
+    else if (pcs.minHeight && pcs.minHeight !== '0px') minH = pcs.minHeight;
+    setVar('--gp-native-header-min-height', minH);
 
     if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
     setVar('--gp-native-header-align', cs.alignItems);
