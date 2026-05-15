@@ -2460,6 +2460,19 @@
   function getGoals() { return new Promise(r => chrome.storage.local.get(['gp_goals'], d => r(d.gp_goals || []))); }
   function saveGoals(g) { return new Promise(r => chrome.storage.local.set({ gp_goals: g }, r)); }
 
+  /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
+  async function persistGpGoalsAndUnified(goals) {
+    await saveGoals(goals);
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model || typeof Model.syncUnifiedWithLegacyGoals !== 'function') return;
+    const chipDone = await new Promise((r) =>
+      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+    );
+    const prev = await Model.loadUnifiedState();
+    const next = Model.syncUnifiedWithLegacyGoals(prev, goals, chipDone || {});
+    await Model.saveUnifiedState(next);
+  }
+
   // ── Date helpers ──
   function defaultEndDate() {
     const d = new Date(); d.setMonth(d.getMonth() + 3);
