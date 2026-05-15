@@ -185,7 +185,7 @@
    * @returns {GoalPlannerUnifiedState}
    */
   function migrateFromLegacy(legacy) {
-    var goals = legacy.gp_goals || [];
+    var goals = Array.isArray(legacy.gp_goals) ? legacy.gp_goals : [];
     var doneMap = legacy.gp_chip_done || {};
 
     var state = createEmptyState();

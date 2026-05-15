@@ -3440,6 +3440,10 @@
           }
           if (!plannerEventId && allowed.length === 1) plannerEventId = allowed[0];
           if (!plannerEventId) plannerEventId = storageKey || canonicalEventKey || '';
+          if (!plannerEventId) {
+            GoalInteractionController.applyGoalSessionCompletionUI(chip, !nextDone);
+            return;
+          }
           if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
 
           const map = { ...chipDoneSnapshot };
