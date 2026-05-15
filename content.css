@@ -446,13 +446,18 @@
   background-color: color-mix(in srgb, var(--goal-progress-color, #d3564b) 24%, #ffffff) !important;
 }
 
+#gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card {
+  --goal-progress-pct: 0%;
+}
+
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
   display: block !important;
   box-sizing: border-box !important;
   height: 100% !important;
   border-radius: 16px !important;
   background-color: var(--goal-progress-color, #d3564b) !important;
-  /* Width patched from JS — CSS-driven smooth interpolate (Goal session toggle → immediate UX). */
+  /* Width from card --goal-progress-pct (set by patchSidebarGoalCardProgressOnly). */
+  width: var(--goal-progress-pct, 0%) !important;
   transition: width 0.38s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 0%;
   max-width: 100%;
