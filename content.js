@@ -1061,6 +1061,9 @@
     else if (pcs.minHeight && pcs.minHeight !== '0px') minH = pcs.minHeight;
     setVar('--gp-native-header-min-height', minH);
 
+    if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
+    setVar('--gp-native-header-align', cs.alignItems);
+
     const mhNum = parseFloat(String(minH || '48px').replace(/px$/i, '')) || 48;
     const brParsed = parseFloat(String(cs.borderRadius || '0').replace(/px$/i, '')) || 0;
     if (cs.borderRadius && cs.borderRadius !== '0px') {
