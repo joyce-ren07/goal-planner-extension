@@ -1804,10 +1804,6 @@
           commitGoalTimeLabelAfterDrop(chip);
         };
 
-        if (chip._gpGoalDragEndHandler) {
-          chip._gpGoalDragEndHandler();
-        }
-
         const onMove = () => {
           if (chip._gpGoalDragMoveRaf != null) return;
           chip._gpGoalDragMoveRaf = requestAnimationFrame(() => {
