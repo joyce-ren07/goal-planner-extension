@@ -137,6 +137,14 @@
   color: var(--gp-m3-on-surface);
   -webkit-font-smoothing: antialiased;
 }
+
+@supports (color: color-mix(in srgb, black, transparent)) {
+  .gp-gcal-sidebar-goals-root {
+    --gp-m3-state-hover: color-mix(in srgb, var(--gp-m3-on-surface) 8%, transparent);
+    --gp-m3-state-focus: color-mix(in srgb, var(--gp-m3-on-surface) 10%, transparent);
+    --gp-m3-state-pressed: color-mix(in srgb, var(--gp-m3-on-surface) 12%, transparent);
+  }
+}
 .gp-gcal-sidebar-goals-root[hidden] {
   display: none !important;
 }
