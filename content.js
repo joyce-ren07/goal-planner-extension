@@ -939,8 +939,7 @@
     addBtn.setAttribute('aria-label', 'Add goal');
     addBtn.setAttribute('title', 'Add goal');
     addBtn.innerHTML =
-      '<span class="material-symbols-outlined gp-gcal-sidebar-header-icon" aria-hidden="true"' +
-      ' style="font-size:20px">add</span>';
+      '<span class="material-symbols-outlined gp-gcal-sidebar-header-icon" aria-hidden="true">add</span>';
 
     const chevronBtn = document.createElement('button');
     chevronBtn.type = 'button';
@@ -950,7 +949,7 @@
     chevronBtn.setAttribute('aria-controls', 'gp-gcal-sidebar-goals-cards');
     chevronBtn.innerHTML =
       '<span class="material-symbols-outlined gp-gcal-sidebar-header-icon gp-gcal-sidebar-chevron-icon"' +
-      ' aria-hidden="true" style="font-size:20px">expand_more</span>';
+      ' aria-hidden="true">expand_more</span>';
 
     actions.append(addBtn, chevronBtn);
     header.append(labelBtn, actions);
