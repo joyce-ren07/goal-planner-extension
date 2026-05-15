@@ -1204,7 +1204,7 @@
     closeDropdowns();
     document.getElementById('gp-recurrence-overlay').classList.remove('open');
   }
-  function saveRecurrence() {
+  async function saveRecurrence() {
     const every = parseInt(document.getElementById('gp-freq-num').value) || 1;
     const period = document.getElementById('gp-freq-period').value;
     const days = [...document.querySelectorAll('.gp-day-btn.selected')].map(b => b.dataset.day);
