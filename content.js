@@ -5325,18 +5325,20 @@
         // Derive a stable key: prefer GCal's event ID, then goal id + text
         const eid =
           chip.closest('[data-eventid]') && chip.closest('[data-eventid]').getAttribute('data-eventid');
-        const goal = goals.find(g => chip.textContent.includes(g.title));
+        const goal = findLegacyGoalForGoalChip(chip, goals);
         let resolvedEid = eid ? resolvePlannerEventIdForChip(eid, goals) || eid : '';
+        let slotIdx = -1;
         if (goal) {
-          let slot =
-            resolveDomSlotIndexFromGoalRow(goal, eid) ??
-            resolveSlotIndexByGoalChipsOnCalendar(chip, goal);
-          if (slot < 0) slot = resolveSlotIndexByAnchorTime(chip, goal);
-          if (slot >= 0 && goal.calEventIds?.[slot]) {
-            resolvedEid = String(goal.calEventIds[slot]);
+          slotIdx = readChipSlotIndexFromDataset(chip, (goal.calEventIds || []).length);
+          if (slotIdx < 0) slotIdx = resolveDomSlotIndexFromGoalRow(goal, eid);
+          if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, goal, goals);
+          if (slotIdx < 0) slotIdx = resolveSlotIndexByAnchorTime(chip, goal);
+          if (slotIdx >= 0 && goal.calEventIds?.[slotIdx]) {
+            resolvedEid = String(goal.calEventIds[slotIdx]);
             chip.dataset.gpCalEventId = resolvedEid;
+            chip.dataset.gpSlotIdx = String(slotIdx);
             if (eid) {
-              void persistCalEventDomIdForGoalSlot(goal.id, slot, eid, goals);
+              void persistCalEventDomIdForGoalSlot(goal.id, slotIdx, eid, goals);
             }
           }
         }
@@ -5344,7 +5346,13 @@
           resolvedEid ||
           (goal ? goal.id + ':' + chip.textContent.trim().slice(0, 40) : 'tx:' + chip.textContent.trim().slice(0, 50));
 
-        const goalData = { title, time, chipKey, id: goal ? goal.id : null };
+        const goalData = {
+          title,
+          time,
+          chipKey,
+          id: goal ? goal.id : null,
+          slotIdx: slotIdx >= 0 ? slotIdx : undefined,
+        };
         const isDone = !!doneMap[chipKey];
 
         debugChipStructure(chip, 'BEFORE injection');
