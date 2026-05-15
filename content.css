@@ -406,14 +406,15 @@
   max-width: 100%;
   min-width: 0;
   margin: 4px 0 !important;
-  /* CAPSTONE Goal card frame — matches Figma (node GoalCard column, ~249px-wide spec, density + padding). */
+  /* CAPSTONE / Figma GoalCard (node cluster 1082:12141): 20px padding, 16px radius, tonal surface off --goal-progress-color. */
   padding: 20px !important;
   border-radius: 16px !important;
   cursor: pointer;
   box-sizing: border-box;
   transition: background-color 0.15s ease;
-  background-color: #ffe1dd !important;
-  border: 1.5px solid #e67c72 !important;
+  --gp-sidebar-row-border: color-mix(in srgb, var(--goal-progress-color, #d3564b) 46%, #ffffff);
+  background-color: color-mix(in srgb, var(--goal-progress-color, #d3564b) 10.75%, #ffffff) !important;
+  border: 1.5px solid var(--gp-sidebar-row-border) !important;
 }
 
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card:hover {
