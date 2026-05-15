@@ -1584,7 +1584,6 @@
     root.style.removeProperty('--gp-booking-add-btn-h');
     root.style.removeProperty('--gp-booking-add-icon-font-size');
 
-    const bookingRow = findNativeSidebarAccordionRowByLabel(scroll, /booking\s*pages/i);
     const goalsSectionHeader = root.querySelector('.gp-gcal-sidebar-section-header');
     if (bookingRow && goalsSectionHeader && scroll.contains(bookingRow)) {
       const delta = Math.round(
