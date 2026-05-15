@@ -2211,6 +2211,7 @@
               chipDone
             );
             await applyGoalsSidebarFromUnifiedState(merged, null, evt.meta || {});
+            await reinforceMyGoalsSidebarProgressFromStorage();
           } catch (_) {
             /* sidebar optional */
           }
