@@ -2179,7 +2179,7 @@
           const isDone = !!doneMap[chip.dataset.gpChipKey];
           GoalInteractionController.applyGoalSessionCompletionUI(chip, isDone);
           const ec = chip.closest('[data-eventid]');
-          requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip, ec));
+          requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
           return;
         }
 
