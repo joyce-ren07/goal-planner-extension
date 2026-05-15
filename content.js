@@ -2270,31 +2270,28 @@
           : null,
       });
 
-      const resolved = resolveVisibleSidebarGoalCard(gid);
-      const card = resolved?.card;
-      const container = resolved?.container;
+      let resolved = resolveVisibleSidebarGoalCard(gid);
       gpMyGoalsSidebarDiag('2 row selection', {
         traceId,
         goalId: gid,
-        rowFound: !!card,
+        rowFound: !!resolved?.card,
         visible: resolved?.visible,
         cardRect: resolved?.rect,
-        containerId: container?.id,
+        containerId: resolved?.container?.id,
         rootConnected: resolved?.root?.isConnected,
         rootCollapsed: resolved?.root?.classList?.contains('gp-gcal-sidebar-collapsed'),
-        cardGoalId: card?.dataset?.goalId,
-        isConnected: !!card?.isConnected,
+        cardGoalId: resolved?.card?.dataset?.goalId,
+        isConnected: !!resolved?.card?.isConnected,
       });
-      if (!card) {
+      if (!resolved?.card) {
         await applyGoalsSidebarFromUnifiedState(mergedState, legacyById, { reason: 'goalsSync' });
-        const retry = resolveVisibleSidebarGoalCard(gid);
-        if (!retry?.card) {
+        resolved = resolveVisibleSidebarGoalCard(gid);
+        if (!resolved?.card) {
           console.warn('[gp-my-goals] no sidebar card for goal', gid);
           continue;
         }
-        Object.assign(resolved || {}, retry);
       }
-      const cardToPatch = resolved?.card || card;
+      const cardToPatch = resolved.card;
       if (!cardToPatch) continue;
       if (!resolved?.visible) {
         console.warn(
