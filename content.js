@@ -504,26 +504,18 @@
       removeGhostEvents();
       return;
     }
-
-    let sessions;
-    let markNp = false;
-    if (Array.isArray(layered)) {
-      sessions = layered;
-    } else if (layered && Array.isArray(layered.sessions)) {
-      sessions = layered.sessions;
-      markNp = !!layered.markNonPersisted;
-    } else {
+    const sessions = layered?.sessions || [];
+    if (!sessions.length) {
       removeGhostEvents();
       return;
     }
-
-    const lbl = ghostCreationPreviewTitlePlain().replace(/^Preview · /i, '').trim();
-    const labelForChip = markNp ? lbl : lbl;
-    paintGhostSessionsOnGrid(sessions, labelForChip, { markNonPersisted: markNp });
+    const base = ghostCreationPreviewTitlePlain();
+    const shortTitle = base.length > 22 ? `${base.slice(0, 21)}…` : base;
+    const finalLabel = layered.markNonPersisted ? `Preview · ${shortTitle}` : shortTitle;
+    paintGhostSessionsOnGrid(sessions, finalLabel, {
+      markNonPersisted: !!layered.markNonPersisted,
+    });
   }
-
-  /* legacy single implementation replaced by paintGhostSessionsOnGrid via renderGhostEvents */
-  void 0;
 
   // ── Inject once ──
   function inject() {
