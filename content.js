@@ -2086,10 +2086,61 @@
       /* projection-only merge */
     }
     await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
+    await reinforceMyGoalsSidebarProgressFromStorage();
   }
 
-  /**
-   * Projection-only: map gp_chip_done keys (often GCal DOM event ids) onto gp_goals[].calEventIds[]
+  async function reinforceMyGoalsSidebarProgressFromStorage() {
+    try {
+      const goals = await getGoals();
+      if (!Array.isArray(goals) || !goals.length) return;
+      const raw = await new Promise((r) =>
+        chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+      );
+      const expanded = expandChipDoneOntoCalEventIds(raw, goals);
+      const container = document.getElementById('gp-gcal-sidebar-goals-cards');
+      const root = document.getElementById('gp-gcal-sidebar-goals-root');
+      if (!container || !root) return;
+      const legacyById = new Map(goals.map((gk) => [gk.id, gk]));
+      for (const lg of goals) {
+        const virtualG = buildSidebarVirtualGoalFromExpanded(lg, expanded);
+        const card = [...container.children].find(
+          (el) =>
+            el.matches?.('.gcal-ext-goal-card[data-goal-id]') &&
+            String(el.dataset.goalId) === String(lg.id)
+        );
+        if (!card) continue;
+        patchSidebarGoalCardProgressOnly(card, virtualG);
+        const pair = goalSidebarCardSigs(virtualG, legacyById);
+        card.dataset.gpSidebarStructSig = pair.struct;
+        card.dataset.gpSidebarProgSig = pair.prog;
+      }
+      const sigJoined = goals
+        .map((lg) => {
+          const v = buildSidebarVirtualGoalFromExpanded(lg, expanded);
+          const p = goalSidebarCardSigs(v, legacyById);
+          return `${p.struct}|${p.prog}`;
+        })
+        .join('||');
+      root.dataset.gpSidebarGoalsSig = sigJoined;
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function buildSidebarVirtualGoalFromExpanded(lg, expandedDone) {
+    const ids = lg.calEventIds || [];
+    const done = expandedDone && typeof expandedDone === 'object' ? expandedDone : {};
+    return {
+      id: lg.id,
+      title: lg.title,
+      color: lg.color,
+      sessions: ids.map((eventId) => ({
+        eventId,
+        completed: !!done[String(eventId)],
+      })),
+      progressPct: 0,
+    };
+  }
    * for merge/sidebar counts. Does not write to storage. Per-goal scoping limits false matches.
    */
   function expandChipDoneOntoCalEventIds(chipDone, legacyGoals) {
