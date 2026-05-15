@@ -415,15 +415,19 @@
           completed: completed,
         };
       });
+      var startDate = deriveGoalStartDateYmd(lg);
+      var totalSessions = resolveGoalTotalSessions(lg);
       nextGoals.push({
         id: lg.id,
         title: lg.title || '',
         scheduleLabel: lg.scheduleLabel,
         recurrence: lg.recurrence ? Object.assign({}, lg.recurrence) : null,
         endDate: lg.endDate || '',
+        startDate: startDate,
         created: lg.created,
         color: lg.color || '',
         sessions: sessions,
+        totalSessions: totalSessions,
         progressPct: 0,
       });
     });
