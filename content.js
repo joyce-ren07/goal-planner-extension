@@ -1274,7 +1274,7 @@
     chevronBtn.setAttribute('aria-controls', 'gp-gcal-sidebar-goals-cards');
     chevronBtn.innerHTML =
       '<span class="material-symbols-outlined gp-gcal-sidebar-header-icon gp-gcal-sidebar-chevron-icon"' +
-      ' aria-hidden="true">expand_more</span>';
+      ' aria-hidden="true">expand_less</span>';
 
     actions.append(addBtn, chevronBtn);
     header.append(labelBtn, actions);
