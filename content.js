@@ -1371,12 +1371,12 @@
       const ag = addBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
       if (ag) {
         const ags = getComputedStyle(ag);
-        if (ags.fontSize && ags.fontSize !== '0px') {
-          const px = parseFloat(ags.fontSize);
-          const capped = Number.isFinite(px) ? Math.min(Math.round(px), 20) : 20;
-          setVar('--gp-native-add-icon-font-size', `${capped}px`);
-        }
+        if (ags.fontSize && ags.fontSize !== '0px') setVar('--gp-native-add-icon-font-size', ags.fontSize);
         if (ags.lineHeight && ags.lineHeight !== '0px') setVar('--gp-native-add-icon-lh', ags.lineHeight);
+        if (ags.fontVariationSettings && ags.fontVariationSettings !== 'normal') {
+          setVar('--gp-native-add-icon-fvs', ags.fontVariationSettings);
+        }
+        if (ags.fontWeight) setVar('--gp-native-add-icon-weight', ags.fontWeight);
       }
     }
 
