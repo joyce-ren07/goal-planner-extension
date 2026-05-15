@@ -3040,27 +3040,29 @@
       if (circle) circle.innerHTML = done ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
     },
 
-    toggleCompletion(chipKey, chip) {
+    toggleCompletion(canonicalEventKey, chip) {
       const nextDone = !chip.classList.contains('ext-goal-completed');
       this.applyGoalSessionCompletionUI(chip, nextDone);
 
+      const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
+      const storageKey = liveEid || canonicalEventKey;
+      if (liveEid && chip.dataset.gpChipKey !== liveEid) chip.dataset.gpChipKey = liveEid;
+
       chrome.storage.local.get(['gp_chip_done'], (d) => {
         const map = { ...(d.gp_chip_done || {}) };
-        if (nextDone) map[chipKey] = true;
-        else delete map[chipKey];
-        const eventId =
-          chip.closest('[data-eventid]')?.getAttribute('data-eventid') || chipKey;
+        if (nextDone) map[storageKey] = true;
+        else delete map[storageKey];
         chrome.storage.local.set({ gp_chip_done: map }, async () => {
           try {
-            await globalThis.GoalCalendarSync?.persistSessionCompleted?.(eventId, nextDone);
+            await globalThis.GoalCalendarSync?.persistSessionCompleted?.(storageKey, nextDone);
           } catch (_) {
             /* ignore */
           }
           try {
             const Model = globalThis.GoalPlannerModel;
-            if (Model && eventId) {
+            if (Model && storageKey) {
               const st = await Model.loadUnifiedState();
-              const hit = Model.findSessionByEventId(st, eventId);
+              const hit = Model.findSessionByEventId(st, storageKey);
               await renderGoalsSidebar(
                 st,
                 hit?.goal?.id ? { reason: 'sessionCompletion', goalId: hit.goal.id } : {}
@@ -3069,7 +3071,7 @@
           } catch (_) {
             /* sidebar optional */
           }
-          chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nextDone });
+          chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: storageKey, complete: nextDone });
           renderHomeScreen();
         });
       });
