@@ -470,7 +470,6 @@
   color: var(--goal-progress-color, #d3564b) !important;
   line-height: 1.35;
   margin: 0 !important;
-  opacity: 0.95;
 }
 
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-session-sep {
