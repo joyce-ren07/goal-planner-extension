@@ -1532,8 +1532,9 @@
     header.append(labelBtn, actions);
 
     const body = document.createElement('div');
-    body.className = 'gp-gcal-sidebar-section-body';
+    body.className = 'gp-gcal-sidebar-section-body gcal-ext-goals-list';
     body.id = 'gp-gcal-sidebar-goals-cards';
+    body.dataset.extension = 'my-goals-list';
     body.setAttribute('aria-live', 'polite');
 
     const chevronGlyph = chevronBtn.querySelector('.gp-gcal-sidebar-chevron-icon');
