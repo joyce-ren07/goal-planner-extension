@@ -993,6 +993,46 @@
     return m;
   }
 
+  function nativeSidebarNestedTriggers(rowEl) {
+    if (!rowEl) return [];
+    return [...rowEl.querySelectorAll('[role="button"], button')].filter((n) => {
+      if (n === rowEl || !rowEl.contains(n)) return false;
+      let d = 0;
+      let p = n;
+      while (p && p !== rowEl) {
+        d++;
+        p = p.parentElement;
+      }
+      return d > 0 && d <= 4;
+    });
+  }
+
+  /** Pixels from rightmost nested trigger to row’s right edge (matches native trailing padding). */
+  function nativeSidebarTrailingPaddingPx(rowEl) {
+    const nested = nativeSidebarNestedTriggers(rowEl);
+    const rowRect = rowEl.getBoundingClientRect();
+    if (rowRect.width <= 0 || !nested.length) return 0;
+    let maxIconRight = rowRect.left;
+    for (const b of nested) {
+      const br = b.getBoundingClientRect();
+      if (br.right > maxIconRight) maxIconRight = br.right;
+    }
+    return Math.max(0, Math.round(rowRect.right - maxIconRight));
+  }
+
+  function maxNativeSidebarTrailingPaddingPx(scrollEl) {
+    if (!scrollEl) return 0;
+    let m = 0;
+    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      m = Math.max(m, nativeSidebarTrailingPaddingPx(row));
+    }
+    return m;
+  }
+
   function findNativeSectionContentSibling(headerRef, scrollEl) {
     if (!headerRef || !scrollEl) return null;
     let sib = headerRef.nextElementSibling;
