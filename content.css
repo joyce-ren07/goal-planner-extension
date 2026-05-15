@@ -725,7 +725,6 @@
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title,
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   font-family: inherit;
-  font-weight: 400;
   letter-spacing: normal;
   -webkit-font-smoothing: antialiased;
   white-space: nowrap;
@@ -735,17 +734,19 @@
   align-self: flex-start;
 }
 
-/* Primary line — matches native event/task summary (12px / 16px, regular). */
+/* Primary line — M3 label emphasis: same weight as “Goal” badge (500 / Medium). */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
   font-size: 12px;
   line-height: 16px;
+  font-weight: 500;
   color: #d3564b;
 }
 
-/* Secondary line — same type metrics as native time text; goal brand coral (not GCal gray). */
+/* Secondary line — regular (400); goal brand coral. */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   font-size: 11px;
   line-height: 14px;
+  font-weight: 400;
   color: #d3564b;
   opacity: 1;
 }
