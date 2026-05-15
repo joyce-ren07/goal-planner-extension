@@ -244,7 +244,7 @@
   border-radius: var(--gp-native-icon-btn-br, 9999px);
   background: transparent;
   cursor: var(--gp-native-cursor, pointer);
-  color: var(--gp-m3-on-surface-variant);
+  color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant));
   display: inline-flex;
   align-items: center;
   justify-content: center;
