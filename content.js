@@ -2087,6 +2087,51 @@
     await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
   }
 
+  /**
+   * Projection-only: map gp_chip_done keys (often GCal DOM event ids) onto gp_goals[].calEventIds[]
+   * for merge/sidebar counts. Does not write to storage. Per-goal scoping limits false matches.
+   */
+  function expandChipDoneOntoCalEventIds(chipDone, legacyGoals) {
+    const raw = chipDone && typeof chipDone === 'object' ? { ...chipDone } : {};
+    const goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    for (const g of goals) {
+      const ids = g.calEventIds || [];
+      if (!ids.length) continue;
+      const idSet = new Set(ids.map((x) => String(x)));
+      for (const calId of ids) {
+        if (!calId) continue;
+        const calStr = String(calId);
+        if (raw[calStr]) continue;
+        for (const k of Object.keys(raw)) {
+          if (!raw[k]) continue;
+          if (idSet.has(String(k))) continue;
+          if (gpChipDoneKeyMatchesCalEventId(calStr, k)) {
+            raw[calStr] = true;
+            break;
+          }
+        }
+      }
+    }
+    return raw;
+  }
+
+  function gpChipDoneKeyMatchesCalEventId(calId, chipKey) {
+    if (!calId || chipKey == null || chipKey === '') return false;
+    const a = String(calId);
+    const b = String(chipKey);
+    if (a === b) return true;
+    let dec = b;
+    try {
+      dec = decodeURIComponent(b.replace(/\+/g, ' '));
+    } catch (_) {
+      dec = b;
+    }
+    if (a === dec) return true;
+    if (b.startsWith(`${a}_`) || dec.startsWith(`${a}_`)) return true;
+    if (a.startsWith(`${b}_`)) return true;
+    return false;
+  }
+
   function setupGoalsSidebarReactiveBinding() {
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.subscribeGoalsState) return;
