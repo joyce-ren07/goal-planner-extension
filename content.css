@@ -116,10 +116,10 @@
   --gp-m3-on-primary: var(--gm3-sys-color-on-primary, #ffffff);
   --gp-m3-outline: var(--gm3-sys-color-outline, #747775);
   --gp-m3-surface: var(--gm3-sys-color-surface, #ffffff);
-  /* State layers (M3): hover / pressed on container */
-  --gp-m3-state-hover: color-mix(in srgb, var(--gp-m3-on-surface) 8%, transparent);
-  --gp-m3-state-focus: color-mix(in srgb, var(--gp-m3-on-surface) 10%, transparent);
-  --gp-m3-state-pressed: color-mix(in srgb, var(--gp-m3-on-surface) 12%, transparent);
+  /* State layers: solid fallbacks; refined when color-mix available */
+  --gp-m3-state-hover: rgba(31, 31, 31, 0.08);
+  --gp-m3-state-focus: rgba(31, 31, 31, 0.1);
+  --gp-m3-state-pressed: rgba(31, 31, 31, 0.12);
   --gp-m3-focus-ring: var(--gm3-sys-color-primary, #0b57d0);
 
   box-sizing: border-box;
