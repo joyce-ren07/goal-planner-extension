@@ -1458,6 +1458,52 @@
     }
     root.dataset.gpCollapseMode = collapseMode;
 
+    function gpMergeNativeClassList(nativeEl, hostEl, gpTokenStr) {
+      if (!hostEl) return;
+      const nat = nativeEl && String(nativeEl.className || '').trim();
+      const gp = String(gpTokenStr || '').trim();
+      hostEl.className = nat && gp ? `${nat} ${gp}`.replace(/\s+/g, ' ').trim() : nat || gp;
+    }
+
+    const headerHost = root.querySelector('.gp-gcal-sidebar-section-header');
+    const labelHost = root.querySelector('.gp-gcal-sidebar-label-btn');
+    const addHost = root.querySelector('.gp-gcal-sidebar-add-btn');
+    const chevHost = root.querySelector('.gp-gcal-sidebar-chevron-btn');
+    const actionsHost = root.querySelector('.gp-gcal-sidebar-actions');
+
+    gpMergeNativeClassList(ref, headerHost, 'gp-gcal-sidebar-section-header');
+    if (titleEl) gpMergeNativeClassList(titleEl, labelHost, 'gp-gcal-sidebar-label-btn');
+    if (addBtnHost) gpMergeNativeClassList(addBtnHost, addHost, 'gp-gcal-sidebar-icon-btn gp-gcal-sidebar-add-btn');
+    if (chevronBtnHost) {
+      gpMergeNativeClassList(chevronBtnHost, chevHost, 'gp-gcal-sidebar-icon-btn gp-gcal-sidebar-chevron-btn');
+    }
+    if (cluster && ref.contains(cluster) && actionsHost) {
+      gpMergeNativeClassList(cluster, actionsHost, 'gp-gcal-sidebar-actions');
+    }
+
+    const addGlyphHost = root.querySelector('.gp-gcal-sidebar-add-btn .gp-gcal-sidebar-header-icon');
+    const chevGlyphHost = root.querySelector('.gp-gcal-sidebar-chevron-btn .gp-gcal-sidebar-header-icon');
+    if (addBtnHost && addGlyphHost) {
+      const ng = addBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
+      if (ng) {
+        gpMergeNativeClassList(
+          ng,
+          addGlyphHost,
+          'material-symbols-outlined gp-gcal-sidebar-header-icon'
+        );
+      }
+    }
+    if (chevronBtnHost && chevGlyphHost) {
+      const ng = chevronBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
+      if (ng) {
+        gpMergeNativeClassList(
+          ng,
+          chevGlyphHost,
+          'material-symbols-outlined gp-gcal-sidebar-header-icon gp-gcal-sidebar-chevron-icon'
+        );
+      }
+    }
+
     root.dataset.gpNativeSidebarSyncTs = String(Date.now());
   }
 
