@@ -1876,7 +1876,17 @@
     const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
     if (trackEl) trackEl.style.setProperty('background-color', hexToTint(goalColor, 0.25), 'important');
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-    if (fillEl) fillEl.style.setProperty('background-color', goalColor, 'important');
+    if (fillEl) {
+      fillEl.style.width = `${pctClamped}%`;
+      fillEl.style.setProperty('background-color', goalColor, 'important');
+    }
+    const countSpan = card.querySelector('.gcal-ext-goal-session-count');
+    const pctSpan = card.querySelector('.gcal-ext-goal-session-pct');
+    if (countSpan) countSpan.textContent = `${completed} of ${total} sessions`;
+    if (pctSpan) pctSpan.textContent = `${pctClamped}%`;
+    const { struct, prog } = goalSidebarCardSigs(g, legacyById);
+    card.dataset.gpSidebarStructSig = struct;
+    card.dataset.gpSidebarProgSig = prog;
     card.addEventListener('click', () => handleGoalCardClick(g.id));
     card.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
