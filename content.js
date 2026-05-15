@@ -2979,18 +2979,7 @@
     const unifiedSnapshot = Model ? await Model.loadUnifiedState() : { goals: [] };
     await renderGoalsSidebar(unifiedSnapshot);
 
-    const goals     = await getGoals();
-    const completedRaw = await new Promise((r) =>
-      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
-    );
-    const slotPackHome = await new Promise((r) =>
-      chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
-    );
-    const completed = injectSlotDoneIntoExpandedChipDone(
-      expandChipDoneOntoCalEventIds(completedRaw, goals),
-      goals,
-      slotPackHome
-    );
+    const goals = await getGoals();
     const emptyEl = document.getElementById('gp-empty-state');
     const listEl = document.getElementById('gp-goals-list');
     if (!goals.length) {
@@ -3007,33 +2996,21 @@
       const fallbackEnd = new Date(g.created);
       fallbackEnd.setMonth(fallbackEnd.getMonth() + 3);
       const deadline = new Date(g.endDate || g.deadline || fallbackEnd.toISOString());
-      const totalDays = Math.max(1, Math.ceil((deadline - new Date(g.created)) / 86400000));
-      const elapsed = Math.ceil((now - new Date(g.created)) / 86400000);
       const daysLeft = Math.max(0, Math.ceil((deadline - now) / 86400000));
-      // Use completion-based progress when the user has started checking off sessions;
-      // fall back to time-elapsed progress for goals with no completions yet.
-      const Model = globalThis.GoalPlannerModel;
-      const totalSessions =
-        typeof g.totalSessions === 'number' && g.totalSessions > 0
-          ? g.totalSessions
-          : Model?.resolveGoalTotalSessions?.(g) || (g.calEventIds || []).length;
-      const completedCount   = totalSessions > 0
-        ? (g.calEventIds || []).filter(id => !!completed[id]).length
-        : 0;
-      const pct = totalSessions > 0 && completedCount > 0
-        ? Math.min(100, Math.round((completedCount / totalSessions) * 100))
-        : Math.min(100, Math.round((elapsed / totalDays) * 100));
+      const titleEsc = escapeHtmlGp(g.title || 'Untitled goal');
+      const schedRaw = g.scheduleLabel || '';
+      const subLine = schedRaw ? `${escapeHtmlGp(schedRaw)} · ${daysLeft}d left` : `${daysLeft}d left`;
       return `<div class="gp-goal-row" data-goal-id="${g.id}">
         <div class="gp-goal-row-main">
           <div class="gp-goal-row-info">
-            <p class="gp-goal-chip-name"><span class="material-symbols-outlined gp-ms-icon" style="font-size:13px;vertical-align:middle;margin-right:3px">flag</span>${g.title}</p>
-            <p class="gp-goal-chip-sub">${g.scheduleLabel} · ${daysLeft}d left</p>
+            <p class="gp-goal-chip-name">${titleEsc}</p>
+            <p class="gp-goal-chip-sub">${subLine}</p>
           </div>
+          <span class="gp-goal-row-chevron material-symbols-outlined gp-ms-icon" aria-hidden="true">chevron_right</span>
           <button class="gp-goal-kebab" data-goal-id="${g.id}" aria-label="More options" title="More options">
             <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">more_vert</span>
           </button>
         </div>
-        <div class="gp-progress-bar"><div class="gp-progress-fill" style="width:${pct}%"></div></div>
       </div>`;
     }).join('');
 
