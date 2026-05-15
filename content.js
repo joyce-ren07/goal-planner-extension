@@ -4121,29 +4121,28 @@
     return -1;
   }
 
+  /** All decorated goal chips on the grid for one gp_goals row (DOM order ≠ API id). */
+  function collectGoalChipsForGoalRow(goalRow, legacyGoals) {
+    const gid = goalRow?.id != null ? String(goalRow.id) : '';
+    if (!gid) return [];
+    const pool = Array.isArray(legacyGoals) && legacyGoals.length ? legacyGoals : [goalRow];
+    return [...document.querySelectorAll('[data-eventchip]')].filter((c) => {
+      if (!c.querySelector('.ext-goal-root')) return false;
+      if (c.dataset.gpGoalId && String(c.dataset.gpGoalId) === gid) return true;
+      const row = findLegacyGoalForGoalChip(c, pool);
+      return row && String(row.id) === gid;
+    });
+  }
+
   /**
    * Which session slot (0..n-1) this chip is among all goal chips visible on the calendar grid.
    * Works when DOM ids ≠ API calEventIds and anchors are missing.
    */
-  function resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow) {
+  function resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow, legacyGoals) {
     const allowed = goalRow?.calEventIds || [];
-    if (!allowed.length || !goalRow?.title) return -1;
-    const title = String(goalRow.title).trim();
-    if (!title) return -1;
+    if (!allowed.length || !goalRow?.id) return -1;
 
-    const chips = [...document.querySelectorAll('[data-eventchip]')].filter((c) => {
-      if (!c.textContent?.includes('🎯')) return false;
-      const row =
-        findLegacyGoalForGoalChip(c, [goalRow]) ||
-        (() => {
-          const t =
-            c.querySelector('.ext-goal-title')?.textContent?.replace(/🎯\s*/g, '').trim() ||
-            '';
-          return t && (t.includes(title) || title.includes(t)) ? goalRow : null;
-        })();
-      return row && String(row.id) === String(goalRow.id);
-    });
-
+    const chips = collectGoalChipsForGoalRow(goalRow, legacyGoals);
     if (!chips.length) return -1;
     chips.sort((a, b) => {
       const ra = (a.closest('[data-eventid]') || a).getBoundingClientRect();
@@ -4151,9 +4150,36 @@
       return ra.top - rb.top || ra.left - rb.left;
     });
 
-    const idx = chips.indexOf(chip);
+    let idx = chips.indexOf(chip);
+    if (idx < 0) {
+      const ec = chip.closest('[data-eventid]');
+      if (ec) {
+        const chipRect = ec.getBoundingClientRect();
+        let best = -1;
+        let bestDist = Infinity;
+        chips.forEach((c, i) => {
+          const r = (c.closest('[data-eventid]') || c).getBoundingClientRect();
+          const d =
+            Math.abs(r.top - chipRect.top) + Math.abs(r.left - chipRect.left);
+          if (d < bestDist) {
+            bestDist = d;
+            best = i;
+          }
+        });
+        if (best >= 0 && bestDist < 80) idx = best;
+      }
+    }
     if (idx >= 0 && idx < allowed.length) return idx;
     return -1;
+  }
+
+  function readChipSlotIndexFromDataset(chip, allowedLen) {
+    const raw = chip?.dataset?.gpSlotIdx;
+    if (raw == null || raw === '') return -1;
+    const n = parseInt(String(raw), 10);
+    if (!Number.isFinite(n) || n < 0) return -1;
+    if (allowedLen > 0 && n >= allowedLen) return -1;
+    return n;
   }
 
   async function persistCalEventDomIdForGoalSlot(goalId, slotIdx, domId, legacyGoals) {
