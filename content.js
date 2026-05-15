@@ -868,7 +868,37 @@
   }
 
   // ── Google Calendar left sidebar — collapsible "My goals" (read-only progress; unified state only) ──
+  /** @deprecated Legacy collapsed flag — superseded by GP_GOALS_ACCORDION_OPEN_KEY */
   const GP_LEFT_GOALS_COLLAPSED_KEY = 'gp_left_goals_collapsed';
+  /** Persisted boolean: true = accordion expanded */
+  const GP_GOALS_ACCORDION_OPEN_KEY = 'goalsAccordionOpen';
+
+  /** Google Calendar API `colorId` → hex (event palette) */
+  const GP_CALENDAR_COLOR_ID_HEX = {
+    '1': '#a4bdfc',
+    '2': '#7ae7bf',
+    '3': '#dbadff',
+    '4': '#ff887c',
+    '5': '#fbd75b',
+    '6': '#ffb878',
+    '7': '#46d6db',
+    '8': '#e1e1e1',
+    '9': '#5484ed',
+    '10': '#51b749',
+    '11': '#dc2127',
+  };
+
+  function gpCalendarColorHex(goalId, legacyGoal) {
+    const cid = legacyGoal?.colorId != null ? String(legacyGoal.colorId) : '';
+    if (cid && GP_CALENDAR_COLOR_ID_HEX[cid]) return GP_CALENDAR_COLOR_ID_HEX[cid];
+    if (legacyGoal?.color && /^#/i.test(String(legacyGoal.color))) return String(legacyGoal.color);
+    return '#5484ed';
+  }
+
+  /** Sidebar cards: merge unified sessions with live gp_chip_done for instant checkbox UI */
+  function gpSidebarSessionCompleted(sess, legacyDone) {
+    return !!sess.completed || !!(sess.eventId && legacyDone[sess.eventId]);
+  }
 
   function gpSkipForSidebarScan(el) {
     return el && el.closest && el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback');
@@ -1053,6 +1083,26 @@
     return { pt, pb };
   }
 
+  /** Tightest native header density (min padding-top/bottom across drawer accordions). */
+  function minNativeSidebarHeaderVerticalPaddingPx(scrollEl) {
+    if (!scrollEl) return { pt: 0, pb: 0 };
+    let minPt = Infinity;
+    let minPb = Infinity;
+    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      const { pt, pb } = nativeHeaderVerticalPaddingPx(row);
+      minPt = Math.min(minPt, pt);
+      minPb = Math.min(minPb, pb);
+    }
+    return {
+      pt: minPt === Infinity ? 0 : minPt,
+      pb: minPb === Infinity ? 0 : minPb,
+    };
+  }
+
   /** Max computed padding-right on native headers (row + inner pad container) — catches outer flex padding. */
   function maxNativeSidebarHeaderPaddingRightPx(scrollEl) {
     if (!scrollEl) return 0;
@@ -1203,15 +1253,14 @@
     let prVal = pcs.paddingRight;
     const maxPlAcross = maxNativeSidebarTitleLeftInsetPx(scroll);
     let plNum = Math.max(maxPlAcross, parseFloat(pcs.paddingLeft) || 0);
+    if (titleEl && rr.width > 0) {
+      const plMeas = Math.round(titleEl.getBoundingClientRect().left - rr.left);
+      plNum = Math.max(plNum, plMeas);
+    }
     const scrSt = getComputedStyle(scroll);
     const scrPadL = Math.round(parseFloat(scrSt.paddingLeft) || 0);
     const scrPadR = Math.round(parseFloat(scrSt.paddingRight) || 0);
-    if (titleEl && root.isConnected && rr.width > 0) {
-      const rootR = root.getBoundingClientRect();
-      plNum = Math.max(plNum, Math.round(titleEl.getBoundingClientRect().left - rootR.left));
-    } else {
-      plNum = Math.max(plNum, scrPadL);
-    }
+    plNum = Math.max(plNum, scrPadL);
 
     if (plNum >= 8) plVal = `${Math.round(plNum)}px`;
     const maxPrAcross = maxNativeSidebarTrailingPaddingPx(scroll);
@@ -1231,12 +1280,6 @@
         if (br.right > maxIconRight) maxIconRight = br.right;
       }
       prNum = Math.max(prNum, Math.round(rr.right - maxIconRight));
-      if (root.isConnected) {
-        const rootR = root.getBoundingClientRect();
-        prNum = Math.max(prNum, Math.round(rootR.right - maxIconRight));
-      }
-    } else {
-      prNum = Math.max(prNum, scrPadR);
     }
     prNum = Math.max(prNum, scrPadR);
     if (prNum >= 4) prVal = `${Math.round(prNum)}px`;
@@ -1319,9 +1362,6 @@
     root.style.removeProperty('--gp-native-add-icon-lh');
     root.style.removeProperty('--gp-native-add-icon-weight');
     root.style.removeProperty('--gp-native-add-icon-fvs');
-
-    root.style.removeProperty('--gp-native-icon-fvs');
-    root.style.removeProperty('--gp-native-icon-glyph-weight');
 
     const iconProbe = chevronBtnHost || addBtnHost || nestedClickables[0];
     if (iconProbe) {
@@ -1447,52 +1487,6 @@
       }
     }
     root.dataset.gpCollapseMode = collapseMode;
-
-    function gpMergeNativeClassList(nativeEl, hostEl, gpTokenStr) {
-      if (!hostEl) return;
-      const nat = nativeEl && String(nativeEl.className || '').trim();
-      const gp = String(gpTokenStr || '').trim();
-      hostEl.className = nat && gp ? `${nat} ${gp}`.replace(/\s+/g, ' ').trim() : nat || gp;
-    }
-
-    const headerHost = root.querySelector('.gp-gcal-sidebar-section-header');
-    const labelHost = root.querySelector('.gp-gcal-sidebar-label-btn');
-    const addHost = root.querySelector('.gp-gcal-sidebar-add-btn');
-    const chevHost = root.querySelector('.gp-gcal-sidebar-chevron-btn');
-    const actionsHost = root.querySelector('.gp-gcal-sidebar-actions');
-
-    gpMergeNativeClassList(ref, headerHost, 'gp-gcal-sidebar-section-header');
-    if (titleEl) gpMergeNativeClassList(titleEl, labelHost, 'gp-gcal-sidebar-label-btn');
-    if (addBtnHost) gpMergeNativeClassList(addBtnHost, addHost, 'gp-gcal-sidebar-icon-btn gp-gcal-sidebar-add-btn');
-    if (chevronBtnHost) {
-      gpMergeNativeClassList(chevronBtnHost, chevHost, 'gp-gcal-sidebar-icon-btn gp-gcal-sidebar-chevron-btn');
-    }
-    if (cluster && ref.contains(cluster) && actionsHost) {
-      gpMergeNativeClassList(cluster, actionsHost, 'gp-gcal-sidebar-actions');
-    }
-
-    const addGlyphHost = root.querySelector('.gp-gcal-sidebar-add-btn .gp-gcal-sidebar-header-icon');
-    const chevGlyphHost = root.querySelector('.gp-gcal-sidebar-chevron-btn .gp-gcal-sidebar-header-icon');
-    if (addBtnHost && addGlyphHost) {
-      const ng = addBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
-      if (ng) {
-        gpMergeNativeClassList(
-          ng,
-          addGlyphHost,
-          'material-symbols-outlined gp-gcal-sidebar-header-icon'
-        );
-      }
-    }
-    if (chevronBtnHost && chevGlyphHost) {
-      const ng = chevronBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
-      if (ng) {
-        gpMergeNativeClassList(
-          ng,
-          chevGlyphHost,
-          'material-symbols-outlined gp-gcal-sidebar-header-icon gp-gcal-sidebar-chevron-icon'
-        );
-      }
-    }
 
     root.dataset.gpNativeSidebarSyncTs = String(Date.now());
   }
