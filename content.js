@@ -889,7 +889,7 @@
       if (r.width < 80 || r.width > 560) continue;
       if (r.height < 120) continue;
       if (r.left > Math.min(mainLeft + 40, 400)) continue;
-      const tx (el.textContent || '');
+      const tx = (el.textContent || '');
       if (!/My calendars|Other calendars|Booking pages/i.test(tx)) continue;
       return el;
     }
