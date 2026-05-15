@@ -391,7 +391,7 @@
   color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant, #80868b));
 }
 
-/* Goal cards: hardcoded fallbacks + !important so GCal theme cannot override; per-goal tints come from JS (hexToTint). */
+/* Goal cards — GCal overrides blocked; hues from --goal-progress-color (sidebar row only). Hover tint still JS (--gp-card-bg-hover). */
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-accent {
   display: none !important;
 }
