@@ -1102,9 +1102,7 @@
     let headerBgTrans = '';
     const headerDur = gpMaxTransitionDurationMs(cs.transitionDuration);
     const headerTp = (cs.transitionProperty || '').toLowerCase();
-    const refTransIncludesBg =
-      headerDur > 0 &&
-      (/\b(all|background|background-color)\b/.test(headerTp) || headerTp.split(',').some((p) => !p.trim()));
+    const refTransIncludesBg = headerDur > 0 && /\b(all|background|background-color)\b/.test(headerTp);
     if (headerDur > 0 && refTransIncludesBg) {
       if (cs.transition && !/^all\s+0s\b/i.test(cs.transition.trim())) {
         headerBgTrans = cs.transition;
