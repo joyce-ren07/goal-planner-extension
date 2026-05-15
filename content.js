@@ -2688,12 +2688,17 @@
           queueMicrotask(() => {
             (async () => {
               try {
-                gpMyGoalsSidebarDiag('storage chip/slot fallback (cross-context)', {
+                if (!goalPlannerModelAvailable()) {
+                  await reinforceMyGoalsSidebarProgressFromStorage();
+                  return;
+                }
+                gpMyGoalsSidebarDiag('storage chip/slot — patch from unified only (no reinforce)', {
                   keys: Object.keys(changes).filter(
                     (k) => k === 'gp_chip_done' || k === 'gp_goal_slot_done'
                   ),
                 });
-                await reinforceMyGoalsSidebarProgressFromStorage();
+                const st = await loadAuthoritativeUnifiedForSidebar(null);
+                await patchMyGoalsSidebarProgressRows(st, { reason: 'storageSync' });
               } catch (_) {
                 /* ignore */
               }
