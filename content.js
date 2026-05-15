@@ -113,6 +113,286 @@
     return t.toLowerCase();
   }
 
+  function hexToRgb(hex) {
+    const h = normalizeHexColor(hex);
+    if (!h) return null;
+    const n = parseInt(h.slice(1), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  function rgbToHex(r, g, b) {
+    const clamp = (x) => Math.max(0, Math.min(255, Math.round(x)));
+    return `#${[clamp(r), clamp(g), clamp(b)]
+      .map((x) => x.toString(16).padStart(2, '0'))
+      .join('')}`;
+  }
+
+  function rgbToHsv(r, g, b) {
+    const R = r / 255;
+    const G = g / 255;
+    const B = b / 255;
+    const max = Math.max(R, G, B);
+    const min = Math.min(R, G, B);
+    const d = max - min;
+    const v = max;
+    const s = max === 0 ? 0 : d / max;
+    let h = 0;
+    if (d !== 0) {
+      switch (max) {
+        case R:
+          h = ((G - B) / d + (G < B ? 6 : 0)) / 6;
+          break;
+        case G:
+          h = ((B - R) / d + 2) / 6;
+          break;
+        default:
+          h = ((R - G) / d + 4) / 6;
+          break;
+      }
+    }
+    return { h: h * 360, s, v };
+  }
+
+  function hsvToRgb(h, s, v) {
+    const hh = ((((h / 360) % 1) + 1) % 1) * 6;
+    const i = Math.floor(hh);
+    const f = hh - i;
+    const p = v * (1 - s);
+    const q = v * (1 - f * s);
+    const t = v * (1 - (1 - f) * s);
+    let r; let g; let b;
+    switch (i % 6) {
+      case 0:
+        r = v; g = t; b = p;
+        break;
+      case 1:
+        r = q; g = v; b = p;
+        break;
+      case 2:
+        r = p; g = v; b = t;
+        break;
+      case 3:
+        r = p; g = q; b = v;
+        break;
+      case 4:
+        r = t; g = p; b = v;
+        break;
+      default:
+        r = v; g = p; b = q;
+        break;
+    }
+    return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+  }
+
+  let gpCtSpectrumH = 210;
+  let gpCtSpectrumS = 0.65;
+  let gpCtSpectrumV = 0.95;
+  let gpCtSpectrumPopWired = false;
+
+  function closeGpCtSpectrumPop() {
+    const spec = document.getElementById('gp-ct-spectrum-pop');
+    if (spec) spec.hidden = true;
+  }
+
+  function renderGpCtSpectrumUi() {
+    const bg = document.getElementById('gp-ct-sv-bg');
+    const pure = hsvToRgb(gpCtSpectrumH, 1, 1);
+    if (bg) bg.style.backgroundColor = `rgb(${pure.r},${pure.g},${pure.b})`;
+    const svMark = document.getElementById('gp-ct-sv-marker');
+    if (svMark) {
+      svMark.style.left = `${gpCtSpectrumS * 100}%`;
+      svMark.style.top = `${(1 - gpCtSpectrumV) * 100}%`;
+    }
+    const hueMark = document.getElementById('gp-ct-hue-marker');
+    if (hueMark) {
+      hueMark.style.left = `${(gpCtSpectrumH / 360) * 100}%`;
+    }
+    const hexIn = document.getElementById('gp-ct-spectrum-hex');
+    if (hexIn && document.activeElement !== hexIn) {
+      const { r, g, b } = hsvToRgb(gpCtSpectrumH, gpCtSpectrumS, gpCtSpectrumV);
+      hexIn.value = rgbToHex(r, g, b);
+    }
+  }
+
+  function commitSpectrumToTag() {
+    const { r, g, b } = hsvToRgb(gpCtSpectrumH, gpCtSpectrumS, gpCtSpectrumV);
+    applyInlineNewTagCustomColorFromPicker(rgbToHex(r, g, b));
+  }
+
+  function positionGpCtSpectrumPop(anchor) {
+    const spec = document.getElementById('gp-ct-spectrum-pop');
+    if (!spec || !anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const w = spec.offsetWidth || 240;
+    const h = spec.offsetHeight || 220;
+    const left = Math.min(window.innerWidth - w - 8, Math.max(8, r.left));
+    const top = Math.min(window.innerHeight - h - 8, r.bottom + 6);
+    spec.style.left = `${left}px`;
+    spec.style.top = `${top}px`;
+  }
+
+  function openGpCtSpectrumPicker(anchorBtn) {
+    const spec = ensureGpCtSpectrumPop();
+    const dot = document.getElementById('gp-ct-new-tag-dot');
+    let hex0 = '#1a73e8';
+    if (dot?.dataset.colorKey === 'custom' && dot.dataset.customHex) {
+      hex0 = normalizeHexColor(dot.dataset.customHex) || hex0;
+    } else if (dot?.dataset.colorKey && TAG_HEX_BY_KEY[dot.dataset.colorKey]) {
+      hex0 = TAG_HEX_BY_KEY[dot.dataset.colorKey];
+    }
+    const rgb = hexToRgb(hex0);
+    if (rgb) {
+      const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+      gpCtSpectrumH = hsv.h;
+      gpCtSpectrumS = hsv.s;
+      gpCtSpectrumV = hsv.v;
+    }
+    spec.hidden = false;
+    renderGpCtSpectrumUi();
+    requestAnimationFrame(() => {
+      positionGpCtSpectrumPop(anchorBtn);
+    });
+  }
+
+  function ensureGpCtSpectrumPop() {
+    let el = document.getElementById('gp-ct-spectrum-pop');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'gp-ct-spectrum-pop';
+    el.className = 'gp-ct-spectrum-pop';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Custom color spectrum');
+    el.hidden = true;
+    el.innerHTML = `
+      <div class="gp-ct-spectrum-pop-inner">
+        <div class="gp-ct-sv-surface" id="gp-ct-sv-surface">
+          <div class="gp-ct-sv-bg" id="gp-ct-sv-bg"></div>
+          <div class="gp-ct-sv-grad-s" aria-hidden="true"></div>
+          <div class="gp-ct-sv-grad-v" aria-hidden="true"></div>
+          <div class="gp-ct-sv-marker" id="gp-ct-sv-marker"></div>
+        </div>
+        <div class="gp-ct-hue-strip" id="gp-ct-hue-strip">
+          <div class="gp-ct-hue-marker" id="gp-ct-hue-marker"></div>
+        </div>
+        <div class="gp-ct-spectrum-hex-row">
+          <label class="gp-ct-spectrum-hex-label" for="gp-ct-spectrum-hex">Hex</label>
+          <input type="text" id="gp-ct-spectrum-hex" class="gp-ct-spectrum-hex" maxlength="7" autocomplete="off" spellcheck="false" placeholder="#000000" />
+        </div>
+      </div>`.trim();
+    document.body.appendChild(el);
+    el.style.position = 'fixed';
+    el.style.zIndex = '2147483647';
+
+    const surf = el.querySelector('#gp-ct-sv-surface');
+    const hueStrip = el.querySelector('#gp-ct-hue-strip');
+    const hexIn = el.querySelector('#gp-ct-spectrum-hex');
+
+    const updateSvFromClient = (clientX, clientY) => {
+      if (!surf) return;
+      const rect = surf.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+      gpCtSpectrumS = rect.width ? x / rect.width : 0;
+      gpCtSpectrumV = rect.height ? 1 - y / rect.height : 0;
+      renderGpCtSpectrumUi();
+      commitSpectrumToTag();
+    };
+
+    const updateHueFromClient = (clientX) => {
+      if (!hueStrip) return;
+      const rect = hueStrip.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      gpCtSpectrumH = rect.width ? (x / rect.width) * 360 : 0;
+      renderGpCtSpectrumUi();
+      commitSpectrumToTag();
+    };
+
+    let svDrag = false;
+    let hueDrag = false;
+
+    surf?.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      svDrag = true;
+      surf.setPointerCapture(e.pointerId);
+      updateSvFromClient(e.clientX, e.clientY);
+    });
+    surf?.addEventListener('pointermove', (e) => {
+      if (!svDrag) return;
+      updateSvFromClient(e.clientX, e.clientY);
+    });
+    surf?.addEventListener('pointerup', (e) => {
+      if (!svDrag) return;
+      svDrag = false;
+      try {
+        surf.releasePointerCapture(e.pointerId);
+      } catch (_) {
+        /* ignore */
+      }
+    });
+    surf?.addEventListener('pointercancel', () => {
+      svDrag = false;
+    });
+
+    hueStrip?.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      hueDrag = true;
+      hueStrip.setPointerCapture(e.pointerId);
+      updateHueFromClient(e.clientX);
+    });
+    hueStrip?.addEventListener('pointermove', (e) => {
+      if (!hueDrag) return;
+      updateHueFromClient(e.clientX);
+    });
+    hueStrip?.addEventListener('pointerup', (e) => {
+      if (!hueDrag) return;
+      hueDrag = false;
+      try {
+        hueStrip.releasePointerCapture(e.pointerId);
+      } catch (_) {
+        /* ignore */
+      }
+    });
+    hueStrip?.addEventListener('pointercancel', () => {
+      hueDrag = false;
+    });
+
+    hexIn?.addEventListener('input', () => {
+      const hx = normalizeHexColor(hexIn.value);
+      if (!hx) return;
+      const rgb = hexToRgb(hx);
+      if (!rgb) return;
+      const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+      gpCtSpectrumH = hsv.h;
+      gpCtSpectrumS = hsv.s;
+      gpCtSpectrumV = hsv.v;
+      renderGpCtSpectrumUi();
+      commitSpectrumToTag();
+    });
+
+    if (!gpCtSpectrumPopWired) {
+      gpCtSpectrumPopWired = true;
+      document.addEventListener(
+        'pointerdown',
+        (e) => {
+          const spec = document.getElementById('gp-ct-spectrum-pop');
+          if (!spec || spec.hidden) return;
+          if (spec.contains(e.target)) return;
+          if (e.target.closest('#gp-ct-color-custom-hit')) return;
+          closeGpCtSpectrumPop();
+        },
+        true,
+      );
+      window.addEventListener('resize', () => {
+        const spec = document.getElementById('gp-ct-spectrum-pop');
+        if (!spec || spec.hidden) return;
+        const anchor = document.querySelector('.gp-ct-color-plus-btn');
+        if (anchor) positionGpCtSpectrumPop(anchor);
+      });
+    }
+
+    return el;
+  }
+
   function normalizeTags(raw) {
     const fallback = getDefaultTags();
     if (!Array.isArray(raw) || raw.length === 0) {
@@ -2076,7 +2356,7 @@
     <div class="gp-ct-scrim" data-gp-ct-dismiss="true" aria-hidden="true"></div>
     <div class="gp-ct-dialog" role="dialog" aria-modal="true" aria-labelledby="gp-ct-heading">
       <header class="gp-ct-header">
-        <div class="gp-ct-header-left">
+        <div class="gp-ct-header-chrome" aria-hidden="true">
           <span class="gp-ct-drag" aria-hidden="true">
             <span class="gp-ct-drag-dot"></span>
             <span class="gp-ct-drag-dot"></span>
@@ -2090,27 +2370,24 @@
           </span>
           <span id="gp-ct-heading" class="gp-ct-header-title">Task</span>
         </div>
-        <div class="gp-ct-header-right">
-          <button type="submit" form="gp-ct-form" class="gp-ct-btn gp-ct-btn--primary gp-ct-header-save">Save</button>
-          <button type="button" class="gp-ct-icon-btn" data-gp-ct-dismiss="true" aria-label="Close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
+        <button type="submit" form="gp-ct-form" class="gp-ct-btn gp-ct-btn--primary gp-ct-header-save" tabindex="-1" aria-hidden="true">Save</button>
+        <button type="button" class="gp-ct-icon-btn gp-ct-close-btn" data-gp-ct-dismiss="true" aria-label="Close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </header>
       <form id="gp-ct-form" class="gp-ct-form" novalidate>
         <input type="hidden" name="column" id="gp-ct-column" value="todo">
         <input type="hidden" name="chip" id="gp-ct-chip" value="">
         <div class="gp-ct-field gp-ct-field--title">
-          <input class="gp-ct-title-input" name="title" type="text" autocomplete="off" placeholder="Add task" aria-label="Task title">
+          <input class="gp-ct-title-input" name="title" type="text" autocomplete="off" placeholder="Add title" aria-label="Task title">
         </div>
         <div class="gp-ct-row gp-ct-row--date">
           <span class="gp-ct-row-icon" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
+              <circle cx="12" cy="12" r="9"></circle>
+              <polyline points="12 7 12 12 15 14"></polyline>
             </svg>
           </span>
           <div class="gp-ct-date-cluster">
@@ -2146,18 +2423,15 @@
                 <input type="text" class="gp-ct-time-txt" name="dueTimeEnd" id="gp-ct-time-end" inputmode="text" autocomplete="off" spellcheck="false" placeholder="7:30pm" aria-label="End time">
               </div>
             </div>
+            <label class="gp-ct-repeat gp-ct-repeat--inline">
+              <span class="gp-ct-sublabel">Repeat</span>
+              <select class="gp-ct-select" name="repeat" aria-label="Repeat">
+                <option value="none" selected>Does not repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
           </div>
-        </div>
-        <div class="gp-ct-row gp-ct-row--repeat">
-          <span class="gp-ct-row-spacer"></span>
-          <label class="gp-ct-repeat">
-            <span class="gp-ct-sublabel">Repeat</span>
-            <select class="gp-ct-select" name="repeat" aria-label="Repeat">
-              <option value="none" selected>Does not repeat</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </label>
         </div>
         <div class="gp-ct-section gp-ct-section--tags" id="gp-ct-tag-section">
           <div class="gp-ct-section-label">Category</div>
@@ -2317,6 +2591,7 @@
   }
 
   function closeGlobalCreateTaskModal() {
+    closeGpCtSpectrumPop();
     closeCreateTaskCalendar();
     const root = getGlobalTaskModalsRoot();
     const layer = document.getElementById('gp-ct-layer');
@@ -2348,6 +2623,15 @@
     const tags = (state.tags || []).filter((t) => !t.hidden);
     const chipVal = document.getElementById('gp-ct-chip')?.value;
 
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'gp-ct-chip gp-ct-chip--dashed';
+    addBtn.id = 'gp-ct-chip-new';
+    addBtn.setAttribute('role', 'option');
+    addBtn.setAttribute('aria-selected', 'false');
+    addBtn.textContent = '+ New';
+    row.appendChild(addBtn);
+
     tags.forEach((tag) => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -2365,15 +2649,6 @@
       row.appendChild(btn);
     });
 
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.className = 'gp-ct-chip gp-ct-chip--dashed';
-    addBtn.id = 'gp-ct-chip-new';
-    addBtn.setAttribute('role', 'option');
-    addBtn.setAttribute('aria-selected', 'false');
-    addBtn.textContent = '+ New';
-    row.appendChild(addBtn);
-
     const chipInput = document.getElementById('gp-ct-chip');
     if (chipInput && !chipInput.value && tags[0]) {
       chipInput.value = tags[0].label;
@@ -2389,7 +2664,8 @@
     dot.dataset.customHex = hex;
     dot.style.background = hex;
     document.querySelectorAll('#gp-ct-color-pop .gp-ct-color-swatch').forEach((s) => s.classList.remove('is-selected'));
-    document.getElementById('gp-ct-color-custom-wrap')?.classList.add('is-selected');
+    const hit = document.getElementById('gp-ct-color-custom-hit');
+    hit?.classList.add('is-selected');
   }
 
   function openInlineNewTagEditor() {
@@ -2407,29 +2683,39 @@
     dot.style.background = TAG_HEX_BY_KEY[firstKey];
     pop.hidden = false;
     pop.innerHTML = '';
-    const wrap = document.createElement('div');
-    wrap.className = 'gp-ct-color-custom-wrap';
-    wrap.id = 'gp-ct-color-custom-wrap';
-    const lab = document.createElement('span');
-    lab.className = 'gp-ct-color-custom-label';
-    lab.textContent = 'Custom color';
-    const nat = document.createElement('input');
-    nat.type = 'color';
-    nat.id = 'gp-ct-tag-color-native';
-    nat.className = 'gp-ct-tag-color-native';
-    nat.value = TAG_HEX_BY_KEY[firstKey];
-    nat.setAttribute('aria-label', 'Custom tag color');
-    wrap.appendChild(lab);
-    wrap.appendChild(nat);
-    pop.appendChild(wrap);
+    const customHit = document.createElement('div');
+    customHit.className = 'gp-ct-color-custom-hit';
+    customHit.id = 'gp-ct-color-custom-hit';
+    const plusBtn = document.createElement('button');
+    plusBtn.type = 'button';
+    plusBtn.className = 'gp-ct-color-plus-btn';
+    plusBtn.setAttribute('aria-label', 'Custom color: open hue and hex spectrum');
+    plusBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    plusBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const spec = document.getElementById('gp-ct-spectrum-pop');
+      if (spec && !spec.hidden) {
+        closeGpCtSpectrumPop();
+      } else {
+        openGpCtSpectrumPicker(plusBtn);
+      }
+    });
+    customHit.appendChild(plusBtn);
+    pop.appendChild(customHit);
+    const checkSvg = `<svg class="gp-ct-swatch-check-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>`;
     TAG_PALETTE_KEYS.forEach((key) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'gp-ct-color-swatch';
       b.dataset.colorKey = key;
-      b.style.setProperty('--sw', TAG_HEX_BY_KEY[key]);
       b.style.background = TAG_HEX_BY_KEY[key];
       b.setAttribute('aria-label', `Color ${key}`);
+      const chk = document.createElement('span');
+      chk.className = 'gp-ct-swatch-check';
+      chk.setAttribute('aria-hidden', 'true');
+      chk.innerHTML = checkSvg;
+      b.appendChild(chk);
       if (key === firstKey) b.classList.add('is-selected');
       pop.appendChild(b);
     });
@@ -2437,6 +2723,7 @@
   }
 
   function closeInlineNewTagEditor() {
+    closeGpCtSpectrumPop();
     const box = document.getElementById('gp-ct-new-tag');
     const pop = document.getElementById('gp-ct-color-pop');
     if (box) box.hidden = true;
@@ -2864,25 +3151,18 @@
     document.getElementById('gp-ct-color-pop')?.addEventListener('click', (e) => {
       const sw = e.target.closest('.gp-ct-color-swatch');
       if (!sw) return;
+      closeGpCtSpectrumPop();
       const key = sw.dataset.colorKey;
       const dot = document.getElementById('gp-ct-new-tag-dot');
       if (dot && key) {
         delete dot.dataset.customHex;
         dot.dataset.colorKey = key;
         dot.style.background = TAG_HEX_BY_KEY[key] || '#5f6368';
-        const nat = document.getElementById('gp-ct-tag-color-native');
-        if (nat) nat.value = TAG_HEX_BY_KEY[key] || '#1a73e8';
       }
       document.querySelectorAll('#gp-ct-color-pop .gp-ct-color-swatch').forEach((s) => {
         s.classList.toggle('is-selected', s === sw);
       });
-      document.getElementById('gp-ct-color-custom-wrap')?.classList.remove('is-selected');
-    });
-
-    document.getElementById('gp-ct-color-pop')?.addEventListener('input', (e) => {
-      const nat = e.target.closest('#gp-ct-tag-color-native');
-      if (!nat || nat.type !== 'color') return;
-      applyInlineNewTagCustomColorFromPicker(nat.value);
+      document.getElementById('gp-ct-color-custom-hit')?.classList.remove('is-selected');
     });
 
     document.getElementById('gp-mt-cancel')?.addEventListener('click', () => {
@@ -2947,6 +3227,12 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
+      const spec = document.getElementById('gp-ct-spectrum-pop');
+      if (spec && !spec.hidden) {
+        closeGpCtSpectrumPop();
+        e.preventDefault();
+        return;
+      }
       const newTag = document.getElementById('gp-ct-new-tag');
       if (newTag && !newTag.hidden) {
         closeInlineNewTagEditor();
