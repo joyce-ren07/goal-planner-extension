@@ -3736,6 +3736,8 @@
             scheduleLabel: schedLabel,
             recurrence: { ...r },
             endDate: r.endDate || '',
+            startDate,
+            totalSessions,
             calEventIds: eventIds,
             sessionAnchors,
             colorId: goals[idx].colorId || '9',
