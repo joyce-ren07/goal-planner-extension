@@ -1003,7 +1003,7 @@
     /** Insert directly after Task (same cluster as native quick-create). */
     const taskItem =
       [...menu.querySelectorAll('[role="menuitem"]:not([' + GP_CREATE_MENU_GOAL_ATTR + '])')].find((i) =>
-        /^\s*task\s*$/i.test((i.textContent || '').trim())
+        /^\s*task\b/i.test((i.textContent || '').trim())
       ) || null;
     if (taskItem && taskItem.parentNode === menu)
       menu.insertBefore(row, taskItem.nextSibling);
