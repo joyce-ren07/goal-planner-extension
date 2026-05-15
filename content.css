@@ -126,8 +126,8 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin-left: var(--gp-native-root-ml, 0);
-  margin-right: var(--gp-native-root-mr, 0);
+  margin-left: calc(var(--gp-native-root-ml, 0px) - 12px);
+  margin-right: calc(var(--gp-native-root-mr, 0px) + 12px);
   margin-top: 0;
   margin-bottom: 0;
   /* Extra inset so “My goals” + cards sit slightly narrower than the raw sidebar column. */
