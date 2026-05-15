@@ -1976,7 +1976,10 @@
       document.querySelector('[data-extension="my-goals-list"]') ||
       document.getElementById('gp-gcal-sidebar-goals-cards');
     const root = document.getElementById('gp-gcal-sidebar-goals-root');
-    if (!container || !root) return;
+    if (!container || !root) {
+      scheduleLeftSidebarGoalsMount();
+      return;
+    }
 
     const legacyById =
       legacyByIdCache || new Map((await getGoals()).map((gk) => [gk.id, gk]));
