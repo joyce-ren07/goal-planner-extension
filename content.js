@@ -2246,6 +2246,10 @@
           chips.forEach(c => {
             c._resizeObserver?.disconnect();
             c._resizeMutAttrObs?.disconnect();
+            if (c._gpLabelSyncRaf != null) {
+              cancelAnimationFrame(c._gpLabelSyncRaf);
+              c._gpLabelSyncRaf = null;
+            }
           });
         });
       }
