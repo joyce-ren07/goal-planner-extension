@@ -3556,12 +3556,12 @@
     let plannerEventId = '';
     const quick = resolveChipCompletionTarget(chip, legacyGoals);
     const ids = goal?.calEventIds || [];
-    if (quick.plannerEventId && ids.includes(quick.plannerEventId)) {
+    if (quick.plannerEventId && calEventIdsContain(ids, quick.plannerEventId)) {
       plannerEventId = quick.plannerEventId;
     }
     if (!plannerEventId && goal) {
       const norm = resolvePlannerEventIdForChip(domId || storageKey || '', [goal]);
-      if (norm && ids.includes(norm)) plannerEventId = norm;
+      if (norm && calEventIdsContain(ids, norm)) plannerEventId = norm;
     }
 
     const anchorGoal = await enrichGoalRowWithUnifiedAnchors(goal, legacyGoals, chipDoneMap);
