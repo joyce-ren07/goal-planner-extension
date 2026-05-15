@@ -365,13 +365,7 @@
       document.getElementById('gp-confirm-title-input')?.value?.trim() ||
       document.getElementById('gp-goal-title')?.value?.trim() ||
       String(state.goalTitle || '').trim();
-    const base =
-      (c ||
-        ({
-          Goal: '🎯 Goal',
-        }.Goal?.replace?.(/^.*$/, 'Goal'))) ? c : '🎯 Goal';
-    if (!c) return 'Goal preview';
-    return c;
+    return c || 'Goal';
   }
 
   /**
