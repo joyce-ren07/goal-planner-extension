@@ -2172,7 +2172,29 @@
         for (const k of Object.keys(raw)) {
           if (!raw[k]) continue;
           if (idSet.has(String(k))) continue;
-          if (gpChipDoneKeyMatchesCalEventId(calStr, k)) {
+          if (
+            gpChipDoneKeyMatchesCalEventId(calStr, k) ||
+            gpChipDoneKeyMatchesCalEventId(k, calStr)
+          ) {
+            raw[calStr] = true;
+            break;
+          }
+        }
+      }
+    }
+    const truthyKeys = Object.keys(raw).filter((k) => raw[k]);
+    for (const g of goals) {
+      const ids = g.calEventIds || [];
+      if (!ids.length) continue;
+      const idStrSet = new Set(ids.map((x) => String(x)));
+      const syntheticGoal = [{ calEventIds: ids }];
+      for (const calId of ids) {
+        const calStr = String(calId);
+        if (raw[calStr]) continue;
+        for (const k of truthyKeys) {
+          if (idStrSet.has(String(k))) continue;
+          const hit = resolvePlannerEventIdForChip(k, syntheticGoal);
+          if (hit && calEventIdsContain(ids, hit)) {
             raw[calStr] = true;
             break;
           }
