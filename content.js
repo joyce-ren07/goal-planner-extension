@@ -1921,6 +1921,140 @@
     if (fillEl) fillEl.style.width = `${pctClamped}%`;
   }
 
+  /** Temporary trace for Goal → My Goals sidebar progress pipeline; set false after verification. */
+  const GP_MY_GOALS_SIDEBAR_DIAG = true;
+
+  function gpMyGoalsSidebarDiag(...args) {
+    if (!GP_MY_GOALS_SIDEBAR_DIAG) return;
+    console.log('[gp-my-goals-sidebar]', ...args);
+  }
+
+  function goalUnifiedProgressSnapshot(g) {
+    const sessions = g?.sessions || [];
+    const total = sessions.length;
+    const completedSessions = total ? sessions.filter((s) => !!s.completed).length : 0;
+    const progressPct =
+      typeof g?.progressPct === 'number'
+        ? Math.max(0, Math.min(100, Math.round(g.progressPct)))
+        : computeGoalSidebarNumbers(g).pctClamped;
+    return { total, completedSessions, progressPct };
+  }
+
+  function diffUnifiedGoalProgressChanges(oldState, newState) {
+    const oldGoals = Array.isArray(oldState?.goals) ? oldState.goals : [];
+    const newGoals = Array.isArray(newState?.goals) ? newState.goals : [];
+    const oldById = new Map(oldGoals.map((g) => [String(g.id), g]));
+    const out = [];
+    for (const ng of newGoals) {
+      const id = String(ng.id);
+      const og = oldById.get(id);
+      const prev = og
+        ? goalUnifiedProgressSnapshot(og)
+        : { total: 0, completedSessions: 0, progressPct: 0 };
+      const next = goalUnifiedProgressSnapshot(ng);
+      if (
+        prev.completedSessions !== next.completedSessions ||
+        prev.progressPct !== next.progressPct ||
+        prev.total !== next.total
+      ) {
+        out.push({ goalId: id, prev, next });
+      }
+    }
+    return out;
+  }
+
+  function findSidebarGoalCardById(container, goalId) {
+    if (!container || goalId == null || goalId === '') return null;
+    const gid = String(goalId);
+    try {
+      const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(gid) : gid;
+      const bySel = container.querySelector(`.gcal-ext-goal-card[data-goal-id="${esc}"]`);
+      if (bySel) return bySel;
+    } catch (_) {
+      /* fall through */
+    }
+    return (
+      [...container.children].find(
+        (el) =>
+          el.matches?.('.gcal-ext-goal-card[data-goal-id]') && String(el.dataset.goalId) === gid
+      ) || null
+    );
+  }
+
+  function refreshSidebarGoalsSigDataset(goals, legacyById, root) {
+    const sigJoined = goals
+      .map((g) => {
+        const p = goalSidebarCardSigs(g, legacyById);
+        return `${p.struct}|${p.prog}`;
+      })
+      .join('||');
+    if (root) root.dataset.gpSidebarGoalsSig = sigJoined;
+    return sigJoined;
+  }
+
+  /**
+   * Minimal My Goals sidebar row patch: progress fill + session count + percentage only.
+   * @param {{ goals?: unknown[] }} mergedState Unified + legacy/chip projection
+   * @param {{ reason?: string, goalId?: string, progressDiffs?: { goalId: string, prev: object, next: object }[], legacyById?: Map<string, unknown> }} [meta]
+   */
+  async function patchMyGoalsSidebarProgressRows(mergedState, meta) {
+    mountLeftSidebarGoalsSection();
+    const container =
+      document.getElementById('gp-gcal-sidebar-goals-cards') ||
+      document.querySelector('#gp-gcal-sidebar-goals-root .gcal-ext-goals-list');
+    const root = document.getElementById('gp-gcal-sidebar-goals-root');
+    if (!container || !root) {
+      scheduleLeftSidebarGoalsMount();
+      return;
+    }
+
+    const goals = Array.isArray(mergedState?.goals) ? mergedState.goals : [];
+    if (!goals.length) return;
+
+    let legacyById = meta?.legacyById || null;
+    if (!legacyById) {
+      const legacyRowsRaw = await getGoals();
+      const legacyRows = Array.isArray(legacyRowsRaw) ? legacyRowsRaw : [];
+      legacyById = new Map(legacyRows.map((gk) => [gk.id, gk]));
+    }
+
+    const idsFromDiffs = (meta?.progressDiffs || []).map((d) => d.goalId);
+    const idsToPatch = [
+      ...new Set(
+        meta?.goalId != null && meta.goalId !== ''
+          ? [String(meta.goalId)]
+          : idsFromDiffs.length
+            ? idsFromDiffs
+            : meta?.reason === 'sessionCompletion'
+              ? goals.map((g) => String(g.id))
+              : []
+      ),
+    ];
+    if (!idsToPatch.length) return;
+
+    for (const gid of idsToPatch) {
+      const g = goals.find((x) => String(x.id) === gid);
+      if (!g) continue;
+      const card = findSidebarGoalCardById(container, gid);
+      const diffEntry = (meta?.progressDiffs || []).find((d) => d.goalId === gid);
+      const snap = goalUnifiedProgressSnapshot(g);
+      gpMyGoalsSidebarDiag('Goal state → sidebar verify', {
+        goalId: gid,
+        completedSessions: diffEntry
+          ? { old: diffEntry.prev.completedSessions, new: diffEntry.next.completedSessions }
+          : snap.completedSessions,
+        progressPct: diffEntry
+          ? { old: diffEntry.prev.progressPct, new: diffEntry.next.progressPct }
+          : snap.progressPct,
+        rowFound: !!card,
+      });
+      if (!card) continue;
+      syncSingleSidebarGoalCard(card, g, legacyById, true);
+      gpMyGoalsSidebarDiag('sidebar row update triggered', { goalId: gid });
+    }
+    refreshSidebarGoalsSigDataset(goals, legacyById, root);
+  }
+
   function updateSidebarGoalCardElement(card, g, legacyById) {
     if (!card || !g) return;
     const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
