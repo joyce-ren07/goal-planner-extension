@@ -4198,7 +4198,10 @@
     const allowed = goalRow?.calEventIds || [];
     if (!allowed.length) return -1;
 
-    let idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
+    let idx = resolveSlotIndexByAnchorTime(chip, goalRow);
+    if (idx >= 0) return idx;
+
+    idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
     if (idx >= 0) return idx;
 
     const probes = [...(mirrorKeys || []), plannerEventId, storageKey]
