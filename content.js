@@ -2759,6 +2759,13 @@
       if (isEditing) {
         const idx = goals.findIndex(g => g.id === state.editingGoalId);
         if (idx !== -1) {
+          const sessionAnchors = [];
+          for (let i = 0; i < eventIds.length; i++) {
+            const sug = state.suggestions[i];
+            if (sug?.isoStart && eventIds[i]) {
+              sessionAnchors.push({ eventId: eventIds[i], isoStart: sug.isoStart });
+            }
+          }
           goals[idx] = {
             ...goals[idx],
             title: state.goalTitle,
@@ -2766,11 +2773,19 @@
             recurrence: { ...r },
             endDate: r.endDate || '',
             calEventIds: eventIds,
+            sessionAnchors,
             colorId: goals[idx].colorId || '9',
             color: goals[idx].color || GP_GOAL_DEFAULT_UI_COLOR,
           };
         }
       } else {
+        const sessionAnchors = [];
+        for (let i = 0; i < eventIds.length; i++) {
+          const sug = state.suggestions[i];
+          if (sug?.isoStart && eventIds[i]) {
+            sessionAnchors.push({ eventId: eventIds[i], isoStart: sug.isoStart });
+          }
+        }
         goals.push({
           id: generateId(),
           title: state.goalTitle,
@@ -2779,6 +2794,7 @@
           endDate: r.endDate || '',
           created: new Date().toISOString(),
           calEventIds: eventIds,
+          sessionAnchors,
           colorId: '9',
           color: GP_GOAL_DEFAULT_UI_COLOR,
         });
