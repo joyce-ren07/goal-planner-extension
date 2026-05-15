@@ -107,12 +107,11 @@
   text-align: center; margin: 0; line-height: 18px;
 }
 
-/* ── Left drawer: “My goals” row — Material Design 3 (inherits Calendar gm3-sys-* when available) ── */
+/* ── Left drawer: “My goals” — layout/typography synced from native accordion rows via JS (--gp-native-*) ── */
 .gp-gcal-sidebar-goals-root {
-  /* Map to Google Calendar Web GM3 surface tokens; solid fallbacks match M3 light baseline */
+  /* Fallback GM3 map when host tokens exist; font/geometry overridden by native probe when sync runs */
   --gp-m3-on-surface: var(--gm3-sys-color-on-surface, #1f1f1f);
   --gp-m3-on-surface-variant: var(--gm3-sys-color-on-surface-variant, #44474f);
-  /* State layers: solid fallbacks; refined when color-mix available */
   --gp-m3-state-hover: rgba(31, 31, 31, 0.08);
   --gp-m3-state-focus: rgba(31, 31, 31, 0.1);
   --gp-m3-state-pressed: rgba(31, 31, 31, 0.12);
@@ -122,14 +121,16 @@
   width: 100%;
   margin: 0;
   padding: 0;
-  font-family:
+  font-family: var(
+    --gp-native-font-family,
     'Google Sans Flex',
     'Google Sans',
     'Google Sans Text',
     Roboto,
     'Helvetica Neue',
     Arial,
-    sans-serif;
+    sans-serif
+  );
   color: var(--gp-m3-on-surface);
   -webkit-font-smoothing: antialiased;
 }
