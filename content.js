@@ -1902,6 +1902,14 @@
     return card;
   }
 
+  /** Temporary trace for Goal → My Goals sidebar progress pipeline; set false after verification. */
+  const GP_MY_GOALS_SIDEBAR_DIAG = true;
+
+  function gpMyGoalsSidebarDiag(...args) {
+    if (!GP_MY_GOALS_SIDEBAR_DIAG) return;
+    console.log('[gp-my-goals-sidebar]', ...args);
+  }
+
   let _gpSidebarPatchTraceSeq = 0;
 
   function inspectSidebarGoalCardDom(card) {
