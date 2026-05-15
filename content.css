@@ -166,6 +166,9 @@
     var(--gp-native-header-pl, 24px);
   border-radius: var(--gp-native-header-br, 9999px);
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   user-select: none;
   cursor: var(--gp-native-cursor, pointer);
   background-color: transparent;
