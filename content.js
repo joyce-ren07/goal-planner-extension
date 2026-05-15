@@ -1258,9 +1258,9 @@
     if (cs.marginLeft && cs.marginLeft !== '0px') setVar('--gp-native-root-ml', cs.marginLeft);
     if (cs.marginRight && cs.marginRight !== '0px') setVar('--gp-native-root-mr', cs.marginRight);
 
-    const minVert = minNativeSidebarHeaderVerticalPaddingPx(scroll);
-    let headerPt = minVert.pt;
-    let headerPb = minVert.pb;
+    const refVert = nativeHeaderVerticalPaddingPx(ref);
+    let headerPt = refVert.pt;
+    let headerPb = refVert.pb;
     if (titleEl && rr.height > 0) {
       const tr = titleEl.getBoundingClientRect();
       const slackTop = Math.max(0, Math.round(tr.top - rr.top));
