@@ -97,13 +97,13 @@
     });
   }
 
-  /**
-   * Ensure unified state has a GoalSession row for this Google event id (from gp_goals).
-   */
   var GEOM_PERSIST_DEBOUNCE_MS = 50;
   /** @type {WeakMap<object, number>} */
   var geomTimersByChip = new WeakMap();
 
+  /**
+   * Ensure unified state has a GoalSession row for this Google event id (from gp_goals).
+   */
   async function ensureSessionRow(Model, state, eventId) {
     if (Model.findSessionByEventId(state, eventId)) return;
     var legacy = await loadLegacyGoalsAndChipDone();
