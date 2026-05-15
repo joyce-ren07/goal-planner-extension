@@ -3049,9 +3049,24 @@
         const eventId =
           chip.closest('[data-eventid]')?.getAttribute('data-eventid') || chipKey;
         chrome.storage.local.set({ gp_chip_done: map }, async () => {
-          await globalThis.GoalCalendarSync?.persistSessionCompleted?.(eventId, nextDone)?.catch?.(
-            () => {}
-          );
+          try {
+            await globalThis.GoalCalendarSync.persistSessionCompleted(eventId, nextDone);
+          } catch (_) {
+            /* GoalCalendarSync optional in tests */
+          }
+          try {
+            const Model = globalThis.GoalPlannerModel;
+            if (Model && eventId) {
+              const st = await Model.loadUnifiedState();
+              const hit = Model.findSessionByEventId(st, eventId);
+              await renderGoalsSidebar(
+                st,
+                hit?.goal?.id ? { reason: 'sessionCompletion', goalId: hit.goal.id } : {}
+              );
+            }
+          } catch (_) {
+            /* sidebar optional */
+          }
           chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nextDone });
           renderHomeScreen();
         });
