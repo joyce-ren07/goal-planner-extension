@@ -3391,7 +3391,7 @@
       return { plannerEventId: ids[0], goalId: goal.id };
     }
     const fallback = resolvePlannerEventIdForChip(domId, legacyGoals);
-    if (fallback && ids.includes(fallback)) {
+    if (fallback && calEventIdsContain(ids, fallback)) {
       return { plannerEventId: fallback, goalId: goal.id };
     }
     return { plannerEventId: domId || fallback || '', goalId: goal.id };
