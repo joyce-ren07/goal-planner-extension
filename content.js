@@ -1803,8 +1803,13 @@
    * Structure vs progress signatures for granular sidebar patches.
    * When only progress changes (session checkbox), we patch fill + count text without touching title or colors.
    */
+  function legacyByIdLookup(map, goalId) {
+    if (!map || goalId == null || goalId === '') return undefined;
+    return map.get(goalId) ?? map.get(String(goalId));
+  }
+
   function goalSidebarCardSigs(g, legacyById) {
-    const legacy = legacyById.get(g.id);
+    const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
       ...legacyRow,
