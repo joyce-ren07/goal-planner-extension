@@ -3627,8 +3627,16 @@
           boundChipHeight(chip);
           const eidAttr = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
           const prevDatasetKey = chip.dataset.gpChipKey;
-          const isDone = !!(doneMap[eidAttr] || doneMap[prevDatasetKey]);
-          if (eidAttr) chip.dataset.gpChipKey = eidAttr;
+          const canonicalPlannerId =
+            resolvePlannerEventIdForChip(eidAttr || prevDatasetKey || '', goals) ||
+            eidAttr ||
+            prevDatasetKey;
+          const isDone = !!(
+            doneMap[prevDatasetKey] ||
+            doneMap[eidAttr] ||
+            (canonicalPlannerId && doneMap[canonicalPlannerId])
+          );
+          if (canonicalPlannerId) chip.dataset.gpChipKey = canonicalPlannerId;
           GoalInteractionController.applyGoalSessionCompletionUI(chip, isDone);
           const ec = chip.closest('[data-eventid]');
           requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
