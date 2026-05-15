@@ -2171,6 +2171,33 @@
     return raw;
   }
 
+  function injectSlotDoneIntoExpandedChipDone(expanded, legacyGoals, slotPack) {
+    const out = expanded && typeof expanded === 'object' ? { ...expanded } : {};
+    const pack = slotPack && typeof slotPack === 'object' ? slotPack : {};
+    for (const g of legacyGoals || []) {
+      const ids = g.calEventIds || [];
+      const arr = pack[String(g.id)];
+      if (!Array.isArray(arr) || !ids.length) continue;
+      for (const idx of arr) {
+        const i = Number(idx);
+        if (Number.isFinite(i) && i >= 0 && i < ids.length) out[String(ids[i])] = true;
+      }
+    }
+    return out;
+  }
+
+  async function loadMergedChipDoneForSidebar(legacyGoals) {
+    const goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    const chipDoneRaw = await new Promise((r) =>
+      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+    );
+    const slotPack = await new Promise((r) =>
+      chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
+    );
+    let merged = expandChipDoneOntoCalEventIds(chipDoneRaw, goals);
+    return injectSlotDoneIntoExpandedChipDone(merged, goals, slotPack);
+  }
+
   function gpChipDoneKeyMatchesCalEventId(calId, chipKey) {
     if (!calId || chipKey == null || chipKey === '') return false;
     const a = String(calId);
