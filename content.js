@@ -2285,15 +2285,32 @@
         cardGoalId: card?.dataset?.goalId,
         isConnected: !!card?.isConnected,
       });
-      if (!card) continue;
-      if (!resolved.visible) {
+      if (!card) {
+        await applyGoalsSidebarFromUnifiedState(mergedState, legacyById, { reason: 'goalsSync' });
+        const retry = resolveVisibleSidebarGoalCard(gid);
+        if (!retry?.card) {
+          console.warn('[gp-my-goals] no sidebar card for goal', gid);
+          continue;
+        }
+        Object.assign(resolved || {}, retry);
+      }
+      const cardToPatch = resolved?.card || card;
+      if (!cardToPatch) continue;
+      if (!resolved?.visible) {
         console.warn(
-          '[gp-my-goals-sidebar] patch target not visible — expand “My goals” in the left drawer or check for a detached duplicate root',
-          { goalId: gid, rect: resolved.rect }
+          '[gp-my-goals] patch target not visible — expand “My goals” in the Google Calendar left drawer',
+          { goalId: gid, rect: resolved?.rect }
         );
       }
 
-      const patchReport = patchSidebarGoalCardProgressOnly(card, g, traceId);
+      const patchReport = patchSidebarGoalCardProgressOnly(cardToPatch, g, traceId, legacyById);
+      console.info(
+        '[gp-my-goals] progress painted',
+        gid,
+        `${patchReport?.numbers?.completed ?? '?'}/${patchReport?.numbers?.total ?? '?'}`,
+        patchReport?.pctAssign,
+        { visible: resolved?.visible, pct: patchReport?.pct }
+      );
       const pair = goalSidebarCardSigs(g, legacyById);
       card.dataset.gpSidebarStructSig = pair.struct;
       card.dataset.gpSidebarProgSig = pair.prog;
