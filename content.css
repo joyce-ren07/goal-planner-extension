@@ -178,7 +178,7 @@
   background-color: var(--gp-m3-state-pressed);
 }
 
-.gp-gcal-sidebar-section-header:focus-within {
+.gp-gcal-sidebar-section-header:focus-within:has(:focus-visible) {
   outline: 2px solid var(--gp-m3-focus-ring);
   outline-offset: 2px;
 }
