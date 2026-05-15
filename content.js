@@ -1961,12 +1961,9 @@
   //
   // Three-track approach that mirrors native GCal timed-event resize UX:
   //
-  //  Track 1 — MutationObserver on event subtree (attributes + native text + childList)
-  //    Move-to-time-slot updates often touch [data-eventchip], inner spans, or title
-  //    before/when the parent [data-eventid] aria-label changes.  Observing only
-  //    the container’s top-level attributes missed those → stale .ext-goal-time until refresh.
-  //    change we immediately rewrite the time label — zero debounce, so the
-  //    displayed time string follows the drag in real time.
+  //  Track 1 — MutationObserver on the persistent [data-eventchip] subtree
+  //    (attributes, native text, childList).  A captured [data-eventid] can be
+  //    detached or stale during move-drag; the chip node identity stays stable.
   //
   //  Track 2 — ResizeObserver (pixel-based live duration)
   //    GCal changes the inline height of [data-eventid] during a drag.  We
