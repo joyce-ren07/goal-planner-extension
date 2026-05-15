@@ -1965,6 +1965,7 @@
           timeEl.textContent = formatDuration(durationMins);
           timeEl.style.display = containerH < 42 ? 'none' : 'block';
         }
+        syncExtGoalTimeFromContainer(chip, eventContainer);
       }
 
       // Debounced: persist final value once the drag settles
