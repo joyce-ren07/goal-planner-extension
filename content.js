@@ -2663,20 +2663,9 @@
                 gpMyGoalsSidebarDiag('storage goalPlannerUnifiedState', {
                   goalIds: diffs.map((d) => d.goalId),
                 });
-                const Model = globalThis.GoalPlannerModel;
-                let merged = unifiedCh.newValue;
-                if (Model?.syncUnifiedWithLegacyGoals) {
-                  const legacyGoalsRaw = await getGoals();
-                  const legacyGoals = Array.isArray(legacyGoalsRaw) ? legacyGoalsRaw : [];
-                  const chipDone = await loadMergedChipDoneForSidebar(legacyGoals);
-                  merged = Model.syncUnifiedWithLegacyGoals(
-                    merged,
-                    legacyGoals,
-                    chipDone
-                  );
-                }
+                const st = unifiedCh.newValue;
                 for (const d of diffs) {
-                  await patchMyGoalsSidebarProgressRows(merged, {
+                  await patchMyGoalsSidebarProgressRows(st, {
                     reason: 'storageSync',
                     goalId: d.goalId,
                     progressDiffs: [d],
