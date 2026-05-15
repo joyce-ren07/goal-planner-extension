@@ -172,7 +172,36 @@
           var k = keys[ki];
           if (!raw[k]) continue;
           if (idSet[String(k)]) continue;
-          if (gpChipDoneKeyMatchesCalEventId(calStr, k)) {
+          if (
+            gpChipDoneKeyMatchesCalEventId(calStr, k) ||
+            gpChipDoneKeyMatchesCalEventId(k, calStr)
+          ) {
+            raw[calStr] = true;
+            break;
+          }
+        }
+      }
+    }
+    var truthyKeys = Object.keys(raw).filter(function (k) {
+      return raw[k];
+    });
+    for (gi = 0; gi < goals.length; gi++) {
+      g = goals[gi];
+      ids = g.calEventIds || [];
+      if (!ids.length) continue;
+      idStrSet = {};
+      for (ii = 0; ii < ids.length; ii++) idStrSet[String(ids[ii])] = true;
+      var syntheticGoal = [{ calEventIds: ids }];
+      for (ci = 0; ci < ids.length; ci++) {
+        calId = ids[ci];
+        if (!calId && calId !== 0) continue;
+        calStr = String(calId);
+        if (raw[calStr]) continue;
+        for (ki = 0; ki < truthyKeys.length; ki++) {
+          k = truthyKeys[ki];
+          if (idStrSet[String(k)]) continue;
+          var hit = resolvePlannerEventIdForChip(k, syntheticGoal);
+          if (hit && calEventIdsContain(ids, hit)) {
             raw[calStr] = true;
             break;
           }
