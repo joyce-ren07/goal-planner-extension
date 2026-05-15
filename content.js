@@ -3660,6 +3660,8 @@
     const suggScr = document.getElementById('gp-screen-suggestions');
     if (suggScr?.classList.contains('active')) {
       await refreshSuggestionsPreview();
+    } else {
+      scheduleGhostPreviewRefreshDebounced();
     }
   }
 
