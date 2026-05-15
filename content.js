@@ -1924,23 +1924,24 @@
     chip._resizeObserver?.disconnect();
     chip._resizeMutAttrObs?.disconnect();
 
-    // ── Track 1: aria-label / data-tooltip attribute watcher (real-time label sync) ──
-    const labelObs = new MutationObserver(() => {
-      const newLabel = eventContainer.getAttribute('aria-label')
-        || eventContainer.getAttribute('data-tooltip') || '';
-      const timeMatch = newLabel.match(
-        /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i
-      );
-      if (!timeMatch) return;
-      const timeEl = chip.querySelector('.ext-goal-time');
-      if (timeEl) {
-        timeEl.textContent = timeMatch[1];
-        timeEl.style.display = chip.getBoundingClientRect().height < 42 ? 'none' : 'block';
-      }
+    // ── Track 1: subtree mutations → rAF-coalesced label sync (move + resize) ──
+    const scheduleLabelSync = () => {
+      if (chip._gpLabelSyncRaf != null) return;
+      chip._gpLabelSyncRaf = requestAnimationFrame(() => {
+        chip._gpLabelSyncRaf = null;
+        syncExtGoalTimeFromContainer(chip, eventContainer);
+      });
+    };
+    const labelObs = new MutationObserver((mutations) => {
+      if (!mutations.some(goalChipTimeLabelMutationRelevant)) return;
+      scheduleLabelSync();
     });
     labelObs.observe(eventContainer, {
       attributes: true,
-      attributeFilter: ['aria-label', 'data-tooltip'],
+      attributeFilter: ['aria-label', 'data-tooltip', 'title'],
+      characterData: true,
+      childList: true,
+      subtree: true,
     });
     chip._resizeMutAttrObs = labelObs;
 
