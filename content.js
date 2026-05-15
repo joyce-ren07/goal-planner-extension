@@ -1309,13 +1309,11 @@
     if (titleEl) {
       const ts = getComputedStyle(titleEl);
       setVar('--gp-native-title-font-size', ts.fontSize);
-      setVar('--gp-native-title-font-weight', ts.fontWeight);
       setVar('--gp-native-title-line-height', ts.lineHeight);
       setVar('--gp-native-title-letter-spacing', ts.letterSpacing);
       setVar('--gp-native-title-font-family', ts.fontFamily);
     } else {
       setVar('--gp-native-title-font-size', cs.fontSize);
-      setVar('--gp-native-title-font-weight', cs.fontWeight);
       setVar('--gp-native-title-line-height', cs.lineHeight);
       setVar('--gp-native-title-letter-spacing', cs.letterSpacing);
     }
