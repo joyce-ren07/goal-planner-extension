@@ -1824,11 +1824,14 @@
     return true;
   }
 
-  /** Keep .ext-goal-time in sync with GCal’s live aria/tooltip (always inject the span). */
-  function syncExtGoalTimeFromContainer(chip, eventContainer) {
-    const timeEl = chip.querySelector('.ext-goal-time');
-    if (!timeEl || !eventContainer) return '';
-    const extracted = extractTimeRangeLabelForGoalChip(chip, eventContainer);
+  /**
+   * Patch only .ext-goal-time text. Always resolves [data-eventid] from chip so
+   * updates still work after GCal reparents the chip during drag.
+   */
+  function syncExtGoalTimeFromContainer(chip) {
+    const timeEl = chip?.querySelector?.('.ext-goal-time');
+    if (!timeEl) return '';
+    const extracted = extractTimeRangeLabelForGoalChip(chip);
     if (extracted && timeEl.textContent !== extracted) timeEl.textContent = extracted;
     const h = chip.getBoundingClientRect().height;
     timeEl.style.display = h > 0 && h < 42 ? 'none' : 'block';
