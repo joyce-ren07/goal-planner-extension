@@ -1896,8 +1896,10 @@
   //
   // Three-track approach that mirrors native GCal timed-event resize UX:
   //
-  //  Track 1 — MutationObserver on aria-label / data-tooltip
-  //    GCal updates these attributes as the event is resized.  Whenever they
+  //  Track 1 — MutationObserver on event subtree (attributes + native text + childList)
+  //    Move-to-time-slot updates often touch [data-eventchip], inner spans, or title
+  //    before/when the parent [data-eventid] aria-label changes.  Observing only
+  //    the container’s top-level attributes missed those → stale .ext-goal-time until refresh.
   //    change we immediately rewrite the time label — zero debounce, so the
   //    displayed time string follows the drag in real time.
   //
