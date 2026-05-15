@@ -346,6 +346,10 @@
     // Initial decoration pass — catches any goal events already in the DOM
     scheduleGoalEventDecoration();
 
+    setTimeout(() => {
+      maybeBackfillSessionAnchorsIntoStorage();
+    }, 3500);
+
     // Re-render ghost events on window resize (column widths change)
     window.addEventListener('resize', () => {
       const screen = document.getElementById('gp-screen-suggestions');
