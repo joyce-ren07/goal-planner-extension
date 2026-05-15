@@ -1021,9 +1021,16 @@
       setVar('--gp-native-title-letter-spacing', cs.letterSpacing);
     }
 
-    const nestedClickables = [...ref.querySelectorAll('[role="button"], button')].filter(
-      (n) => n !== ref && ref.contains(n)
-    );
+    const nestedClickables = [...ref.querySelectorAll('[role="button"], button')].filter((n) => {
+      if (n === ref || !ref.contains(n)) return false;
+      let d = 0;
+      let p = n;
+      while (p && p !== ref) {
+        d++;
+        p = p.parentElement;
+      }
+      return d > 0 && d <= 4;
+    });
     const iconHost =
       nestedClickables.find((b) => {
         const r = b.getBoundingClientRect();
