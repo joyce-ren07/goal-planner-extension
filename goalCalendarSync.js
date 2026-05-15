@@ -161,13 +161,33 @@
     await Model.saveUnifiedState(state);
   }
 
+  function cancelScheduledPersistSessionGeometry(chip) {
+    var t = geomTimersByChip.get(chip);
+    if (t != null) {
+      clearTimeout(t);
+      geomTimersByChip.delete(chip);
+    }
+  }
+
+  /** Trailing debounced persist while drag/resize is moving (avoids storage thrash). */
   function schedulePersistSessionGeometry(chip) {
-    if (!chip || !global.GoalCalendarSync) return;
-    if (chip._gpGeomSyncRaf != null) return;
-    chip._gpGeomSyncRaf = requestAnimationFrame(function () {
-      chip._gpGeomSyncRaf = null;
-      persistSessionGeometry(chip).catch(function () {});
-    });
+    if (!chip || !deps) return;
+    var prev = geomTimersByChip.get(chip);
+    if (prev != null) clearTimeout(prev);
+    geomTimersByChip.set(
+      chip,
+      setTimeout(function () {
+        geomTimersByChip.delete(chip);
+        persistSessionGeometry(chip).catch(function () {});
+      }, GEOM_PERSIST_DEBOUNCE_MS)
+    );
+  }
+
+  /** Flush geometry to storage immediately (e.g. after GCal commits drop). */
+  function flushPersistSessionGeometry(chip) {
+    if (!chip || !deps) return Promise.resolve();
+    cancelScheduledPersistSessionGeometry(chip);
+    return persistSessionGeometry(chip);
   }
 
   global.GoalCalendarSync = {
@@ -176,5 +196,6 @@
     persistSessionGeometry: persistSessionGeometry,
     persistSessionCompleted: persistSessionCompleted,
     schedulePersistSessionGeometry: schedulePersistSessionGeometry,
+    flushPersistSessionGeometry: flushPersistSessionGeometry,
   };
 })(typeof self !== 'undefined' ? self : globalThis);
