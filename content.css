@@ -264,7 +264,16 @@
   font-size: var(--gp-native-add-icon-font-size, var(--gp-native-icon-font-size, 20px));
   line-height: var(--gp-native-add-icon-lh, var(--gp-native-icon-lh, 1));
   font-weight: var(--gp-native-add-icon-weight, var(--gp-native-icon-glyph-weight, 400));
-  font-variation-settings: var(--gp-native-add-icon-fvs, var(--gp-native-icon-fvs));
+  font-variation-settings: var(
+    --gp-native-add-icon-fvs,
+    var(
+      --gp-native-icon-fvs,
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 20
+    )
+  );
 }
 
 .gp-gcal-sidebar-icon-btn:hover {
