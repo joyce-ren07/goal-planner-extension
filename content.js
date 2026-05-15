@@ -2311,6 +2311,9 @@
         if (changes.gp_chip_done && !changes.goalPlannerUnifiedState) {
           renderGoalsSidebar();
         }
+        if (changes.gp_goal_slot_done && !changes.goalPlannerUnifiedState) {
+          renderGoalsSidebar();
+        }
       });
     } catch (_) {
       /* ignore */
