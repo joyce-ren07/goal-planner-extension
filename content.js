@@ -2610,34 +2610,26 @@
       queueMicrotask(() => {
         (async () => {
           try {
-            const legacyGoalsRaw = await getGoals();
-            const legacyGoals = Array.isArray(legacyGoalsRaw) ? legacyGoalsRaw : [];
-            const chipDone = await loadMergedChipDoneForSidebar(legacyGoals);
-            const merged = Model.syncUnifiedWithLegacyGoals(
-              evt.state,
-              legacyGoals,
-              chipDone
-            );
+            const st = evt.state;
             const meta = evt.meta || {};
-            if (meta.reason === 'sessionCompletion') {
-              const snap = meta.goalId
-                ? (() => {
-                    const g = merged.goals?.find((x) => String(x.id) === String(meta.goalId));
-                    return g ? goalUnifiedProgressSnapshot(g) : null;
-                  })()
-                : null;
-              if (meta.goalId && snap) {
-                gpMyGoalsSidebarDiag('reactive Goal state → sidebar', {
+            if (meta.goalId) {
+              const g = st.goals?.find((x) => String(x.id) === String(meta.goalId));
+              if (g && GP_MY_GOALS_SIDEBAR_DIAG) {
+                const snap = goalUnifiedProgressSnapshot(g);
+                gpMyGoalsSidebarDiag('reactive unified → sidebar patch', {
                   goalId: meta.goalId,
                   completedSessions: snap.completedSessions,
                   progressPct: snap.progressPct,
                 });
               }
-              await patchMyGoalsSidebarProgressRows(merged, meta);
-            } else {
-              await applyGoalsSidebarFromUnifiedState(merged, null, meta);
-              await reinforceMyGoalsSidebarProgressFromStorage();
             }
+            if (meta.reason === 'sessionCompletion') {
+              await patchMyGoalsSidebarProgressRows(st, meta);
+              return;
+            }
+            const applyMeta = isSidebarStructuralMeta(meta) ? meta : { reason: 'goalsSync' };
+            await applyGoalsSidebarFromUnifiedState(st, null, applyMeta);
+            await patchMyGoalsSidebarProgressRows(st, meta);
           } catch (_) {
             /* sidebar optional */
           }
