@@ -2192,6 +2192,45 @@
     return false;
   }
 
+  /**
+   * Pair DOM/storage checkbox keys with API calendar ids when persisting gp_chip_done (no shared-prefix-only guess).
+   */
+  function gpChipDoneMirrorStrictPair(calId, chipKey) {
+    if (!calId || chipKey == null || chipKey === '') return false;
+    const a = String(calId);
+    const b = String(chipKey);
+    if (a === b) return true;
+    let dec = b;
+    try {
+      dec = decodeURIComponent(b.replace(/\+/g, ' '));
+    } catch (_) {
+      dec = b;
+    }
+    if (a === dec) return true;
+    if (b.startsWith(`${a}_`) || dec.startsWith(`${a}_`)) return true;
+    if (a.startsWith(`${b}_`) || a.startsWith(`${dec}_`)) return true;
+    return false;
+  }
+
+  /** Keys to set/remove together on toggle so My Goals (calEventIds) and chips (often DOM ids) share completion state. */
+  function mirrorGpChipDoneKeysForSession(plannerEventId, allowedIds) {
+    const keys = new Set();
+    const p = plannerEventId != null && plannerEventId !== '' ? String(plannerEventId) : '';
+    if (p) keys.add(p);
+    const ids = Array.isArray(allowedIds) ? allowedIds.map(String).filter(Boolean) : [];
+    if (!ids.length) return [...keys];
+
+    if (ids.length === 1) {
+      keys.add(ids[0]);
+      return [...keys];
+    }
+
+    for (const cid of ids) {
+      if (gpChipDoneMirrorStrictPair(cid, p)) keys.add(cid);
+    }
+    return [...keys];
+  }
+
   function setupGoalsSidebarReactiveBinding() {
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.subscribeGoalsState) return;
