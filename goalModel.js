@@ -221,9 +221,13 @@
 
   function computeProgressPct(goal) {
     var sessions = goal.sessions || [];
-    if (!sessions.length) return 0;
     var done = sessions.filter(function (s) { return s.completed; }).length;
-    return clampPct((done / sessions.length) * 100);
+    var total =
+      typeof goal.totalSessions === 'number' && goal.totalSessions > 0
+        ? goal.totalSessions
+        : sessions.length;
+    if (!total) return 0;
+    return clampPct((done / total) * 100);
   }
 
   function recomputeAllProgress(state) {
