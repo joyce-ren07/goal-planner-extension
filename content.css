@@ -313,6 +313,9 @@
 
 .gp-gcal-sidebar-section-body {
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: var(--gp-native-body-pad-top, 0) var(--gp-native-header-pr, 16px)
     var(--gp-native-body-pad-bottom, 8px) var(--gp-native-header-pl, 24px);
 }
