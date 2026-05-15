@@ -4407,12 +4407,15 @@
               slotGoalRow = goalRow;
             }
           }
-          const slotIdx = computeSlotIndexForGoalSession(
+          let slotIdx = await resolveSlotIndexForGoalToggle(
             chip,
             slotGoalRow,
             plannerEventId,
-            storageKey
+            storageKey,
+            mirrorKeys,
+            legacyGoals
           );
+          stampCalEventIdOnChipMap(map, allowed, slotIdx, nextDone);
           if (gid && slotIdx >= 0) {
             const prevArr = Array.isArray(slotPackPrev[gid]) ? slotPackPrev[gid] : [];
             const sset = new Set(
@@ -4421,6 +4424,14 @@
             if (nextDone) sset.add(slotIdx);
             else sset.delete(slotIdx);
             slotPackPrev[gid] = [...sset].sort((a, b) => a - b);
+          } else if (gid && nextDone && allowed.length) {
+            console.warn('[gp-my-goals] could not resolve session slot index', {
+              goalId: gid,
+              calEventIds: allowed,
+              plannerEventId,
+              storageKey,
+              mirrorKeys: [...mirrorKeys],
+            });
           }
 
           chrome.storage.local.set({ gp_chip_done: map, gp_goal_slot_done: slotPackPrev }, async () => {
