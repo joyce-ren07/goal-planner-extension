@@ -4308,8 +4308,9 @@
     const allowed = goalRow?.calEventIds || [];
     if (!allowed.length) return -1;
 
-    let idx = resolveDomSlotIndexFromGoalRow(goalRow, storageKey);
-    if (idx < 0) idx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow);
+    let idx = readChipSlotIndexFromDataset(chip, allowed.length);
+    if (idx < 0) idx = resolveDomSlotIndexFromGoalRow(goalRow, storageKey);
+    if (idx < 0) idx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow, legacyGoals);
     if (idx < 0) idx = resolveSlotIndexByAnchorTime(chip, goalRow);
     if (idx < 0) idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
     if (idx >= 0) return idx;
