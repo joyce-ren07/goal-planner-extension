@@ -2990,22 +2990,18 @@
     }
     emptyEl.style.display = 'none';
     listEl.classList.add('visible');
-    const now = new Date();
 
     listEl.innerHTML = goals.map(g => {
-      const fallbackEnd = new Date(g.created);
-      fallbackEnd.setMonth(fallbackEnd.getMonth() + 3);
-      const deadline = new Date(g.endDate || g.deadline || fallbackEnd.toISOString());
-      const daysLeft = Math.max(0, Math.ceil((deadline - now) / 86400000));
       const titleEsc = escapeHtmlGp(g.title || 'Untitled goal');
       const schedRaw = g.scheduleLabel || '';
-      const subLine = schedRaw ? `${escapeHtmlGp(schedRaw)} · ${daysLeft}d left` : `${daysLeft}d left`;
+      const subEsc = schedRaw ? escapeHtmlGp(schedRaw) : '';
+      const subBlock = subEsc ? `<p class="gp-goal-chip-sub">${subEsc}</p>` : '';
       const accent = getGoalDisplayColor(g);
       return `<div class="gp-goal-row" data-goal-id="${g.id}" style="--gp-goal-accent:${accent};">
         <div class="gp-goal-row-main">
           <div class="gp-goal-row-info">
             <p class="gp-goal-chip-name">${titleEsc}</p>
-            <p class="gp-goal-chip-sub">${subLine}</p>
+            ${subBlock}
           </div>
           <button class="gp-goal-kebab" data-goal-id="${g.id}" aria-label="More options" title="More options">
             <span class="material-symbols-outlined gp-ms-icon" style="font-size:18px">more_vert</span>
