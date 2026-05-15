@@ -193,6 +193,11 @@
   outline-offset: 2px;
 }
 
+#gp-gcal-sidebar-goals-root > .gp-gcal-sidebar-section-header {
+  padding-top: max(0px, calc(var(--gp-native-header-pt, 0px) - 4px));
+  padding-bottom: max(0px, calc(var(--gp-native-header-pb, 0px) - 4px));
+}
+
 /* M3 label-large: section title — metrics match native title span when synced */
 .gp-gcal-sidebar-label-btn {
   flex: 1;
