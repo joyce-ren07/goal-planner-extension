@@ -2312,12 +2312,12 @@
         { visible: resolved?.visible, pct: patchReport?.pct }
       );
       const pair = goalSidebarCardSigs(g, legacyById);
-      card.dataset.gpSidebarStructSig = pair.struct;
-      card.dataset.gpSidebarProgSig = pair.prog;
+      cardToPatch.dataset.gpSidebarStructSig = pair.struct;
+      cardToPatch.dataset.gpSidebarProgSig = pair.prog;
 
       const expected = patchReport
         ? {
-            widthStyle: patchReport.forceVisualTest ? '80%' : patchReport.widthAssign,
+            pctDataset: String(patchReport.pct),
             countText: patchReport.countAssign,
             pctText: patchReport.pctAssign,
           }
@@ -2325,10 +2325,10 @@
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const post = inspectSidebarGoalCardDom(card);
+          const post = inspectSidebarGoalCardDom(cardToPatch);
           const persisted =
             !!expected &&
-            post?.widthStyle === expected.widthStyle &&
+            cardToPatch.dataset.gpProgressPct === expected.pctDataset &&
             post?.countText === expected.countText &&
             post?.pctText === expected.pctText;
           gpMyGoalsSidebarDiag('5 DOM persistence (2×rAF)', {
