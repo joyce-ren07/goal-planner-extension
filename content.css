@@ -299,7 +299,7 @@
 /* Host-driven timing: mirror native pane transition when measured from Calendar (see syncMyGoalsSidebarChromeFromNative) */
 .gp-gcal-sidebar-goals-root[data-gp-collapse-mode="css"] .gp-gcal-sidebar-section-body {
   overflow: var(--gp-native-pane-overflow, visible);
-  transition: var(--gp-native-pane-transition);
+  transition: var(--gp-native-pane-transition, unset);
   max-height: 10000px;
   opacity: 1;
 }
