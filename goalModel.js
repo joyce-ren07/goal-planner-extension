@@ -111,7 +111,7 @@
       var goal = state.goals[g];
       var list = goal.sessions || [];
       for (var s = 0; s < list.length; s++) {
-        if (list[s].eventId === eventId) {
+        if (String(list[s].eventId) === String(eventId)) {
           return { goal: goal, session: list[s], gIdx: g, sIdx: s };
         }
       }
