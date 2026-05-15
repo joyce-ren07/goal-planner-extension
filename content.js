@@ -2304,7 +2304,8 @@
         });
       });
     }
-    refreshSidebarGoalsSigDataset(goals, legacyById, root);
+    const sigRoot = document.getElementById('gp-gcal-sidebar-goals-root');
+    refreshSidebarGoalsSigDataset(goals, legacyById, sigRoot);
   }
 
   function updateSidebarGoalCardElement(card, g, legacyById) {
