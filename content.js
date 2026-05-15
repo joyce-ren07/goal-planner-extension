@@ -1765,6 +1765,11 @@
 
     goals.forEach((g) => {
       const legacy = legacyById.get(g.id);
+      const legacyRow = legacy || {};
+      const colorSource = {
+        ...legacyRow,
+        color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
+      };
       const sessions = g.sessions || [];
       const total = sessions.length;
       let completed = 0;
