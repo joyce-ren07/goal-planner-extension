@@ -120,8 +120,11 @@
     color 200ms cubic-bezier(0.2, 0, 0, 1);
   --gp-native-icon-fvs: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
 
+  /* Contain to sidebar column: width:100% + horizontal margins overflows parent; min-width:0 respects flex shrink. */
   box-sizing: border-box;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
   margin-left: var(--gp-native-root-ml, 0);
   margin-right: var(--gp-native-root-mr, 0);
   margin-top: 0;
