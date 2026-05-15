@@ -268,6 +268,8 @@
 
       const ghost = document.createElement('div');
       ghost.className = 'goal-ghost-event';
+      ghost.setAttribute('data-gp-ghost-preview', 'true');
+      ghost.setAttribute('aria-hidden', 'true');
       ghost.style.cssText =
         `left:${left}px;top:${fixedTop}px;width:${width}px;height:${height}px;`;
 
