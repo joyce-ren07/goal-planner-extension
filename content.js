@@ -2248,6 +2248,13 @@
    * @returns {boolean} true if this card’s DOM was updated
    */
   function syncSingleSidebarGoalCard(card, g, legacyById, force) {
+    if (goalPlannerModelAvailable()) {
+      patchSidebarGoalCardProgressOnly(card, g);
+      const pair = goalSidebarCardSigs(g, legacyById);
+      card.dataset.gpSidebarStructSig = pair.struct;
+      card.dataset.gpSidebarProgSig = pair.prog;
+      return true;
+    }
     const pair = goalSidebarCardSigs(g, legacyById);
     const prevS = card.dataset.gpSidebarStructSig;
     const prevP = card.dataset.gpSidebarProgSig;
