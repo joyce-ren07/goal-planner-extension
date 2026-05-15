@@ -278,7 +278,7 @@
         goalId: g.id,
         startTime: '',
         endTime: '',
-        completed: !!legacy.doneMap[eventId],
+        completed: !!(legacy.doneMap[eventId] || legacy.doneMap[String(eventId)]),
       });
     }
   }
