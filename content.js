@@ -3580,10 +3580,10 @@
       if (fromUnified) plannerEventId = fromUnified;
     }
     if (!plannerEventId && goal && ids.length === 1) plannerEventId = ids[0];
-    if (!plannerEventId && domId && ids.includes(domId)) plannerEventId = domId;
+    if (!plannerEventId && domId && calEventIdsContain(ids, domId)) plannerEventId = domId;
     if (!plannerEventId) {
       const fb = resolvePlannerEventIdForChip(storageKey || domId, legacyGoals);
-      if (fb && ids.includes(fb)) plannerEventId = fb;
+      if (fb && calEventIdsContain(ids, fb)) plannerEventId = fb;
     }
     if (!plannerEventId) plannerEventId = quick.plannerEventId || storageKey || domId || '';
     const metaGoalId = goal?.id != null && goal.id !== '' ? goal.id : quick.goalId;
