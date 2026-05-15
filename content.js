@@ -1144,15 +1144,17 @@
       plNum = Math.max(plNum, plMeas);
     }
     if (plNum >= 8) plVal = `${Math.round(plNum)}px`;
+    const maxPrAcross = maxNativeSidebarTrailingPaddingPx(scroll);
+    let prNum = Math.max(maxPrAcross, parseFloat(pcs.paddingRight) || 0);
     if (nestedClickables.length && rr.width > 0) {
       let maxIconRight = rr.left;
       for (const b of nestedClickables) {
         const br = b.getBoundingClientRect();
         if (br.right > maxIconRight) maxIconRight = br.right;
       }
-      const prMeas = Math.round(rr.right - maxIconRight);
-      if (prMeas >= 4) prVal = `${prMeas}px`;
+      prNum = Math.max(prNum, Math.round(rr.right - maxIconRight));
     }
+    if (prNum >= 4) prVal = `${Math.round(prNum)}px`;
     setVar('--gp-native-header-pl', plVal);
     setVar('--gp-native-header-pr', prVal);
     if (cs.marginLeft && cs.marginLeft !== '0px') setVar('--gp-native-root-ml', cs.marginLeft);
