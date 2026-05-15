@@ -5090,11 +5090,21 @@
           const eidAttr = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
           const prevDatasetKey = chip.dataset.gpChipKey;
           const target = resolveChipCompletionTarget(chip, goals);
-          const canonicalPlannerId =
+          const goalRowForChip = target.goalId
+            ? goals.find((g) => String(g.id) === String(target.goalId))
+            : findLegacyGoalForGoalChip(chip, goals);
+          let canonicalPlannerId =
             target.plannerEventId ||
             resolvePlannerEventIdForChip(eidAttr || prevDatasetKey || '', goals) ||
             eidAttr ||
             prevDatasetKey;
+          if (goalRowForChip) {
+            const slotFromTime = resolveSlotIndexByAnchorTime(chip, goalRowForChip);
+            if (slotFromTime >= 0 && goalRowForChip.calEventIds?.[slotFromTime]) {
+              canonicalPlannerId = String(goalRowForChip.calEventIds[slotFromTime]);
+              chip.dataset.gpCalEventId = canonicalPlannerId;
+            }
+          }
           const isDone = !!(
             doneMap[prevDatasetKey] ||
             doneMap[eidAttr] ||
