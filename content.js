@@ -1276,7 +1276,8 @@
     const scroll = findGCalLeftSidebarScrollEl();
     if (!root || !root.isConnected || !scroll) return;
 
-    const ref = findNativeCalendarSidebarAccordionRow(scroll);
+    const bookingRow = findNativeSidebarAccordionRowByLabel(scroll, /booking\s*pages/i);
+    const ref = bookingRow || findNativeCalendarSidebarAccordionRow(scroll);
     if (!ref) return;
 
     root.style.removeProperty('--gp-native-root-ml');
