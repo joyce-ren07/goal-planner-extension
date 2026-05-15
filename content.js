@@ -1303,17 +1303,7 @@
 
     const pane = findNativeSectionContentSibling(ref, scroll);
 
-    function pickNativeAddTrigger(nodes) {
-      for (const b of nodes) {
-        const al = (b.getAttribute('aria-label') || '').toLowerCase();
-        if (/\badd\b/i.test(al) || /create|new\s/i.test(al)) return b;
-        const mat = b.querySelector('.material-symbols-outlined, .google-symbols, .google-material-icons, span');
-        const mt = mat ? String(mat.textContent || '').trim().toLowerCase() : '';
-        if (mt === 'add' || mt === '+') return b;
-      }
-      return null;
-    }
-    const addBtnHost = pickNativeAddTrigger(nestedClickables);
+    const addBtnHost = gpPickSidebarRowAddTrigger(nestedClickables);
     const chevronBtnHost =
       nestedClickables.length === 0
         ? null
