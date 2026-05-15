@@ -1742,6 +1742,63 @@
 
   GoalInteractionController.install();
 
+  /** Live time label during move-drag (GCal often transforms without mutating a stable wrapper). */
+  let _gpGoalTimeLabelDragSyncInstalled = false;
+  function installGoalTimeLabelLiveDragSync() {
+    if (_gpGoalTimeLabelDragSyncInstalled) return;
+    _gpGoalTimeLabelDragSyncInstalled = true;
+
+    document.addEventListener(
+      'pointerdown',
+      (e) => {
+        if (e.button !== 0) return;
+        if (e.target.closest?.('.goal-checkbox, .ext-check-circle')) return;
+        const ec = e.target.closest?.('[data-eventid]');
+        if (!ec?.querySelector?.('[data-eventchip].ext-goal-chip .ext-goal-root')) return;
+        const chip = ec.querySelector('[data-eventchip].ext-goal-chip');
+        if (!chip?.querySelector?.('.ext-goal-root')) return;
+
+        const cleanup = () => {
+          if (chip._gpGoalDragMoveRaf != null) {
+            cancelAnimationFrame(chip._gpGoalDragMoveRaf);
+            chip._gpGoalDragMoveRaf = null;
+          }
+          const mv = chip._gpGoalDragMoveHandler;
+          const en = chip._gpGoalDragEndHandler;
+          if (mv) document.removeEventListener('pointermove', mv, true);
+          if (en) {
+            document.removeEventListener('pointerup', en, true);
+            document.removeEventListener('pointercancel', en, true);
+          }
+          chip._gpGoalDragMoveHandler = null;
+          chip._gpGoalDragEndHandler = null;
+          syncExtGoalTimeFromContainer(chip);
+        };
+
+        if (chip._gpGoalDragEndHandler) cleanup();
+
+        const onMove = () => {
+          if (chip._gpGoalDragMoveRaf != null) return;
+          chip._gpGoalDragMoveRaf = requestAnimationFrame(() => {
+            chip._gpGoalDragMoveRaf = null;
+            syncExtGoalTimeFromContainer(chip);
+          });
+        };
+        const onEnd = () => cleanup();
+
+        chip._gpGoalDragMoveHandler = onMove;
+        chip._gpGoalDragEndHandler = onEnd;
+
+        document.addEventListener('pointermove', onMove, { passive: true, capture: true });
+        document.addEventListener('pointerup', onEnd, true);
+        document.addEventListener('pointercancel', onEnd, true);
+      },
+      true
+    );
+  }
+
+  installGoalTimeLabelLiveDragSync();
+
   function toggleGoalComplete(chipKey, chip) {
     GoalInteractionController.toggleCompletion(chipKey, chip);
   }
