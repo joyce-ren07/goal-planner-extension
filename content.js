@@ -1986,14 +1986,6 @@
     return { numbers, widthAssign, countAssign, pctAssign, before, after, fillEl };
   }
 
-  /** Temporary trace for Goal → My Goals sidebar progress pipeline; set false after verification. */
-  const GP_MY_GOALS_SIDEBAR_DIAG = true;
-
-  function gpMyGoalsSidebarDiag(...args) {
-    if (!GP_MY_GOALS_SIDEBAR_DIAG) return;
-    console.log('[gp-my-goals-sidebar]', ...args);
-  }
-
   function goalUnifiedProgressSnapshot(g) {
     const sessions = g?.sessions || [];
     const total = sessions.length;
