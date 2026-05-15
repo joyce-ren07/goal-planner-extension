@@ -1584,8 +1584,13 @@
       }
     });
 
-    chrome.storage.local.get([GP_LEFT_GOALS_COLLAPSED_KEY], (d) => {
+    chrome.storage.local.get([GP_GOALS_ACCORDION_OPEN_KEY, GP_LEFT_GOALS_COLLAPSED_KEY], (d) => {
       if (!root.isConnected) return;
+      const openExplicit = d[GP_GOALS_ACCORDION_OPEN_KEY];
+      if (typeof openExplicit === 'boolean') {
+        applyCollapsed(!openExplicit);
+        return;
+      }
       if (d[GP_LEFT_GOALS_COLLAPSED_KEY]) applyCollapsed(true);
     });
 
