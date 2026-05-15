@@ -981,8 +981,8 @@
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       resetEditMode();
-      showScreen('form');
       openPanel();
+      showScreen('form');
     });
 
     labelBtn.addEventListener('keydown', (e) => {
