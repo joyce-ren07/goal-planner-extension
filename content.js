@@ -4100,6 +4100,92 @@
     return -1;
   }
 
+  /**
+   * GCal DOM `data-eventid` (often base64) ≠ Calendar API ids in gp_goals.calEventIds[].
+   * Match this chip to a session slot via sessionAnchors.isoStart ↔ grid geometry / chip time.
+   */
+  function resolveSlotIndexByAnchorTime(chip, goalRow) {
+    const allowed = goalRow?.calEventIds || [];
+    const anchors = goalRow?.sessionAnchors || [];
+    if (!allowed.length || !anchors.length) return -1;
+
+    let targetMs = NaN;
+    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
+    if (geo?.startTime) targetMs = Date.parse(geo.startTime);
+
+    if (!Number.isFinite(targetMs)) {
+      const aria = chip.closest('[data-eventid]')?.getAttribute('aria-label') || '';
+      const m = aria.match(
+        /(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i
+      );
+      if (m) {
+        const now = new Date();
+        let h = parseInt(m[1], 10) % 12;
+        if (/pm/i.test(m[3])) h += 12;
+        const min = m[2] ? parseInt(m[2], 10) : 0;
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, min, 0, 0);
+        targetMs = d.getTime();
+      }
+    }
+
+    if (!Number.isFinite(targetMs)) return -1;
+
+    let bestIdx = -1;
+    let bestDelta = Infinity;
+    for (const a of anchors) {
+      if (!a?.isoStart || a.eventId == null || a.eventId === '') continue;
+      const ms = Date.parse(a.isoStart);
+      if (!Number.isFinite(ms)) continue;
+      const idx = allowed.findIndex((id) => String(id) === String(a.eventId));
+      if (idx < 0) continue;
+      const d = Math.abs(ms - targetMs);
+      if (d < bestDelta) {
+        bestDelta = d;
+        bestIdx = idx;
+      }
+    }
+    if (bestIdx >= 0 && bestDelta <= 12 * 60 * 60 * 1000) return bestIdx;
+    return -1;
+  }
+
+  async function resolveCalEventIdForChipSession(chip, goalRow, legacyGoals, chipDoneMap) {
+    if (!goalRow) return '';
+    const allowed = goalRow.calEventIds || [];
+    if (!allowed.length) return '';
+
+    const stored = chip.dataset.gpCalEventId;
+    if (stored && calEventIdsContain(allowed, stored)) return String(stored);
+
+    const slotFromTime = resolveSlotIndexByAnchorTime(chip, goalRow);
+    if (slotFromTime >= 0 && allowed[slotFromTime] != null) {
+      const id = String(allowed[slotFromTime]);
+      chip.dataset.gpCalEventId = id;
+      return id;
+    }
+
+    const fromAnchors = pickPlannerEventIdFromAnchors(chip, goalRow);
+    if (fromAnchors && calEventIdsContain(allowed, fromAnchors)) {
+      chip.dataset.gpCalEventId = String(fromAnchors);
+      return String(fromAnchors);
+    }
+
+    try {
+      const fromUnified = await pickPlannerEventIdFromUnifiedSessions(
+        chip,
+        goalRow,
+        legacyGoals || [],
+        chipDoneMap || {}
+      );
+      if (fromUnified && calEventIdsContain(allowed, fromUnified)) {
+        chip.dataset.gpCalEventId = String(fromUnified);
+        return String(fromUnified);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return '';
+  }
+
   /** Resolve calEventIds[] index for this checkbox (mirror keys → anchors → grid time). */
   async function resolveSlotIndexForGoalToggle(
     chip,
