@@ -347,7 +347,12 @@
 
 /* ── Left drawer: goal cards ("My goals" body) ── All selectors scoped under extension root */
 .gp-gcal-sidebar-goals-root .gp-gcal-sidebar-section-body.gcal-ext-goals-list {
-  padding: 4px var(--gp-native-header-pr, 16px) 8px var(--gp-native-header-pl, 24px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px var(--gp-native-goals-body-pr, var(--gp-native-header-pr, 16px)) 8px
+    var(--gp-native-goals-body-pl, var(--gp-native-header-pl, 24px));
   display: flex;
   flex-direction: column;
   gap: 0;
