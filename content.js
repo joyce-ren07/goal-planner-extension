@@ -2368,6 +2368,11 @@
       const container = document.getElementById('gp-gcal-sidebar-goals-cards');
       const root = document.getElementById('gp-gcal-sidebar-goals-root');
       if (!container || !root) return;
+      if (GP_MY_GOALS_SIDEBAR_DIAG) {
+        gpMyGoalsSidebarDiag('reinforceMyGoalsSidebarProgressFromStorage run', {
+          stack: new Error().stack?.split('\n').slice(1, 4),
+        });
+      }
       const legacyById = new Map(goals.map((gk) => [gk.id, gk]));
       for (const lg of goals) {
         const slotRaw = slotPack[String(lg.id)] ?? slotPack[lg.id];
