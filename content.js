@@ -3526,28 +3526,7 @@
       if (norm && ids.includes(norm)) plannerEventId = norm;
     }
 
-    let anchorGoal = goal;
-    if (goal && !goal.sessionAnchors?.length) {
-      const Model = globalThis.GoalPlannerModel;
-      if (Model) {
-        try {
-          let st = await Model.loadUnifiedState();
-          st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDoneMap || {});
-          const ug = st.goals.find((g) => String(g.id) === String(goal.id));
-          const calIds = goal.calEventIds || [];
-          const syn = [];
-          if (ug?.sessions?.length && calIds.length) {
-            for (const id of calIds) {
-              const s = ug.sessions.find((x) => x.eventId === id);
-              if (s?.startTime) syn.push({ eventId: id, isoStart: s.startTime });
-            }
-            if (syn.length) anchorGoal = { ...goal, sessionAnchors: syn };
-          }
-        } catch (_) {
-          /* ignore */
-        }
-      }
-    }
+    const anchorGoal = await enrichGoalRowWithUnifiedAnchors(goal, legacyGoals, chipDoneMap);
 
     if (!plannerEventId && anchorGoal) {
       const fromAnchors = pickPlannerEventIdFromAnchors(chip, anchorGoal);
