@@ -62,6 +62,27 @@
     ps: 'yellow',
   };
   const KANBAN_COURSE_OPTIONS = ['PSYC101', 'MGT103', 'COGS14B', 'PS'];
+  const TAG_HEX_BY_KEY = {
+    blue: '#1a73e8',
+    red: '#d93025',
+    green: '#137333',
+    yellow: '#e37400',
+    purple: '#9334e6',
+    orange: '#e8710a',
+    teal: '#00796b',
+    grey: '#5f6368',
+  };
+  const TAG_PALETTE_KEYS = Object.keys(TAG_HEX_BY_KEY);
+  const CHIP_CLASS_BY_COLOR_KEY = {
+    blue: 'blue',
+    red: 'red',
+    green: 'green',
+    yellow: 'yellow',
+    purple: 'purple',
+    orange: 'orange',
+    teal: 'teal',
+    grey: 'grey',
+  };
   const MYTASKS_MESSAGE_SOURCE = 'mytasks-kanban-extension';
   const KANBAN_LIST_MATCHERS = [
     { id: 'all', pattern: /^\s*my tasks?\s*$/i },
@@ -69,6 +90,38 @@
     { id: 'progress', pattern: /\bin progress\b/i },
     { id: 'done', pattern: /^\s*done\s*$/i },
   ];
+
+  function getDefaultTags() {
+    return KANBAN_COURSE_OPTIONS.map((label) => ({
+      id: `tag-${label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+      label,
+      colorKey: KANBAN_CHIP_COLORS[label] || 'blue',
+      hidden: false,
+    }));
+  }
+
+  function normalizeTags(raw) {
+    const fallback = getDefaultTags();
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return fallback.map((t) => ({ ...t }));
+    }
+
+    return raw.map((t, i) => ({
+      id: String(t?.id || `tag-${i}`),
+      label: String(t?.label || `Tag ${i + 1}`).trim() || `Tag ${i + 1}`,
+      colorKey: TAG_PALETTE_KEYS.includes(t?.colorKey) ? t.colorKey : 'blue',
+      hidden: Boolean(t?.hidden),
+    }));
+  }
+
+  function findTagByLabel(tags, label) {
+    return (tags || []).find((t) => t.label === label);
+  }
+
+  function chipClassForColorKey(colorKey) {
+    return CHIP_CLASS_BY_COLOR_KEY[colorKey] || 'blue';
+  }
+
   const SIDEBAR_MARKUP = `
 <div id="gp-panel" class="mytasks-sidebar" aria-hidden="true">
   <div class="gp-card" id="gp-card">
@@ -1056,11 +1109,15 @@
       chip,
       chipColor: KANBAN_CHIP_COLORS[chip] || 'blue',
       starred: false,
+      notes: '',
+      subtasks: [],
     };
   }
 
+  const KANBAN_CHIP_COLOR_KEYS = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'teal', 'grey'];
+
   function resolveKanbanChipColor(chip, chipColor, legacyCourseKey) {
-    if (chipColor && ['blue', 'red', 'green', 'yellow'].includes(chipColor)) {
+    if (chipColor && KANBAN_CHIP_COLOR_KEYS.includes(chipColor)) {
       return chipColor;
     }
 
@@ -1086,11 +1143,25 @@
     return parseTaskDueDate(card?.due);
   }
 
-  function normalizeKanbanCard(card, fallbackId) {
+  function normalizeKanbanCard(card, fallbackId, tags) {
     const chip = card?.chip || card?.course || 'PSYC101';
     const dueDate = card?.dueDate
       || formatDueDateIso(parseTaskDueDate(card?.due))
       || '2026-05-21';
+
+    let chipColor = resolveKanbanChipColor(chip, card?.chipColor, card?.courseKey);
+    const tagMatch = findTagByLabel(tags, chip);
+    if (tagMatch && !tagMatch.hidden) {
+      chipColor = chipClassForColorKey(tagMatch.colorKey);
+    }
+
+    const subtasks = Array.isArray(card?.subtasks)
+      ? card.subtasks.map((s, si) => ({
+        id: String(s?.id || `st-${fallbackId}-${si}`),
+        title: String(s?.title || '').trim() || 'Subtask',
+        done: Boolean(s?.done),
+      })).filter((s) => s.title)
+      : [];
 
     return {
       id: card?.id || fallbackId,
@@ -1098,12 +1169,15 @@
       dueDate,
       due: card?.due || formatKanbanDueLabel(dueDate),
       chip,
-      chipColor: resolveKanbanChipColor(chip, card?.chipColor, card?.courseKey),
+      chipColor,
       starred: Boolean(card?.starred),
+      notes: String(card?.notes || '').trim(),
+      subtasks,
     };
   }
 
   function getDefaultKanbanState() {
+    const tags = getDefaultTags();
     return {
       columns: {
         todo: [
@@ -1129,6 +1203,7 @@
         starredOnly: false,
         activeList: 'all',
       },
+      tags,
     };
   }
 
@@ -1145,18 +1220,20 @@
 
   function normalizeKanbanState(state) {
     const defaults = getDefaultKanbanState();
+    const tags = normalizeTags(state?.tags?.length ? state.tags : defaults.tags);
     const columns = {};
 
     KANBAN_COLUMN_DEFS.forEach(({ id }) => {
       const savedCards = Array.isArray(state?.columns?.[id]) ? state.columns[id] : null;
       columns[id] = savedCards
-        ? savedCards.map((card, index) => normalizeKanbanCard(card, `${id}-${index + 1}`))
-        : defaults.columns[id];
+        ? savedCards.map((card, index) => normalizeKanbanCard(card, `${id}-${index + 1}`, tags))
+        : defaults.columns[id].map((card) => normalizeKanbanCard(card, card.id, tags));
     });
 
     return {
       columns,
       filters: normalizeKanbanFilters(state?.filters || defaults.filters),
+      tags,
     };
   }
 
@@ -1199,7 +1276,7 @@
     }
   }
 
-  function renderSidebarTaskRow(task, columnId) {
+  function renderSidebarTaskRow(task, columnId, tags) {
     const statusKey = COLUMN_STATUS_MAP[columnId] || 'planned';
     const status = TASK_STATUSES[statusKey];
     const isCompleted = columnId === 'done';
@@ -1264,6 +1341,11 @@
       ? `gp-course-chip ${courseChipClass}`
       : 'gp-course-chip';
     courseChip.textContent = task.chip;
+    const tagMeta = findTagByLabel(tags, task.chip);
+    if (!courseChipClass && tagMeta) {
+      courseChip.classList.add('gp-course-chip--custom');
+      courseChip.style.setProperty('--gp-tag-fg', TAG_HEX_BY_KEY[tagMeta.colorKey] || '#5f6368');
+    }
 
     const statusChip = document.createElement('div');
     statusChip.className = `gp-filter-chip ${status.className}`;
@@ -1339,7 +1421,7 @@
 
       inner.innerHTML = '';
       buckets[folderKey].forEach(({ task, columnId }) => {
-        inner.appendChild(renderSidebarTaskRow(task, columnId));
+        inner.appendChild(renderSidebarTaskRow(task, columnId, state.tags));
       });
     });
 
@@ -1429,6 +1511,12 @@
     if (task.dueDate) {
       card.dataset.dueDate = task.dueDate;
     }
+    if (task.notes) {
+      card.dataset.notes = task.notes;
+    }
+    if (task.subtasks?.length) {
+      card.dataset.subtasks = JSON.stringify(task.subtasks);
+    }
 
     const header = document.createElement('div');
     header.className = 'mk-card-header';
@@ -1488,6 +1576,14 @@
         if (!cid || seenIds.has(cid)) return;
         seenIds.add(cid);
 
+        const subtasks = (() => {
+          try {
+            return cardEl.dataset.subtasks ? JSON.parse(cardEl.dataset.subtasks) : [];
+          } catch (_) {
+            return [];
+          }
+        })();
+
         columns[colId].push({
           id: cid,
           title: cardEl.querySelector('.mk-card-title')?.textContent || 'Project Outline',
@@ -1496,6 +1592,8 @@
           chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
           chipColor: cardEl.dataset.chipColor || 'blue',
           starred: cardEl.dataset.starred === 'true',
+          notes: cardEl.dataset.notes || '',
+          subtasks: Array.isArray(subtasks) ? subtasks : [],
         });
       });
     });
@@ -1555,7 +1653,7 @@
             ...cardData,
             dueDate: cardData.dueDate || existing.card.dueDate,
           }
-          : normalizeKanbanCard(cardData, cardData.id));
+          : normalizeKanbanCard(cardData, cardData.id, state.tags || []));
       });
 
       (state.columns[id] || []).forEach((card) => {
@@ -1662,51 +1760,758 @@
     board.className = 'mytasks-kanban__board';
     board.setAttribute('aria-label', 'Kanban board');
 
-    const modal = document.createElement('div');
-    modal.className = 'mytasks-kanban__modal';
-    modal.hidden = true;
-    modal.innerHTML = `
-      <div class="mytasks-kanban__modal-scrim" data-modal-dismiss="true"></div>
-      <div class="mytasks-kanban__modal-dialog" role="dialog" aria-modal="true" aria-labelledby="mytasks-kanban-modal-title">
-        <h2 class="mytasks-kanban__modal-title" id="mytasks-kanban-modal-title">Create task</h2>
-        <form class="mytasks-kanban__modal-form">
-          <label class="mytasks-kanban__field">
-            <span class="mytasks-kanban__field-label">Task title</span>
-            <input class="mytasks-kanban__field-input" name="title" type="text" required autocomplete="off">
-          </label>
-          <label class="mytasks-kanban__field">
-            <span class="mytasks-kanban__field-label">Due date</span>
-            <input class="mytasks-kanban__field-input" name="dueDate" type="date" required>
-          </label>
-          <label class="mytasks-kanban__field">
-            <span class="mytasks-kanban__field-label">Course tag</span>
-            <select class="mytasks-kanban__field-input" name="course">
-              <option value="PSYC101">PSYC101</option>
-              <option value="MGT103">MGT103</option>
-              <option value="COGS14B">COGS14B</option>
-              <option value="PS">PS</option>
-            </select>
-          </label>
-          <label class="mytasks-kanban__field">
-            <span class="mytasks-kanban__field-label">Column</span>
-            <select class="mytasks-kanban__field-input" name="column">
-              <option value="todo">TO-DO</option>
-              <option value="progress">IN PROGRESS</option>
-              <option value="done">DONE</option>
-            </select>
-          </label>
-          <div class="mytasks-kanban__modal-actions">
-            <button type="button" class="mytasks-kanban__btn mytasks-kanban__btn--text" data-modal-dismiss="true">Cancel</button>
-            <button type="submit" class="mytasks-kanban__btn mytasks-kanban__btn--filled">Create</button>
-          </div>
-        </form>
-      </div>
-    `;
-
     root.appendChild(toolbar);
     root.appendChild(board);
-    root.appendChild(modal);
     return root;
+  }
+
+  let gpGlobalTaskModalsWired = false;
+  let gpManageTagsDraft = null;
+  let gpResumeCreateTaskLayerAfterTags = false;
+
+  function getGlobalTaskModalsRoot() {
+    return document.getElementById('gp-task-modals-root');
+  }
+
+  function buildGlobalTaskModalsMarkup() {
+    return `
+<div id="gp-task-modals-root" class="gp-task-modals-root" hidden>
+  <div id="gp-ct-layer" class="gp-ct-layer" hidden>
+    <div class="gp-ct-scrim" data-gp-ct-dismiss="true" aria-hidden="true"></div>
+    <div class="gp-ct-dialog" role="dialog" aria-modal="true" aria-labelledby="gp-ct-heading">
+      <header class="gp-ct-header">
+        <div class="gp-ct-header-left">
+          <span class="gp-ct-drag" aria-hidden="true">
+            <span class="gp-ct-drag-dot"></span>
+            <span class="gp-ct-drag-dot"></span>
+            <span class="gp-ct-drag-dot"></span>
+          </span>
+          <span class="gp-ct-task-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </span>
+          <span id="gp-ct-heading" class="gp-ct-header-title">Task</span>
+        </div>
+        <div class="gp-ct-header-right">
+          <button type="submit" form="gp-ct-form" class="gp-ct-btn gp-ct-btn--primary gp-ct-header-save">Save</button>
+          <button type="button" class="gp-ct-icon-btn" data-gp-ct-dismiss="true" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <form id="gp-ct-form" class="gp-ct-form" novalidate>
+        <input type="hidden" name="column" id="gp-ct-column" value="todo">
+        <input type="hidden" name="chip" id="gp-ct-chip" value="">
+        <div class="gp-ct-field gp-ct-field--title">
+          <input class="gp-ct-title-input" name="title" type="text" autocomplete="off" placeholder="Add task" aria-label="Task title">
+        </div>
+        <div class="gp-ct-row gp-ct-row--date">
+          <span class="gp-ct-row-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </span>
+          <div class="gp-ct-date-cluster">
+            <input class="gp-ct-date-native" name="dueDate" type="date" required aria-label="Due date">
+            <input class="gp-ct-time-native" name="dueTime" type="time" aria-label="Due time">
+            <button type="button" class="gp-ct-pill gp-ct-pill--ghost" id="gp-ct-time-toggle" aria-pressed="false">No time</button>
+          </div>
+        </div>
+        <div class="gp-ct-row gp-ct-row--repeat">
+          <span class="gp-ct-row-spacer"></span>
+          <label class="gp-ct-repeat">
+            <span class="gp-ct-sublabel">Repeat</span>
+            <select class="gp-ct-select" name="repeat" aria-label="Repeat">
+              <option value="none" selected>Does not repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </label>
+        </div>
+        <div class="gp-ct-section gp-ct-section--tags" id="gp-ct-tag-section">
+          <div class="gp-ct-section-label">Category</div>
+          <button type="button" class="gp-ct-text-btn" id="gp-ct-manage-tags" hidden>Manage tags</button>
+          <div class="gp-ct-chip-scroll" id="gp-ct-chip-scroll">
+            <div class="gp-ct-chip-row" id="gp-ct-chip-row" role="listbox" aria-label="Category tag"></div>
+          </div>
+          <div id="gp-ct-new-tag" class="gp-ct-new-tag" hidden>
+            <span class="gp-ct-new-tag-dot" id="gp-ct-new-tag-dot"></span>
+            <input type="text" id="gp-ct-new-tag-input" class="gp-ct-new-tag-input" maxlength="40" placeholder="Tag name" aria-label="New tag name">
+            <button type="button" class="gp-ct-btn gp-ct-btn--primary gp-ct-btn--small" id="gp-ct-new-tag-add">Add</button>
+            <button type="button" class="gp-ct-icon-btn gp-ct-icon-btn--small" id="gp-ct-new-tag-cancel" aria-label="Cancel new tag">×</button>
+            <div id="gp-ct-color-pop" class="gp-ct-color-pop" hidden role="listbox" aria-label="Tag color"></div>
+          </div>
+        </div>
+        <div class="gp-ct-section">
+          <div class="gp-ct-section-label">Status</div>
+          <div class="gp-ct-segmented" role="radiogroup" aria-label="Task status">
+            <button type="button" class="gp-ct-seg is-active" data-gp-ct-status="todo" role="radio" aria-checked="true">Planned</button>
+            <button type="button" class="gp-ct-seg" data-gp-ct-status="progress" role="radio" aria-checked="false">In progress</button>
+            <button type="button" class="gp-ct-seg" data-gp-ct-status="done" role="radio" aria-checked="false">Done</button>
+          </div>
+        </div>
+        <div class="gp-ct-row gp-ct-row--notes">
+          <span class="gp-ct-row-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+          </span>
+          <textarea class="gp-ct-notes" name="notes" rows="2" placeholder="Add description" aria-label="Description"></textarea>
+        </div>
+        <div class="gp-ct-section">
+          <div class="gp-ct-section-label">Subtasks</div>
+          <div id="gp-ct-subtasks" class="gp-ct-subtasks"></div>
+          <button type="button" class="gp-ct-text-btn" id="gp-ct-add-subtask">Add subtask</button>
+          <p class="gp-ct-hint">Subtasks sync across recurring sessions</p>
+        </div>
+        <footer class="gp-ct-footer">
+          <div class="gp-ct-footer-left">
+            <span class="gp-ct-cal-dot" aria-hidden="true"></span>
+            <span class="gp-ct-cal-label">My Tasks</span>
+          </div>
+          <div class="gp-ct-footer-right">
+            <button type="button" class="gp-ct-btn gp-ct-btn--text" data-gp-ct-dismiss="true">Cancel</button>
+            <button type="submit" class="gp-ct-btn gp-ct-btn--primary">Save</button>
+          </div>
+        </footer>
+      </form>
+    </div>
+  </div>
+  <div id="gp-mt-layer" class="gp-mt-layer" hidden>
+    <div class="gp-mt-scrim" data-gp-mt-dismiss="true"></div>
+    <div class="gp-mt-dialog" role="dialog" aria-modal="true" aria-labelledby="gp-mt-title">
+      <h2 id="gp-mt-title" class="gp-mt-title">Your tags</h2>
+      <p class="gp-mt-sub">Assign colors to classify your tasks. Tags appear on tasks and in the kanban board.</p>
+      <div id="gp-mt-rows" class="gp-mt-rows"></div>
+      <button type="button" class="gp-mt-add" id="gp-mt-add-row" aria-label="Add tag">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+      <div class="gp-mt-actions">
+        <button type="button" class="gp-ct-btn gp-ct-btn--text" id="gp-mt-cancel">Cancel</button>
+        <button type="button" class="gp-ct-btn gp-ct-btn--primary" id="gp-mt-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>`.trim();
+  }
+
+  function ensureGlobalTaskModals() {
+    if (getGlobalTaskModalsRoot()) return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = buildGlobalTaskModalsMarkup();
+    const modRoot = wrap.firstElementChild;
+    if (!modRoot) return;
+    document.body.appendChild(modRoot);
+    wireGlobalTaskModalsOnce();
+  }
+
+  function resetCreateTaskTagSectionEngagement() {
+    const tagSection = document.getElementById('gp-ct-tag-section');
+    const manageBtn = document.getElementById('gp-ct-manage-tags');
+    if (tagSection) delete tagSection.dataset.tagsEngaged;
+    if (manageBtn) manageBtn.hidden = true;
+  }
+
+  function openGlobalCreateTaskModal(options = {}) {
+    ensureGlobalTaskModals();
+    const root = getGlobalTaskModalsRoot();
+    const layer = document.getElementById('gp-ct-layer');
+    const form = document.getElementById('gp-ct-form');
+    if (!root || !layer || !form) return;
+
+    const preferredColumnId = options.preferredColumnId;
+    void loadKanbanState().then((state) => {
+      const col = preferredColumnId || getDefaultCreateColumnId(state);
+      const colInput = document.getElementById('gp-ct-column');
+      if (colInput) colInput.value = col;
+
+      document.querySelectorAll('.gp-ct-seg').forEach((btn) => {
+        const active = btn.dataset.gpCtStatus === col;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
+
+      form.reset();
+      if (colInput) colInput.value = col;
+      const chipInput = document.getElementById('gp-ct-chip');
+      if (chipInput) chipInput.value = '';
+
+      const subtasksEl = document.getElementById('gp-ct-subtasks');
+      if (subtasksEl) subtasksEl.innerHTML = '';
+
+      const newTagEl = document.getElementById('gp-ct-new-tag');
+      if (newTagEl) newTagEl.hidden = true;
+      const colorPop = document.getElementById('gp-ct-color-pop');
+      if (colorPop) {
+        colorPop.hidden = true;
+        colorPop.innerHTML = '';
+      }
+
+      renderCreateTaskTagChips(state);
+      syncCreateTaskStatusSegments(col);
+
+      resetCreateTaskTagSectionEngagement();
+
+      const mtLayer = document.getElementById('gp-mt-layer');
+      if (mtLayer) mtLayer.hidden = true;
+      gpResumeCreateTaskLayerAfterTags = false;
+      gpManageTagsDraft = null;
+
+      const due = form.querySelector('[name="dueDate"]');
+      if (due && !due.value) {
+        due.value = formatDueDateIso(new Date());
+      }
+
+      const timeToggle = document.getElementById('gp-ct-time-toggle');
+      const timeInput = form.querySelector('[name="dueTime"]');
+      if (timeInput) {
+        timeInput.value = '';
+        timeInput.classList.add('gp-ct-time-native--hidden');
+      }
+      if (timeToggle) {
+        timeToggle.setAttribute('aria-pressed', 'false');
+        timeToggle.textContent = 'No time';
+      }
+
+      root.hidden = false;
+      layer.hidden = false;
+      document.body.classList.add('gp-task-modals-open');
+
+      const kr = getActiveKanbanRoot();
+      if (kr) kr.classList.add('is-modal-open');
+
+      queueMicrotask(() => {
+        form.querySelector('.gp-ct-title-input')?.focus();
+      });
+    });
+  }
+
+  function closeGlobalCreateTaskModal() {
+    const root = getGlobalTaskModalsRoot();
+    const layer = document.getElementById('gp-ct-layer');
+    const mt = document.getElementById('gp-mt-layer');
+    if (layer) layer.hidden = true;
+    const kanbanRoot = getActiveKanbanRoot();
+    if (kanbanRoot) kanbanRoot.classList.remove('is-modal-open');
+    if (mt && !mt.hidden) {
+      return;
+    }
+    if (root) root.hidden = true;
+    document.body.classList.remove('gp-task-modals-open');
+  }
+
+  function syncCreateTaskStatusSegments(columnId) {
+    document.querySelectorAll('.gp-ct-seg').forEach((btn) => {
+      const active = btn.dataset.gpCtStatus === columnId;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+    const colInput = document.getElementById('gp-ct-column');
+    if (colInput) colInput.value = columnId;
+  }
+
+  function renderCreateTaskTagChips(state) {
+    const row = document.getElementById('gp-ct-chip-row');
+    if (!row) return;
+    row.innerHTML = '';
+    const tags = (state.tags || []).filter((t) => !t.hidden);
+    const chipVal = document.getElementById('gp-ct-chip')?.value;
+
+    tags.forEach((tag) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'gp-ct-chip';
+      btn.dataset.tagId = tag.id;
+      btn.setAttribute('role', 'option');
+      const selected = chipVal === tag.label || (!chipVal && tag.label === tags[0]?.label);
+      btn.setAttribute('aria-selected', selected ? 'true' : 'false');
+      btn.classList.toggle('is-selected', selected);
+      const dot = document.createElement('span');
+      dot.className = 'gp-ct-chip-dot';
+      dot.style.background = TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368';
+      btn.appendChild(dot);
+      btn.appendChild(document.createTextNode(tag.label));
+      row.appendChild(btn);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'gp-ct-chip gp-ct-chip--dashed';
+    addBtn.id = 'gp-ct-chip-new';
+    addBtn.setAttribute('role', 'option');
+    addBtn.setAttribute('aria-selected', 'false');
+    addBtn.textContent = '+ New';
+    row.appendChild(addBtn);
+
+    const chipInput = document.getElementById('gp-ct-chip');
+    if (chipInput && !chipInput.value && tags[0]) {
+      chipInput.value = tags[0].label;
+    }
+  }
+
+  function openInlineNewTagEditor() {
+    const box = document.getElementById('gp-ct-new-tag');
+    const input = document.getElementById('gp-ct-new-tag-input');
+    const dot = document.getElementById('gp-ct-new-tag-dot');
+    const pop = document.getElementById('gp-ct-color-pop');
+    if (!box || !input || !dot || !pop) return;
+
+    box.hidden = false;
+    input.value = '';
+    const firstKey = TAG_PALETTE_KEYS[0];
+    dot.dataset.colorKey = firstKey;
+    dot.style.background = TAG_HEX_BY_KEY[firstKey];
+    pop.hidden = false;
+    pop.innerHTML = '';
+    TAG_PALETTE_KEYS.forEach((key) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gp-ct-color-swatch';
+      b.dataset.colorKey = key;
+      b.style.setProperty('--sw', TAG_HEX_BY_KEY[key]);
+      b.style.background = TAG_HEX_BY_KEY[key];
+      b.setAttribute('aria-label', `Color ${key}`);
+      if (key === firstKey) b.classList.add('is-selected');
+      pop.appendChild(b);
+    });
+    queueMicrotask(() => input.focus());
+  }
+
+  function closeInlineNewTagEditor() {
+    const box = document.getElementById('gp-ct-new-tag');
+    const pop = document.getElementById('gp-ct-color-pop');
+    if (box) box.hidden = true;
+    if (pop) {
+      pop.hidden = true;
+      pop.innerHTML = '';
+    }
+  }
+
+  function appendSubtaskRow(title = '', done = false) {
+    const host = document.getElementById('gp-ct-subtasks');
+    if (!host) return;
+    const row = document.createElement('div');
+    row.className = 'gp-ct-subtask';
+    row.innerHTML = `
+      <input type="checkbox" class="gp-ct-subtask-check" ${done ? 'checked' : ''} aria-label="Done">
+      <input type="text" class="gp-ct-subtask-input" placeholder="Subtask">
+      <button type="button" class="gp-ct-subtask-del" aria-label="Remove subtask">×</button>
+    `;
+    const textInput = row.querySelector('.gp-ct-subtask-input');
+    if (textInput) textInput.value = title;
+    host.appendChild(row);
+  }
+
+  function readSubtasksFromForm() {
+    const host = document.getElementById('gp-ct-subtasks');
+    if (!host) return [];
+    return [...host.querySelectorAll('.gp-ct-subtask')].map((row, i) => {
+      const input = row.querySelector('.gp-ct-subtask-input');
+      const check = row.querySelector('.gp-ct-subtask-check');
+      const title = input?.value.trim() || '';
+      if (!title) return null;
+      return {
+        id: `st-new-${i}-${Date.now()}`,
+        title,
+        done: Boolean(check?.checked),
+      };
+    }).filter(Boolean);
+  }
+
+  async function submitGlobalCreateTaskForm() {
+    const form = document.getElementById('gp-ct-form');
+    if (!form) return;
+
+    const title = form.querySelector('[name="title"]')?.value.trim();
+    const dueDate = form.querySelector('[name="dueDate"]')?.value;
+    const chip = document.getElementById('gp-ct-chip')?.value?.trim() || (getDefaultTags()[0]?.label || 'PSYC101');
+    const columnId = document.getElementById('gp-ct-column')?.value || 'todo';
+    const notes = form.querySelector('[name="notes"]')?.value.trim() || '';
+    const subtasks = readSubtasksFromForm();
+
+    if (!title || !dueDate) return;
+
+    const state = await loadKanbanState();
+    const tag = findTagByLabel(state.tags, chip);
+    const chipColor = tag ? chipClassForColorKey(tag.colorKey) : resolveKanbanChipColor(chip, null, null);
+
+    const card = {
+      id: `task-${Date.now()}`,
+      title,
+      dueDate,
+      due: formatKanbanDueLabel(dueDate),
+      chip,
+      chipColor,
+      starred: false,
+      notes,
+      subtasks,
+    };
+
+    state.columns[columnId] = [...(state.columns[columnId] || []), card];
+    await saveKanbanState(state);
+    closeGlobalCreateTaskModal();
+  }
+
+  function escapeHtmlAttr(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function renderManageTagRows() {
+    const host = document.getElementById('gp-mt-rows');
+    if (!host || !gpManageTagsDraft) return;
+    host.innerHTML = '';
+    gpManageTagsDraft.forEach((tag, index) => {
+      const row = document.createElement('div');
+      row.className = 'gp-mt-row';
+      row.dataset.index = String(index);
+      row.innerHTML = `
+        <button type="button" class="gp-mt-color-hit" aria-label="Choose color" data-index="${index}">
+          <span class="gp-mt-dot" style="background:${TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368'}"></span>
+        </button>
+        <input class="gp-mt-input" type="text" value="${escapeHtmlAttr(tag.label)}" aria-label="Tag name">
+        <button type="button" class="gp-mt-icon-btn" data-action="hide" aria-label="Toggle visibility" title="Show in picker">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <button type="button" class="gp-mt-icon-btn" data-action="del" aria-label="Delete tag">×</button>
+      `;
+      const hit = row.querySelector('.gp-mt-color-hit');
+      const dot = hit?.querySelector('.gp-mt-dot');
+      if (dot) dot.style.background = TAG_HEX_BY_KEY[tag.colorKey] || '#5f6368';
+      const hideBtn = row.querySelector('[data-action="hide"]');
+      if (hideBtn) {
+        hideBtn.classList.toggle('is-muted', tag.hidden);
+        hideBtn.setAttribute('aria-pressed', tag.hidden ? 'true' : 'false');
+      }
+      host.appendChild(row);
+    });
+  }
+
+  function openManageTagsModal(fromUserManageButton = false) {
+    if (!fromUserManageButton) return;
+    const tagSection = document.getElementById('gp-ct-tag-section');
+    if (!tagSection || tagSection.dataset.tagsEngaged !== 'true') {
+      return;
+    }
+
+    ensureGlobalTaskModals();
+    void loadKanbanState().then((state) => {
+      gpManageTagsDraft = normalizeTags(state.tags).map((t) => ({ ...t }));
+      const layer = document.getElementById('gp-mt-layer');
+      const root = getGlobalTaskModalsRoot();
+      const ctLayer = document.getElementById('gp-ct-layer');
+      if (!layer || !root) return;
+
+      gpResumeCreateTaskLayerAfterTags = Boolean(ctLayer && !ctLayer.hidden);
+      if (gpResumeCreateTaskLayerAfterTags) {
+        ctLayer.hidden = true;
+      }
+
+      renderManageTagRows();
+      root.hidden = false;
+      layer.hidden = false;
+      document.body.classList.add('gp-task-modals-open');
+    });
+  }
+
+  function closeManageTagsModal() {
+    const layer = document.getElementById('gp-mt-layer');
+    if (layer) layer.hidden = true;
+    gpManageTagsDraft = null;
+
+    if (gpResumeCreateTaskLayerAfterTags) {
+      const ctLayer = document.getElementById('gp-ct-layer');
+      if (ctLayer) ctLayer.hidden = false;
+      gpResumeCreateTaskLayerAfterTags = false;
+      return;
+    }
+
+    const root = getGlobalTaskModalsRoot();
+    const ct = document.getElementById('gp-ct-layer');
+    if (root && ct?.hidden !== false) {
+      root.hidden = true;
+    }
+    if (!ct || ct.hidden) {
+      document.body.classList.remove('gp-task-modals-open');
+    }
+  }
+
+  async function saveManageTagsModal() {
+    if (!gpManageTagsDraft) return;
+    let next = gpManageTagsDraft.filter((t) => t.label.trim());
+    if (next.length === 0) {
+      next = getDefaultTags();
+    }
+    const state = await loadKanbanState();
+    state.tags = normalizeTags(next);
+    await saveKanbanState(state);
+    closeManageTagsModal();
+    const st = kanbanStateCache || await loadKanbanState();
+    renderCreateTaskTagChips(st);
+  }
+
+  function wireGlobalTaskModalsOnce() {
+    if (gpGlobalTaskModalsWired) return;
+    gpGlobalTaskModalsWired = true;
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[data-gp-ct-dismiss="true"]')) {
+        closeGlobalCreateTaskModal();
+      }
+      if (event.target.closest('[data-gp-mt-dismiss="true"]')) {
+        closeManageTagsModal();
+      }
+    });
+
+    const form = document.getElementById('gp-ct-form');
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void submitGlobalCreateTaskForm();
+    });
+
+    document.getElementById('gp-ct-chip-row')?.addEventListener('click', (e) => {
+      if (e.target.closest('#gp-ct-chip-new')) {
+        e.preventDefault();
+        openInlineNewTagEditor();
+        return;
+      }
+      const chip = e.target.closest('.gp-ct-chip');
+      if (!chip) return;
+      document.querySelectorAll('#gp-ct-chip-row .gp-ct-chip').forEach((c) => {
+        c.classList.remove('is-selected');
+        c.setAttribute('aria-selected', 'false');
+      });
+      chip.classList.add('is-selected');
+      chip.setAttribute('aria-selected', 'true');
+      const id = chip.dataset.tagId;
+      void loadKanbanState().then((state) => {
+        const tag = state.tags.find((t) => t.id === id);
+        const input = document.getElementById('gp-ct-chip');
+        if (input && tag) input.value = tag.label;
+      });
+    });
+
+    document.getElementById('gp-ct-time-toggle')?.addEventListener('click', () => {
+      const form = document.getElementById('gp-ct-form');
+      const timeInput = form?.querySelector('[name="dueTime"]');
+      const btn = document.getElementById('gp-ct-time-toggle');
+      if (!timeInput || !btn) return;
+      const pressed = btn.getAttribute('aria-pressed') === 'true';
+      if (pressed) {
+        btn.setAttribute('aria-pressed', 'false');
+        btn.textContent = 'No time';
+        timeInput.value = '';
+        timeInput.classList.add('gp-ct-time-native--hidden');
+      } else {
+        btn.setAttribute('aria-pressed', 'true');
+        btn.textContent = 'Time';
+        timeInput.classList.remove('gp-ct-time-native--hidden');
+        timeInput.focus();
+      }
+    });
+
+    document.querySelector('.gp-ct-segmented')?.addEventListener('click', (e) => {
+      const seg = e.target.closest('.gp-ct-seg');
+      if (!seg) return;
+      const col = seg.dataset.gpCtStatus;
+      if (!col) return;
+      syncCreateTaskStatusSegments(col);
+    });
+
+    document.getElementById('gp-ct-manage-tags')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openManageTagsModal(true);
+    });
+
+    const tagSection = document.getElementById('gp-ct-tag-section');
+    const markTagSectionEngaged = () => {
+      if (!tagSection || tagSection.dataset.tagsEngaged === 'true') return;
+      tagSection.dataset.tagsEngaged = 'true';
+      const showManageBtn = () => {
+        const btn = document.getElementById('gp-ct-manage-tags');
+        if (btn) btn.hidden = false;
+      };
+      /* Defer until after pointerup so the same click cannot land on the newly
+         revealed "Manage tags" control (ghost-open of Your tags modal). */
+      const onPointerUp = () => {
+        document.removeEventListener('pointerup', onPointerUp, true);
+        window.clearTimeout(fallbackTimer);
+        window.setTimeout(showManageBtn, 0);
+      };
+      const fallbackTimer = window.setTimeout(() => {
+        document.removeEventListener('pointerup', onPointerUp, true);
+        showManageBtn();
+      }, 3000);
+      document.addEventListener('pointerup', onPointerUp, true);
+    };
+
+    tagSection?.addEventListener('pointerdown', (event) => {
+      if (tagSection.dataset.tagsEngaged === 'true') return;
+      if (event.target.closest('#gp-ct-manage-tags')) return;
+      if (event.target.closest('#gp-ct-chip-scroll') || event.target.closest('#gp-ct-new-tag')) {
+        markTagSectionEngaged();
+      }
+    });
+
+    tagSection?.addEventListener('focusin', (event) => {
+      if (tagSection.dataset.tagsEngaged === 'true') return;
+      const t = event.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest('#gp-ct-chip-row') || t.id === 'gp-ct-new-tag-input') {
+        tagSection.dataset.tagsEngaged = 'true';
+        window.setTimeout(() => {
+          const btn = document.getElementById('gp-ct-manage-tags');
+          if (btn) btn.hidden = false;
+        }, 0);
+      }
+    });
+
+    document.getElementById('gp-ct-add-subtask')?.addEventListener('click', () => {
+      appendSubtaskRow();
+      const host = document.getElementById('gp-ct-subtasks');
+      host?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')?.focus();
+    });
+
+    document.getElementById('gp-ct-subtasks')?.addEventListener('click', (e) => {
+      if (e.target.closest('.gp-ct-subtask-del')) {
+        e.target.closest('.gp-ct-subtask')?.remove();
+      }
+    });
+
+    document.getElementById('gp-ct-subtasks')?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const input = e.target.closest('.gp-ct-subtask-input');
+      if (!input) return;
+      e.preventDefault();
+      appendSubtaskRow();
+      const host = document.getElementById('gp-ct-subtasks');
+      host?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')?.focus();
+    });
+
+    document.getElementById('gp-ct-new-tag-add')?.addEventListener('click', () => {
+      void (async () => {
+        const input = document.getElementById('gp-ct-new-tag-input');
+        const dot = document.getElementById('gp-ct-new-tag-dot');
+        const label = input?.value.trim();
+        if (!label) return;
+        const colorKey = dot?.dataset.colorKey || 'blue';
+        const state = await loadKanbanState();
+        const id = `tag-${Date.now()}`;
+        state.tags = normalizeTags([...(state.tags || []), { id, label, colorKey, hidden: false }]);
+        await saveKanbanState(state);
+        const chipInput = document.getElementById('gp-ct-chip');
+        if (chipInput) chipInput.value = label;
+        closeInlineNewTagEditor();
+        renderCreateTaskTagChips(await loadKanbanState());
+      })();
+    });
+
+    document.getElementById('gp-ct-new-tag-cancel')?.addEventListener('click', () => {
+      closeInlineNewTagEditor();
+    });
+
+    document.getElementById('gp-ct-color-pop')?.addEventListener('click', (e) => {
+      const sw = e.target.closest('.gp-ct-color-swatch');
+      if (!sw) return;
+      const key = sw.dataset.colorKey;
+      const dot = document.getElementById('gp-ct-new-tag-dot');
+      if (dot && key) {
+        dot.dataset.colorKey = key;
+        dot.style.background = TAG_HEX_BY_KEY[key] || '#5f6368';
+      }
+      document.querySelectorAll('#gp-ct-color-pop .gp-ct-color-swatch').forEach((s) => {
+        s.classList.toggle('is-selected', s === sw);
+      });
+    });
+
+    document.getElementById('gp-mt-cancel')?.addEventListener('click', () => {
+      closeManageTagsModal();
+    });
+
+    document.getElementById('gp-mt-save')?.addEventListener('click', () => {
+      void saveManageTagsModal();
+    });
+
+    document.getElementById('gp-mt-add-row')?.addEventListener('click', () => {
+      if (!gpManageTagsDraft) return;
+      gpManageTagsDraft.push({
+        id: `tag-${Date.now()}`,
+        label: '',
+        colorKey: 'blue',
+        hidden: false,
+      });
+      renderManageTagRows();
+    });
+
+    document.getElementById('gp-mt-rows')?.addEventListener('input', (e) => {
+      const input = e.target.closest('.gp-mt-input');
+      const row = input?.closest('.gp-mt-row');
+      if (!row || !gpManageTagsDraft) return;
+      const idx = Number(row.dataset.index);
+      if (!Number.isNaN(idx)) gpManageTagsDraft[idx].label = input.value;
+    });
+
+    document.getElementById('gp-mt-rows')?.addEventListener('click', (e) => {
+      const del = e.target.closest('[data-action="del"]');
+      const row = e.target.closest('.gp-mt-row');
+      const hideBtn = e.target.closest('[data-action="hide"]');
+      const colorHit = e.target.closest('.gp-mt-color-hit');
+      if (del && row && gpManageTagsDraft) {
+        const idx = Number(row.dataset.index);
+        gpManageTagsDraft.splice(idx, 1);
+        renderManageTagRows();
+        return;
+      }
+      if (hideBtn && row && gpManageTagsDraft) {
+        const idx = Number(row.dataset.index);
+        gpManageTagsDraft[idx].hidden = !gpManageTagsDraft[idx].hidden;
+        renderManageTagRows();
+        return;
+      }
+      if (colorHit && row && gpManageTagsDraft) {
+        const idx = Number(row.dataset.index);
+        const order = TAG_PALETTE_KEYS;
+        const cur = gpManageTagsDraft[idx].colorKey;
+        const ni = (order.indexOf(cur) + 1) % order.length;
+        gpManageTagsDraft[idx].colorKey = order[ni];
+        renderManageTagRows();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const pop = document.getElementById('gp-ct-color-pop');
+      const newTag = document.getElementById('gp-ct-new-tag');
+      if (newTag && !newTag.hidden) {
+        closeInlineNewTagEditor();
+        e.preventDefault();
+        return;
+      }
+      if (document.getElementById('gp-mt-layer') && !document.getElementById('gp-mt-layer').hidden) {
+        closeManageTagsModal();
+        e.preventDefault();
+        return;
+      }
+      if (document.getElementById('gp-ct-layer') && !document.getElementById('gp-ct-layer').hidden) {
+        closeGlobalCreateTaskModal();
+        e.preventDefault();
+      }
+    });
   }
 
   function formatKanbanDueLabel(value) {
@@ -1721,54 +2526,12 @@
     return 'todo';
   }
 
-  function openCreateTaskModal(root, preferredColumnId) {
-    const modal = root.querySelector('.mytasks-kanban__modal');
-    const form = modal?.querySelector('.mytasks-kanban__modal-form');
-    if (!modal || !form) return;
-
-    const state = kanbanStateCache || getDefaultKanbanState();
-    const columnField = form.querySelector('[name="column"]');
-    if (columnField) {
-      columnField.value = preferredColumnId || getDefaultCreateColumnId(state);
-    }
-
-    modal.hidden = false;
-    root.classList.add('is-modal-open');
-    form.querySelector('[name="title"]')?.focus();
+  function openCreateTaskModal(_root, preferredColumnId) {
+    openGlobalCreateTaskModal({ preferredColumnId });
   }
 
-  function closeCreateTaskModal(root) {
-    const modal = root.querySelector('.mytasks-kanban__modal');
-    const form = modal?.querySelector('.mytasks-kanban__modal-form');
-    if (!modal || !form) return;
-
-    form.reset();
-    modal.hidden = true;
-    root.classList.remove('is-modal-open');
-  }
-
-  async function submitCreateTaskModal(root, form) {
-    const title = form.querySelector('[name="title"]')?.value.trim();
-    const dueDate = form.querySelector('[name="dueDate"]')?.value;
-    const course = form.querySelector('[name="course"]')?.value || 'PSYC101';
-    const columnId = form.querySelector('[name="column"]')?.value || 'todo';
-
-    if (!title || !dueDate) return;
-
-    const state = await loadKanbanState();
-    const card = {
-      id: `task-${Date.now()}`,
-      title,
-      dueDate,
-      due: formatKanbanDueLabel(dueDate),
-      chip: course,
-      chipColor: KANBAN_CHIP_COLORS[course] || 'blue',
-      starred: false,
-    };
-
-    state.columns[columnId] = [...(state.columns[columnId] || []), card];
-    await saveKanbanState(state);
-    closeCreateTaskModal(root);
+  function closeCreateTaskModal() {
+    closeGlobalCreateTaskModal();
   }
 
   async function toggleKanbanCardStar(root, cardId) {
@@ -1893,17 +2656,6 @@
         setKanbanActiveList(root, 'all');
         return;
       }
-
-      if (event.target.closest('[data-modal-dismiss="true"]')) {
-        event.preventDefault();
-        closeCreateTaskModal(root);
-      }
-    });
-
-    const form = root.querySelector('.mytasks-kanban__modal-form');
-    form?.addEventListener('submit', (event) => {
-      event.preventDefault();
-      submitCreateTaskModal(root, form);
     });
   }
 
@@ -2983,6 +3735,7 @@
     if (createTaskBtn) {
       createTaskBtn.addEventListener('click', () => {
         createTaskBtn.blur();
+        openGlobalCreateTaskModal({});
       });
     }
 
@@ -2993,6 +3746,7 @@
   }
 
   function mountSidebar() {
+    ensureGlobalTaskModals();
     let existing = document.getElementById('gp-panel');
     if (existing && existing.querySelector('#gp-view-kanban-btn, #gp-screen-kanban')) {
       existing.remove();
@@ -3077,6 +3831,7 @@
 
   async function bootstrapCalendarTasksUi() {
     await maybeClearKanbanBoardStorageOnce();
+    ensureGlobalTaskModals();
     setupNativeTasksFrameBridge();
     mountSidebar();
     setupRailObserver();
