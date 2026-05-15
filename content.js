@@ -2078,10 +2078,7 @@
     try {
       const legacyGoalsRaw = await getGoals();
       const legacyGoals = Array.isArray(legacyGoalsRaw) ? legacyGoalsRaw : [];
-      const chipDoneRaw = await new Promise((r) =>
-        chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
-      );
-      const chipDone = expandChipDoneOntoCalEventIds(chipDoneRaw, legacyGoals);
+      const chipDone = await loadMergedChipDoneForSidebar(legacyGoals);
       st = Model.syncUnifiedWithLegacyGoals(st, legacyGoals, chipDone);
     } catch (_) {
       /* projection-only merge */
