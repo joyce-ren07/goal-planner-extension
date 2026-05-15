@@ -882,25 +882,10 @@
   function stripGCalMenuItemBehaviorAttrs(el) {
     if (!el) return;
     const purge = ['jsaction', 'jscontroller', 'jsname', 'jsshadow', 'jsmodel', '__is_owner'];
-    for (let n = el; n; ) {
-      for (const a of purge) {
-        try {
-          n.removeAttribute(a);
-        } catch (_) {
-          /* ignore */
-        }
-      }
-      if (n.shadowRoot?.firstElementChild)
-        stripGCalMenuItemBehaviorAttrs(n.shadowRoot.firstElementChild);
-      const next = TreeWalker_NEXT(n, el); // Wrong - use iterative walk
-      break;
-    }
-    /** @type {Element | null} */
-    let cur = el;
     const stack = [el];
     while (stack.length) {
-      cur = stack.pop();
-      if (!cur) continue;
+      const cur = stack.pop();
+      if (!cur || cur.nodeType !== Node.ELEMENT_NODE) continue;
       for (const a of purge) {
         try {
           cur.removeAttribute(a);
@@ -908,10 +893,12 @@
           /* ignore */
         }
       }
-      cur = cur.firstElementChild;
-      while (cur) {
-        stack.push(cur);
-        cur = cur.nextElementSibling;
+      const sr = cur.shadowRoot && cur.shadowRoot.firstElementChild;
+      if (sr) stack.push(sr);
+      let c = cur.firstElementChild;
+      while (c) {
+        stack.push(c);
+        c = c.nextElementSibling;
       }
     }
   }
@@ -921,11 +908,21 @@
     let n = walker.nextNode();
     while (n) {
       const t = (n.textContent || '').trim();
-      if (t && t.length <= 56 && /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(t)) {
+      if (t && /^(event|task)\b/i.test(t)) {
         n.textContent = label;
         return;
       }
       n = walker.nextNode();
+    }
+    const w2 = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let m = w2.nextNode();
+    while (m) {
+      const t = (m.textContent || '').trim();
+      if (t.length >= 2 && t.length <= 64) {
+        m.textContent = label;
+        return;
+      }
+      m = w2.nextNode();
     }
   }
 
