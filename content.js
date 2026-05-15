@@ -572,8 +572,8 @@
 
     // Re-render ghost events on window resize (column widths change)
     window.addEventListener('resize', () => {
-      const screen = document.getElementById('gp-screen-suggestions');
-      if (screen && screen.classList.contains('active')) renderGhostEvents();
+      const p = document.getElementById('gp-panel');
+      if (p?.classList.contains('open')) renderGhostEvents();
     });
   }
 
