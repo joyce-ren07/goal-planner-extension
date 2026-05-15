@@ -4647,7 +4647,14 @@
               calEventIds: allowed,
               plannerEventId,
               storageKey,
-              mirrorKeys: [...mirrorKeys],
+              sessionAnchors: (slotGoalRow?.sessionAnchors || []).length,
+              goalChipsOnPage: document.querySelectorAll('[data-eventchip]').length,
+            });
+          } else if (gid && slotIdx >= 0) {
+            console.info('[gp-my-goals] session slot resolved', {
+              goalId: gid,
+              slotIdx,
+              apiEventId: allowed[slotIdx],
             });
           }
 
