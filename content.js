@@ -2176,8 +2176,12 @@
 
   function goalUnifiedProgressSnapshot(g) {
     const sessions = g?.sessions || [];
-    const total = sessions.length;
-    const completedSessions = total ? sessions.filter((s) => !!s.completed).length : 0;
+    const slotCount = sessions.length;
+    const total =
+      typeof g?.totalSessions === 'number' && g.totalSessions > 0
+        ? g.totalSessions
+        : slotCount;
+    const completedSessions = slotCount ? sessions.filter((s) => !!s.completed).length : 0;
     const progressPct =
       typeof g?.progressPct === 'number'
         ? Math.max(0, Math.min(100, Math.round(g.progressPct)))
