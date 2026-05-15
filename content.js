@@ -2359,7 +2359,7 @@
           renderGoalsSidebar(changes.goalPlannerUnifiedState.newValue, { reason: 'storage' });
         }
         if (changes.gp_chip_done && !changes.goalPlannerUnifiedState) {
-          renderGoalsSidebar();
+          renderGoalsSidebar(undefined, { reason: 'sessionCompletion' });
         }
         if (changes.gp_goal_slot_done && !changes.goalPlannerUnifiedState) {
           renderGoalsSidebar();
