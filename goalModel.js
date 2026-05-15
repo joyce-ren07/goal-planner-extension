@@ -83,7 +83,28 @@
   /** gp_chip_done keys are often strings; calEventIds may be stored as numbers — avoid strict key misses. */
   function lookupChipDone(doneMap, eventId) {
     if (!doneMap || eventId == null || eventId === '') return false;
-    return !!(doneMap[eventId] || doneMap[String(eventId)]);
+    if (doneMap[eventId] || doneMap[String(eventId)]) return true;
+    var e = String(eventId);
+    var keys = Object.keys(doneMap);
+    for (var ki = 0; ki < keys.length; ki++) {
+      var k = keys[ki];
+      if (!doneMap[k]) continue;
+      if (k === e) return true;
+      var dec = k;
+      try {
+        dec = decodeURIComponent(String(k).replace(/\+/g, ' '));
+      } catch (_) {
+        dec = k;
+      }
+      if (dec === e) return true;
+      if (String(k).indexOf(e + '_') === 0 || dec.indexOf(e + '_') === 0) return true;
+      if (e.indexOf(String(k) + '_') === 0 || e.indexOf(dec.split('_')[0] + '_') === 0) return true;
+      var eSeg = e.split('_')[0];
+      var kSeg = String(k).split('_')[0];
+      var decSeg = dec.split('_')[0];
+      if (eSeg.length >= 8 && (eSeg === kSeg || eSeg === decSeg)) return true;
+    }
+    return false;
   }
 
   function computeProgressPct(goal) {
