@@ -246,8 +246,8 @@
 }
 
 .gp-gcal-sidebar-header-icon {
-  font-size: 24px;
-  line-height: 1;
+  font-size: var(--gp-native-icon-font-size, 24px);
+  line-height: var(--gp-native-icon-lh, 1);
   user-select: none;
   font-variation-settings:
     'FILL' 0,
