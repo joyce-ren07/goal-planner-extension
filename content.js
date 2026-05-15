@@ -2007,10 +2007,15 @@
         return g;
       }
       const done = sessions.filter((s) => s.completed).length;
-      const progressPct = sessions.length
-        ? Math.max(0, Math.min(100, Math.round((done / sessions.length) * 100)))
+      const totalSessions =
+        typeof g.totalSessions === 'number' && g.totalSessions > 0
+          ? g.totalSessions
+          : globalThis.GoalPlannerModel?.resolveGoalTotalSessions?.(lg) ||
+            sessions.length;
+      const progressPct = totalSessions
+        ? Math.max(0, Math.min(100, Math.round((done / totalSessions) * 100)))
         : 0;
-      return { ...g, sessions, progressPct };
+      return { ...g, sessions, totalSessions, progressPct };
     });
     return { ...st, goals };
   }
