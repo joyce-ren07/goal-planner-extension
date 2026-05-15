@@ -1638,7 +1638,7 @@
     _leftSidebarGoalsMountTimer = setTimeout(() => {
       _leftSidebarGoalsMountTimer = null;
       mountLeftSidebarGoalsSection();
-      renderMyGoalsProgressPanel();
+      renderGoalsSidebar();
     }, 400);
   }
 
