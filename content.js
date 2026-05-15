@@ -4323,9 +4323,17 @@
       chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || '';
     const goal = findLegacyGoalForGoalChip(chip, legacyGoals);
     let plannerEventId = '';
+    const anchorGoal = goal ? await enrichGoalRowWithUnifiedAnchors(goal, legacyGoals, chipDoneMap) : goal;
+    const calFromSession = await resolveCalEventIdForChipSession(
+      chip,
+      anchorGoal || goal,
+      legacyGoals,
+      chipDoneMap
+    );
+    if (calFromSession) plannerEventId = calFromSession;
     const quick = resolveChipCompletionTarget(chip, legacyGoals);
     const ids = goal?.calEventIds || [];
-    if (quick.plannerEventId && calEventIdsContain(ids, quick.plannerEventId)) {
+    if (!plannerEventId && quick.plannerEventId && calEventIdsContain(ids, quick.plannerEventId)) {
       plannerEventId = quick.plannerEventId;
     }
     if (!plannerEventId && goal) {
