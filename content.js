@@ -866,7 +866,6 @@
     } else if (name === 'form') {
       clearGoalCreationPreview();
     }
-    if (name === 'suggestions') { /* preview state only cleared on commit / cancel */ }
   }
 
   // ── My Goals — read-only progress strip (GoalPlannerModel / goalPlannerUnifiedState only) ──
