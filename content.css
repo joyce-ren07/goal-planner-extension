@@ -288,7 +288,7 @@
 
 .gp-gcal-sidebar-section-body {
   box-sizing: border-box;
-  padding: 4px var(--gp-native-header-pr, 8px) 12px var(--gp-native-header-pl, 12px);
+  padding: 4px var(--gp-native-header-pr, 16px) 12px var(--gp-native-header-pl, 20px);
 }
 
 /* Instant hide (default + fallback): matches common accordion “panel not in flow when closed” behavior */
