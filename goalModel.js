@@ -110,7 +110,7 @@
       endTime: session.endTime || '',
       completed: !!session.completed,
     });
-      goal.progressPct = computeProgressPct(goal);
+    goal.progressPct = computeProgressPct(goal);
     return state;
   }
 
