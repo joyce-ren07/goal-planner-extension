@@ -79,11 +79,31 @@
 
   // ── Ghost events: remove all from DOM and tear down scroll listener ──
   function removeGhostEvents() {
-    document.querySelectorAll('.goal-ghost-event').forEach(el => el.remove());
+    document.querySelectorAll('.goal-ghost-event[data-gp-ghost-preview]').forEach((el) => el.remove());
+    document.querySelectorAll('.goal-ghost-event').forEach((el) => el.remove());
     if (_ghostScrollEl && _ghostScrollHandler) {
       _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
       _ghostScrollEl = null;
       _ghostScrollHandler = null;
+    }
+  }
+
+  /** In-memory preview only: never written to chrome.storage until confirmAddToCalendar succeeds. */
+  function clearGoalCreationPreview() {
+    state.suggestions = [];
+    _originalSuggestions = [];
+    removeGhostEvents();
+    resetPrefTimeInput();
+  }
+
+  async function computePreviewSuggestions(r) {
+    try {
+      const token = await getAuthToken();
+      const busySlots = await fetchBusySlots(token);
+      return generateSmartSuggestions(r, busySlots);
+    } catch (e) {
+      console.warn('GoalPlanner: freebusy unavailable, using preferred time.', e);
+      return generateFallbackSuggestions(r);
     }
   }
 
