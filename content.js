@@ -3325,19 +3325,25 @@
         if (id) allIds.push(id);
       }
     }
-    if (allIds.includes(raw)) return raw;
+    for (const id of allIds) {
+      if (String(id) === String(raw)) return id;
+    }
     let decoded = raw;
     try {
       decoded = decodeURIComponent(raw.replace(/\+/g, ' '));
     } catch (_) {
       decoded = raw;
     }
-    if (decoded !== raw && allIds.includes(decoded)) return decoded;
+    if (decoded !== raw) {
+      for (const id of allIds) {
+        if (String(id) === String(decoded)) return id;
+      }
+    }
 
     for (const id of allIds) {
-      if (!id) continue;
+      if (!id && id !== 0) continue;
       const instPrefix = `${id}_`;
-      if (raw === id || decoded === id) return id;
+      if (raw === id || decoded === id || String(raw) === String(id)) return id;
       if (raw.startsWith(instPrefix) || decoded.startsWith(instPrefix)) return id;
     }
 
