@@ -1074,10 +1074,14 @@
 
     let plVal = pcs.paddingLeft;
     let prVal = pcs.paddingRight;
+    const maxPlAcross = maxNativeSidebarTitleLeftInsetPx(scroll);
     if (titleEl && rr.width > 0) {
       const tr = titleEl.getBoundingClientRect();
       const plMeas = Math.round(tr.left - rr.left);
-      if (plMeas >= 8) plVal = `${plMeas}px`;
+      const plNum = Math.max(plMeas >= 8 ? plMeas : 0, maxPlAcross, parseFloat(pcs.paddingLeft) || 0);
+      if (plNum >= 8) plVal = `${Math.round(plNum)}px`;
+    } else if (maxPlAcross >= 8) {
+      plVal = `${Math.round(Math.max(maxPlAcross, parseFloat(pcs.paddingLeft) || 0))}px`;
     }
     if (nestedClickables.length && rr.width > 0) {
       let maxIconRight = rr.left;
