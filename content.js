@@ -1154,7 +1154,10 @@
   /** Mount (or re-mount) the extension sidebar block into Google Calendar’s left stack. */
   function mountLeftSidebarGoalsSection() {
     let root = document.getElementById('gp-gcal-sidebar-goals-root');
-    if (root && root.isConnected) return root;
+    if (root && root.isConnected) {
+      syncMyGoalsSidebarChromeFromNative();
+      return root;
+    }
 
     const scroll = findGCalLeftSidebarScrollEl();
     if (!scroll) return null;
@@ -1162,6 +1165,7 @@
     if (root) root.remove();
     root = buildLeftSidebarGoalsSection();
     insertGoalsSectionIntoSidebarScroll(scroll, root);
+    syncMyGoalsSidebarChromeFromNative();
     return root;
   }
 
