@@ -742,11 +742,11 @@
   color: #d3564b;
 }
 
-/* Secondary line — matches native event time / caption (11px / 14px, regular, standard GCal muted gray). */
+/* Secondary line — same type metrics as native time text; goal brand coral (not GCal gray). */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   font-size: 11px;
   line-height: 14px;
-  color: #5f6368;
+  color: #d3564b;
   opacity: 1;
 }
 
