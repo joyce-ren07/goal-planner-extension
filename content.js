@@ -335,7 +335,7 @@
     setupRailFallbackPositioner();
 
     wireEvents();
-    setupMyGoalsUnifiedBinding();
+    setupMyGoalsSidebarStorageSync();
     setupGoalsSidebarReactiveBinding();
     setupLeftSidebarGoalsMountObserver();
     renderHomeScreen();
