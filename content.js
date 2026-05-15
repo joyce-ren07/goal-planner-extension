@@ -2367,13 +2367,6 @@
     ensureSidebarGoalSessionsSpans(sessWrap);
     const countSpan = sessWrap?.querySelector('.gcal-ext-goal-session-count');
     const pctSpan = sessWrap?.querySelector('.gcal-ext-goal-session-pct');
-    if (countSpan) countSpan.textContent = `${completed} of ${total} sessions`;
-    if (pctSpan) pctSpan.textContent = `${pctClamped}%`;
-    else if (sessWrap) sessWrap.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
-
-    card.style.setProperty('--goal-progress-pct', `${pctClamped}%`);
-    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-    if (fillEl) fillEl.style.removeProperty('width');
     const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
