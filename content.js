@@ -3736,6 +3736,9 @@
           }
           const goalRow = findLegacyGoalForGoalChip(chip, legacyGoals);
           const allowed = goalRow?.calEventIds || [];
+          if ((goalId == null || goalId === '') && goalRow?.id != null && goalRow.id !== '') {
+            goalId = goalRow.id;
+          }
           if (allowed.length && plannerEventId && !calEventIdsContain(allowed, plannerEventId)) {
             const alt = resolvePlannerEventIdForChip(storageKey || plannerEventId, legacyGoals);
             if (alt && calEventIdsContain(allowed, alt)) plannerEventId = alt;
