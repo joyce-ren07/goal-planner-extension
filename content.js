@@ -2184,11 +2184,8 @@
    */
   async function patchMyGoalsSidebarProgressRows(mergedState, meta) {
     mountLeftSidebarGoalsSection();
-    const container =
-      document.getElementById('gp-gcal-sidebar-goals-cards') ||
-      document.querySelector('#gp-gcal-sidebar-goals-root .gcal-ext-goals-list');
     const root = document.getElementById('gp-gcal-sidebar-goals-root');
-    if (!container || !root) {
+    if (!root?.isConnected) {
       scheduleLeftSidebarGoalsMount();
       return;
     }
