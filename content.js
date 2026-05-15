@@ -1269,16 +1269,44 @@
     const sessionCount = Math.max(1, r.days.length);
     renderSkeletons(sessionCount);
 
-    // Fetch freebusy data and generate calendar-aware suggestions
+    // Fetch freebusy data and generate calendar-aware suggestions (in-memory preview only)
     try {
-      const token = await getAuthToken();
-      const busySlots = await fetchBusySlots(token);
-      state.suggestions = generateSmartSuggestions(r, busySlots);
+      state.suggestions = await computePreviewSuggestions(r);
     } catch (e) {
-      console.warn('GoalPlanner: freebusy unavailable, using preferred time.', e);
+      console.warn('GoalPlanner: suggestion preview failed', e);
       state.suggestions = generateFallbackSuggestions(r);
     }
     _originalSuggestions = state.suggestions.map(s => ({ ...s }));
+    renderSuggestions();
+  }
+
+  /** Regenerate suggestion list + ghost overlays after recurrence changes on Screen 3. */
+  async function refreshSuggestionsPreview() {
+    if (!state.recurrence) return;
+    const r = state.recurrence;
+    const sessionCount = Math.max(1, (r.days && r.days.length) || 1);
+    renderSkeletons(sessionCount);
+    removeGhostEvents();
+
+    try {
+      state.suggestions = await computePreviewSuggestions(r);
+    } catch (e) {
+      console.warn('GoalPlanner: suggestion preview failed', e);
+      state.suggestions = generateFallbackSuggestions(r);
+    }
+    _originalSuggestions = state.suggestions.map(s => ({ ...s }));
+    resetPrefTimeInput();
+
+    const dayNames = { SU:'Sun', MO:'Mon', TU:'Tue', WE:'Wed', TH:'Thu', FR:'Fri', SA:'Sat' };
+    const dayStr = (r.days || []).map(d => dayNames[d]).join(', ');
+    const schedLabel = r.every === 1 ? `Weekly on ${dayStr}` : `Every ${r.every} ${r.period}s on ${dayStr}`;
+    let endsLabel = 'Never ends';
+    if (r.ends === 'on' && r.endDate) {
+      endsLabel = `Ends ${formatDate(r.endDate)}`;
+    } else if (r.ends === 'after') {
+      endsLabel = `Ends after ${r.occurrences} sessions`;
+    }
+    updateConfirmChips(schedLabel, endsLabel);
     renderSuggestions();
   }
 
