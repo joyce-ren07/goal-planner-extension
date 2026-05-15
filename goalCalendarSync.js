@@ -158,7 +158,13 @@
     var state = await Model.loadUnifiedState();
     await ensureSessionRow(Model, state, eventId);
     Model.setSessionCompleted(state, eventId, !!completed);
-    await Model.saveUnifiedState(state);
+    var hit = Model.findSessionByEventId(state, eventId);
+    var goalId = hit ? hit.goal.id : null;
+    await Model.saveUnifiedState(state, {
+      reason: 'sessionCompletion',
+      eventId: eventId,
+      goalId: goalId,
+    });
   }
 
   function cancelScheduledPersistSessionGeometry(chip) {
