@@ -3115,30 +3115,35 @@
       const storageKey = liveEid || canonicalEventKey;
       if (liveEid && chip.dataset.gpChipKey !== liveEid) chip.dataset.gpChipKey = liveEid;
 
-      chrome.storage.local.get(['gp_chip_done'], (d) => {
+      chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
+        const legacyGoals = d.gp_goals || [];
+        const plannerEventId = resolvePlannerEventIdForChip(storageKey, legacyGoals);
         const map = { ...(d.gp_chip_done || {}) };
-        if (nextDone) map[storageKey] = true;
-        else delete map[storageKey];
+        if (nextDone) map[plannerEventId] = true;
+        else delete map[plannerEventId];
         chrome.storage.local.set({ gp_chip_done: map }, async () => {
           try {
-            await globalThis.GoalCalendarSync?.persistSessionCompleted?.(storageKey, nextDone);
+            await globalThis.GoalCalendarSync?.persistSessionCompleted?.(plannerEventId, nextDone);
           } catch (_) {
             /* ignore */
           }
+          let metaSidebar = {};
           try {
             const Model = globalThis.GoalPlannerModel;
-            if (Model && storageKey) {
+            if (Model && plannerEventId) {
               const st = await Model.loadUnifiedState();
-              const hit = Model.findSessionByEventId(st, storageKey);
-              await renderGoalsSidebar(
-                st,
-                hit?.goal?.id ? { reason: 'sessionCompletion', goalId: hit.goal.id } : {}
-              );
+              const hit = Model.findSessionByEventId(st, plannerEventId);
+              if (hit?.goal?.id) metaSidebar = { reason: 'sessionCompletion', goalId: hit.goal.id };
             }
           } catch (_) {
             /* sidebar optional */
           }
-          chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: storageKey, complete: nextDone });
+          try {
+            await renderGoalsSidebar(undefined, metaSidebar);
+          } catch (_) {
+            /* ignore */
+          }
+          chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: plannerEventId, complete: nextDone });
           renderHomeScreen();
         });
       });
