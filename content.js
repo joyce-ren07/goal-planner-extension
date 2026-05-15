@@ -1741,7 +1741,13 @@
         const map = { ...(d.gp_chip_done || {}) };
         if (nextDone) map[chipKey] = true;
         else delete map[chipKey];
-        chrome.storage.local.set({ gp_chip_done: map });
+        const eventId =
+          chip.closest('[data-eventid]')?.getAttribute('data-eventid') || chipKey;
+        chrome.storage.local.set({ gp_chip_done: map }, () => {
+          globalThis.GoalCalendarSync?.persistSessionCompleted?.(eventId, nextDone)?.catch?.(
+            () => {}
+          );
+        });
         chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nextDone });
       });
 
