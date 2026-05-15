@@ -951,12 +951,6 @@
     return `rgb(${blend(r)}, ${blend(g)}, ${blend(b)})`;
   }
 
-  /** Sidebar cards: merge unified sessions with live gp_chip_done for instant checkbox UI */
-  function gpSidebarSessionCompleted(sess, legacyDone) {
-    return !!sess.completed || !!(sess.eventId && legacyDone[sess.eventId]);
-  }
-
-  function gpSkipForSidebarScan(el) {
     return el && el.closest && el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback');
   }
 
