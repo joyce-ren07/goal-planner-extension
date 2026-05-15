@@ -152,15 +152,21 @@
     await Model.saveUnifiedState(state, { silent: true });
   }
 
+  /**
+   * After gp_chip_done is written from the calendar checkbox, reshuffle unified state
+   * from gp_goals + chip map so completions always match sidebar + chips (avoids orphaned
+   * unified sessions rows that setSessionCompleted could not find).
+   */
   async function persistSessionCompleted(eventId, completed) {
     var Model = global.GoalPlannerModel;
     if (!Model || !eventId) return;
+    void completed;
+    var legacy = await loadLegacyGoalsAndChipDone();
     var state = await Model.loadUnifiedState();
-    await ensureSessionRow(Model, state, eventId);
-    Model.setSessionCompleted(state, eventId, !!completed);
-    var hit = Model.findSessionByEventId(state, eventId);
+    var merged = Model.syncUnifiedWithLegacyGoals(state, legacy.goals, legacy.doneMap);
+    var hit = Model.findSessionByEventId(merged, eventId);
     var goalId = hit ? hit.goal.id : null;
-    await Model.saveUnifiedState(state, {
+    await Model.saveUnifiedState(merged, {
       reason: 'sessionCompletion',
       eventId: eventId,
       goalId: goalId,
