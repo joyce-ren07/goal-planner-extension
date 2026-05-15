@@ -3306,7 +3306,10 @@
       chip.classList.add('ext-goal-chip');
       chip.classList.remove('ext-goal-done');
       chip.classList.toggle('ext-goal-completed', isDone);
-      chip.dataset.gpChipKey = goalData.chipKey;
+      {
+        const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
+        chip.dataset.gpChipKey = liveEid || goalData.chipKey;
+      }
       if (isDone) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
 
