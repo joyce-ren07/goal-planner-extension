@@ -3012,7 +3012,11 @@
       const daysLeft = Math.max(0, Math.ceil((deadline - now) / 86400000));
       // Use completion-based progress when the user has started checking off sessions;
       // fall back to time-elapsed progress for goals with no completions yet.
-      const totalSessions    = (g.calEventIds || []).length;
+      const Model = globalThis.GoalPlannerModel;
+      const totalSessions =
+        typeof g.totalSessions === 'number' && g.totalSessions > 0
+          ? g.totalSessions
+          : Model?.resolveGoalTotalSessions?.(g) || (g.calEventIds || []).length;
       const completedCount   = totalSessions > 0
         ? (g.calEventIds || []).filter(id => !!completed[id]).length
         : 0;
