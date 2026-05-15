@@ -2832,12 +2832,30 @@
 
   /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
   async function persistGpGoalsAndUnified(goals) {
-    await saveGoals(goals);
     const Model = globalThis.GoalPlannerModel;
-    if (!Model || typeof Model.syncUnifiedWithLegacyGoals !== 'function') return;
     const chipDone = await new Promise((r) =>
       chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
     );
+    if (Model?.syncUnifiedWithLegacyGoals) {
+      try {
+        const prev = await Model.loadUnifiedState();
+        const merged = Model.syncUnifiedWithLegacyGoals(prev, goals, chipDone || {});
+        for (const lg of goals) {
+          if (lg.sessionAnchors?.length || !(lg.calEventIds || []).length) continue;
+          const ug = merged.goals.find((g) => String(g.id) === String(lg.id));
+          const syn = [];
+          for (const id of lg.calEventIds) {
+            const s = ug?.sessions?.find((x) => x.eventId === id);
+            if (s?.startTime) syn.push({ eventId: id, isoStart: s.startTime });
+          }
+          if (syn.length) lg.sessionAnchors = syn;
+        }
+      } catch (_) {
+        /* non-fatal */
+      }
+    }
+    await saveGoals(goals);
+    if (!Model || typeof Model.syncUnifiedWithLegacyGoals !== 'function') return;
     const prev = await Model.loadUnifiedState();
     const next = Model.syncUnifiedWithLegacyGoals(prev, goals, chipDone || {});
     await Model.saveUnifiedState(next, { reason: 'goalsSync' });
