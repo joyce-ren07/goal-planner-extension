@@ -243,7 +243,6 @@
     hydrateUnifiedFromStorageRaw: hydrateUnifiedFromStorageRaw,
     loadUnifiedState: loadUnifiedState,
     saveUnifiedState: saveUnifiedState,
-    saveUnifiedStateWithLegacyChipMirror: saveUnifiedStateWithLegacyChipMirror,
   };
 
   global.GoalPlannerModel = GoalPlannerModel;
