@@ -3414,6 +3414,35 @@
     return '';
   }
 
+  /**
+   * Which index in goal.calEventIds[] this chip/session corresponds to for gp_goal_slot_done
+   * when DOM/API ids diverge from stored calendar ids.
+   */
+  function computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey) {
+    const ids = goalRow?.calEventIds || [];
+    if (!ids.length) return -1;
+    const p = plannerEventId != null ? String(plannerEventId) : '';
+    const sk = storageKey != null ? String(storageKey) : '';
+
+    let j = ids.findIndex((id) => String(id) === p);
+    if (j >= 0) return j;
+
+    for (let i = 0; i < ids.length; i++) {
+      if (p && gpChipDoneMirrorStrictPair(String(ids[i]), p)) return i;
+      if (sk && gpChipDoneMirrorStrictPair(String(ids[i]), sk)) return i;
+    }
+
+    if (ids.length === 1) return 0;
+
+    const anchored = pickPlannerEventIdFromAnchors(chip, goalRow);
+    if (anchored) {
+      j = ids.findIndex((id) => String(id) === String(anchored));
+      if (j >= 0) return j;
+    }
+
+    return -1;
+  }
+
   /** When unified sessions have startTime from geometry sync, pick best calEventId for this chip. */
   async function pickPlannerEventIdFromUnifiedSessions(chip, goal, legacyGoals, chipDoneMap) {
     const ids = goal?.calEventIds || [];
