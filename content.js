@@ -1213,15 +1213,20 @@
       setVar('--gp-native-title-letter-spacing', cs.letterSpacing);
     }
 
-    const iconHost =
-      nestedClickables.find((b) => {
-        const r = b.getBoundingClientRect();
-        return r.width >= 20 && r.width <= 52 && r.height >= 20 && r.height <= 52;
-      }) || nestedClickables[0];
+    root.style.removeProperty('--gp-native-add-btn-w');
+    root.style.removeProperty('--gp-native-add-btn-h');
+    root.style.removeProperty('--gp-native-add-btn-br');
+    root.style.removeProperty('--gp-native-add-btn-margin');
+    root.style.removeProperty('--gp-native-add-bg-transition');
+    root.style.removeProperty('--gp-native-add-icon-font-size');
+    root.style.removeProperty('--gp-native-add-icon-lh');
+    root.style.removeProperty('--gp-native-add-icon-weight');
+    root.style.removeProperty('--gp-native-add-icon-fvs');
 
-    if (iconHost) {
-      const r = iconHost.getBoundingClientRect();
-      const bcs = getComputedStyle(iconHost);
+    const iconProbe = chevronBtnHost || addBtnHost || nestedClickables[0];
+    if (iconProbe) {
+      const r = iconProbe.getBoundingClientRect();
+      const bcs = getComputedStyle(iconProbe);
       setVar('--gp-native-icon-btn-w', `${Math.round(r.width)}px`);
       setVar('--gp-native-icon-btn-h', `${Math.round(r.height)}px`);
       setVar('--gp-native-icon-btn-br', bcs.borderRadius);
@@ -1229,12 +1234,33 @@
       if (bcs.transition && gpMaxTransitionDurationMs(bcs.transitionDuration) > 0) {
         setVar('--gp-native-icon-bg-transition', bcs.transition);
       }
-      const glyph = iconHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
+      const glyph = iconProbe.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
       if (glyph) {
         const gcs = getComputedStyle(glyph);
         if (gcs.fontSize && gcs.fontSize !== '0px') setVar('--gp-native-icon-font-size', gcs.fontSize);
         if (gcs.lineHeight && gcs.lineHeight !== '0px') setVar('--gp-native-icon-lh', gcs.lineHeight);
         if (gcs.fontWeight) setVar('--gp-native-icon-font-weight', gcs.fontWeight);
+      }
+    }
+
+    if (addBtnHost && addBtnHost !== iconProbe) {
+      const ar = addBtnHost.getBoundingClientRect();
+      const abcs = getComputedStyle(addBtnHost);
+      setVar('--gp-native-add-btn-w', `${Math.round(ar.width)}px`);
+      setVar('--gp-native-add-btn-h', `${Math.round(ar.height)}px`);
+      setVar('--gp-native-add-btn-br', abcs.borderRadius);
+      setVar('--gp-native-add-btn-margin', abcs.margin);
+      if (abcs.transition && gpMaxTransitionDurationMs(abcs.transitionDuration) > 0) {
+        setVar('--gp-native-add-bg-transition', abcs.transition);
+      }
+      const ag = addBtnHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
+      if (ag) {
+        const ags = getComputedStyle(ag);
+        if (ags.fontSize && ags.fontSize !== '0px') setVar('--gp-native-add-icon-font-size', ags.fontSize);
+        if (ags.lineHeight && ags.lineHeight !== '0px') setVar('--gp-native-add-icon-lh', ags.lineHeight);
+        if (ags.fontWeight) setVar('--gp-native-add-icon-weight', ags.fontWeight);
+        if (ags.fontVariationSettings && ags.fontVariationSettings !== 'normal')
+          setVar('--gp-native-add-icon-fvs', ags.fontVariationSettings);
       }
     }
 
