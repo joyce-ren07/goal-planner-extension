@@ -3322,44 +3322,66 @@
       const storageKey = liveEid || canonicalEventKey;
 
       chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
-        const legacyGoals = d.gp_goals || [];
-        const target = resolveChipCompletionTarget(chip, legacyGoals);
-        let plannerEventId = target.plannerEventId || resolvePlannerEventIdForChip(storageKey, legacyGoals);
-        if (!plannerEventId) plannerEventId = storageKey;
-        if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
-        const map = { ...(d.gp_chip_done || {}) };
-        if (nextDone) map[plannerEventId] = true;
-        else delete map[plannerEventId];
-        chrome.storage.local.set({ gp_chip_done: map }, async () => {
+        void (async () => {
+          const legacyGoals = d.gp_goals || [];
+          const chipDoneSnapshot = { ...(d.gp_chip_done || {}) };
           try {
-            await globalThis.GoalCalendarSync?.persistSessionCompleted?.(plannerEventId, nextDone);
+            await globalThis.GoalCalendarSync?.flushPersistSessionGeometry?.(chip);
           } catch (_) {
-            /* ignore */
+            /* geometry optional */
           }
-          let metaSidebar = {};
-          if (target.goalId != null && target.goalId !== '') {
-            metaSidebar = { reason: 'sessionCompletion', goalId: target.goalId };
+          let { plannerEventId, goalId } = await resolvePlannerEventIdForSidebarSync(
+            chip,
+            storageKey,
+            legacyGoals,
+            chipDoneSnapshot
+          );
+          const goalRow = findLegacyGoalForGoalChip(chip, legacyGoals);
+          const allowed = goalRow?.calEventIds || [];
+          if (allowed.length && plannerEventId && !allowed.includes(plannerEventId)) {
+            plannerEventId = '';
           }
-          try {
-            const Model = globalThis.GoalPlannerModel;
-            if (!metaSidebar.goalId && Model && plannerEventId) {
-              const stHit = await Model.loadUnifiedState();
-              const hit = Model.findSessionByEventId(stHit, plannerEventId);
-              if (hit?.goal?.id != null && hit.goal.id !== '') {
-                metaSidebar = { reason: 'sessionCompletion', goalId: hit.goal.id };
-              }
+          if (!plannerEventId && allowed.length === 1) plannerEventId = allowed[0];
+          if (!plannerEventId) {
+            plannerEventId = storageKey || canonicalEventKey || '';
+          }
+          if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
+
+          const map = { ...chipDoneSnapshot };
+          if (nextDone) map[plannerEventId] = true;
+          else delete map[plannerEventId];
+
+          chrome.storage.local.set({ gp_chip_done: map }, async () => {
+            try {
+              await globalThis.GoalCalendarSync?.persistSessionCompleted?.(plannerEventId, nextDone);
+            } catch (_) {
+              /* ignore */
             }
-          } catch (_) {
-            /* sidebar optional */
-          }
-          try {
-            await renderGoalsSidebar(undefined, metaSidebar);
-          } catch (_) {
-            /* ignore */
-          }
-          chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: plannerEventId, complete: nextDone });
-          renderHomeScreen();
-        });
+            let metaSidebar = {};
+            if (goalId != null && goalId !== '') {
+              metaSidebar = { reason: 'sessionCompletion', goalId };
+            }
+            try {
+              const Model = globalThis.GoalPlannerModel;
+              if (!metaSidebar.goalId && Model && plannerEventId) {
+                const stHit = await Model.loadUnifiedState();
+                const hit = Model.findSessionByEventId(stHit, plannerEventId);
+                if (hit?.goal?.id != null && hit.goal.id !== '') {
+                  metaSidebar = { reason: 'sessionCompletion', goalId: hit.goal.id };
+                }
+              }
+            } catch (_) {
+              /* sidebar optional */
+            }
+            try {
+              await renderGoalsSidebar(undefined, metaSidebar);
+            } catch (_) {
+              /* ignore */
+            }
+            chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: plannerEventId, complete: nextDone });
+            renderHomeScreen();
+          });
+        })();
       });
     },
   };
