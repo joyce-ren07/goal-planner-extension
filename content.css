@@ -313,7 +313,7 @@
   pointer-events: none;
 }
 
-/* M3 body small — empty hint */
+/* M3 body small — empty hint (no card chrome; sits on drawer like native accordion body) */
 .gp-gcal-mgg-empty {
   font-family: inherit;
   font-size: 12px;
@@ -321,47 +321,58 @@
   line-height: 16px;
   letter-spacing: 0.025em;
   color: var(--gp-m3-on-surface-variant, #44474f);
-  margin: 2px 0 10px;
-  padding: 0;
+  margin: 0 0 6px;
+  padding: 4px 0 0 10px;
+  box-sizing: border-box;
 }
 .gp-gcal-mgg-empty strong {
   font-weight: 500;
   color: var(--gp-m3-on-surface, #1f1f1f);
 }
 
-/* Goal progress card — white panel (matches Goal Planner mock) */
+/* Goal rows — flat list items (native Booking pages style: no bordered inner panel) */
 .gp-gcal-mgg-card {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px 12px 12px;
-  margin-bottom: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 6px 0 8px 10px;
+  margin: 0 0 4px;
   box-sizing: border-box;
 }
 .gp-gcal-mgg-card:last-child {
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 .gp-gcal-mgg-eyebrow {
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 10px;
+  font-family: var(
+    --gp-native-font-family,
+    'Google Sans',
+    Roboto,
+    sans-serif
+  );
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #5f6368;
-  margin: 0 0 8px;
-  line-height: 14px;
+  letter-spacing: 0.00625em;
+  text-transform: none;
+  color: var(--gp-m3-on-surface-variant, #5f6368);
+  margin: 0 0 6px;
+  line-height: 16px;
 }
 .gp-gcal-mgg-card .gp-mgg-row-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 .gp-gcal-mgg-card .gp-mgg-title {
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px;
+  font-family: var(
+    --gp-native-font-family,
+    'Google Sans',
+    Roboto,
+    sans-serif
+  );
+  font-size: var(--gp-native-title-font-size, 13px);
   font-weight: 500;
-  color: #202124;
+  color: var(--gp-m3-on-surface, #202124);
   line-height: 18px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -370,15 +381,27 @@
   min-width: 0;
 }
 .gp-gcal-mgg-card .gp-mgg-count {
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  color: #5f6368;
+  font-family: var(
+    --gp-native-font-family,
+    'Google Sans',
+    Roboto,
+    sans-serif
+  );
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--gp-m3-on-surface-variant, #5f6368);
   white-space: nowrap;
   flex-shrink: 0;
 }
 .gp-gcal-mgg-card .gp-progress-bar {
-  margin-top: 10px;
+  margin-top: 8px;
+  height: 2px;
+  background: var(--gm3-sys-color-outline-variant, #cac4d0);
+  border-radius: 1px;
+}
+.gp-gcal-mgg-card .gp-progress-fill {
+  background: var(--gp-m3-focus-ring, #0b57d0);
+  border-radius: 1px;
 }
 
 /* ── Goals list (populated state) ── */
