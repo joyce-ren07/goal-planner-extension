@@ -204,7 +204,7 @@
           goalId: g.id,
           startTime: '',
           endTime: '',
-          completed: !!doneMap[eventId],
+          completed: lookupChipDone(doneMap, eventId),
         };
       });
       state.goals.push({
