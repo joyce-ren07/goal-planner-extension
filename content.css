@@ -286,15 +286,16 @@
 }
 
 .gp-gcal-sidebar-header-icon {
-  font-size: var(--gp-native-icon-font-size, 24px);
+  font-size: var(--gp-native-icon-font-size, 20px);
   line-height: var(--gp-native-icon-lh, 1);
   user-select: none;
   font-variation-settings: var(--gp-native-icon-fvs);
+  color: inherit;
 }
 
 .gp-gcal-sidebar-chevron-icon {
   transition: var(--gp-native-chevron-transition, color 200ms cubic-bezier(0.2, 0, 0, 1));
-  color: var(--gp-m3-on-surface-variant);
+  color: var(--gm3-sys-color-on-surface-variant, var(--gp-m3-on-surface-variant));
 }
 
 @media (prefers-reduced-motion: reduce) {
