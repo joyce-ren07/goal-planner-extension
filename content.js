@@ -3005,14 +3005,16 @@
       const root = checkbox.closest('.ext-goal-root');
       if (!root || root.closest('[data-eventchip]') !== chip) return;
 
-      const chipKey = chip.dataset.gpChipKey;
-      if (!chipKey) return;
+      // Canonical id must match gp_goals[].calEventIds[] for sidebar sync (gp_chip_done ↔ unified model).
+      const canonicalEventKey =
+        chip.closest('[data-eventid]')?.getAttribute('data-eventid') || chip.dataset.gpChipKey;
+      if (!canonicalEventKey) return;
 
       if (GP_GOAL_CLICK_DEBUG) {
         console.log('[GoalPlanner] checkbox click', {
           target: e.target,
           checkbox,
-          chipKey,
+          canonicalEventKey,
           bubbles: e.bubbles,
         });
       }
@@ -3021,7 +3023,7 @@
       e.stopPropagation();
       e.stopImmediatePropagation();
 
-      this.toggleCompletion(chipKey, chip);
+      this.toggleCompletion(canonicalEventKey, chip);
     },
 
     /**
