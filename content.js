@@ -2843,6 +2843,7 @@
 
   /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
   async function persistGpGoalsAndUnified(goals) {
+    if (!Array.isArray(goals)) return;
     const Model = globalThis.GoalPlannerModel;
     const chipDone = await new Promise((r) =>
       chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
