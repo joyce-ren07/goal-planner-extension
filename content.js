@@ -2002,6 +2002,38 @@
     if (fillEl) {
       fillEl.style.width = widthAssign;
       if (!fillEl.style.display) fillEl.style.display = 'block';
+
+      if (GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST) {
+        fillEl.style.backgroundColor = 'red';
+        fillEl.style.height = '8px';
+        fillEl.style.width = '80%';
+        if (GP_MY_GOALS_SIDEBAR_DIAG) {
+          const rect = fillEl.getBoundingClientRect();
+          gpMyGoalsSidebarDiag('FORCE VISUAL TEST on fill', {
+            traceId,
+            goalId: card.dataset.goalId,
+            isConnected: fillEl.isConnected,
+            parentClass: fillEl.parentElement?.className,
+            inline: {
+              backgroundColor: fillEl.style.backgroundColor,
+              height: fillEl.style.height,
+              width: fillEl.style.width,
+            },
+            rect: { w: rect.width, h: rect.height, top: rect.top, left: rect.left },
+            computed: {
+              width: getComputedStyle(fillEl).width,
+              height: getComputedStyle(fillEl).height,
+              backgroundColor: getComputedStyle(fillEl).backgroundColor,
+            },
+            interpret: {
+              wrongNode: rect.width === 0 && rect.height === 0,
+              widthBindingOnly:
+                rect.width > 0 &&
+                getComputedStyle(fillEl).backgroundColor.includes('255, 0, 0'),
+            },
+          });
+        }
+      }
     }
 
     const after = inspectSidebarGoalCardDom(card);
