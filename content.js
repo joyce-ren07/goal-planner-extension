@@ -2374,10 +2374,8 @@
       color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
     };
     const displayColor = getGoalDisplayColor(colorSource);
-    card.style.setProperty('--goal-progress-color', displayColor);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(displayColor, 0.18));
-    card.style.setProperty('--goal-progress-pct', `${pctClamped}%`);
-    if (fillEl) fillEl.style.removeProperty('width');
+    paintSidebarGoalProgressOnCard(card, g, legacyById);
   }
 
   /**
