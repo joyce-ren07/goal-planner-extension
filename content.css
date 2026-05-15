@@ -286,7 +286,14 @@
   font-size: var(--gp-native-icon-font-size, 20px);
   line-height: var(--gp-native-icon-lh, 1);
   user-select: none;
-  font-variation-settings: var(--gp-native-icon-fvs);
+  font-variation-settings: var(
+    --gp-native-icon-fvs,
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 20
+  );
+  font-weight: var(--gp-native-icon-glyph-weight, 400);
   color: inherit;
 }
 
