@@ -1599,6 +1599,7 @@
       }
       await saveGoals(goals);
 
+      clearGoalCreationPreview();
       resetEditMode();
       document.getElementById('gp-toast').classList.add('visible');
       btn.textContent = 'Create goal';
