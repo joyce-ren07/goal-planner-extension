@@ -2204,6 +2204,8 @@
    * @param {{ reason?: string, goalId?: string, progressDiffs?: { goalId: string, prev: object, next: object }[], legacyById?: Map<string, unknown> }} [meta]
    */
   async function patchMyGoalsSidebarProgressRows(mergedState, meta) {
+    meta = meta || {};
+    mergedState = await ensureAuthoritativeSidebarState(mergedState);
     mountLeftSidebarGoalsSection();
     const root = document.getElementById('gp-gcal-sidebar-goals-root');
     if (!root?.isConnected) {
