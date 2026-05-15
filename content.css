@@ -254,15 +254,14 @@
 }
 
 .gp-gcal-sidebar-add-btn {
-  width: var(
-    --gp-booking-add-btn-w,
-    calc(var(--gp-native-add-btn-w, var(--gp-native-icon-btn-w, 40px)) + 4px)
+  width: calc(
+    var(--gp-booking-add-btn-w, calc(var(--gp-native-add-btn-w, var(--gp-native-icon-btn-w, 40px)) + 4px)) + 4px
   );
-  height: var(
-    --gp-booking-add-btn-h,
-    calc(var(--gp-native-add-btn-h, var(--gp-native-icon-btn-h, 40px)) + 4px)
+  height: calc(
+    var(--gp-booking-add-btn-h, calc(var(--gp-native-add-btn-h, var(--gp-native-icon-btn-h, 40px)) + 4px)) + 4px
   );
   margin: var(--gp-native-add-btn-margin, var(--gp-native-icon-btn-margin, 0));
+  margin-right: -8px;
   border-radius: var(--gp-native-add-btn-br, var(--gp-native-icon-btn-br, 9999px));
   transition: var(
     --gp-native-add-bg-transition,
@@ -271,9 +270,11 @@
 }
 
 .gp-gcal-sidebar-add-btn .gp-gcal-sidebar-header-icon {
-  font-size: var(
-    --gp-booking-add-icon-font-size,
-    calc(var(--gp-native-add-icon-font-size, var(--gp-native-icon-font-size, 20px)) + 4px)
+  font-size: calc(
+    var(
+      --gp-booking-add-icon-font-size,
+      calc(var(--gp-native-add-icon-font-size, var(--gp-native-icon-font-size, 20px)) + 4px)
+    ) + 4px
   );
   line-height: var(--gp-native-add-icon-lh, var(--gp-native-icon-lh, 1));
   font-weight: 400;
