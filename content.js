@@ -1255,8 +1255,11 @@
       applyCollapsed(!root.classList.contains('gp-gcal-sidebar-collapsed'));
     }
 
-    labelBtn.addEventListener('click', toggle);
-    chevronBtn.addEventListener('click', toggle);
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('.gp-gcal-sidebar-add-btn')) return;
+      toggle();
+    });
+
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       resetEditMode();
