@@ -3220,18 +3220,11 @@
           const calIds = goal.calEventIds || [];
           const syn = [];
           if (ug?.sessions?.length && calIds.length) {
-            let complete = true;
             for (const id of calIds) {
               const s = ug.sessions.find((x) => x.eventId === id);
-              if (!s?.startTime) {
-                complete = false;
-                break;
-              }
-              syn.push({ eventId: id, isoStart: s.startTime });
+              if (s?.startTime) syn.push({ eventId: id, isoStart: s.startTime });
             }
-            if (complete && syn.length === calIds.length) {
-              anchorGoal = { ...goal, sessionAnchors: syn };
-            }
+            if (syn.length) anchorGoal = { ...goal, sessionAnchors: syn };
           }
         } catch (_) {
           /* ignore */
