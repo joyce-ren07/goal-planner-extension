@@ -1094,6 +1094,8 @@
     }
     setVar('--gp-native-header-pl', plVal);
     setVar('--gp-native-header-pr', prVal);
+    if (cs.marginLeft && cs.marginLeft !== '0px') setVar('--gp-native-root-ml', cs.marginLeft);
+    if (cs.marginRight && cs.marginRight !== '0px') setVar('--gp-native-root-mr', cs.marginRight);
     if (pcs.paddingTop) setVar('--gp-native-header-pt', pcs.paddingTop);
     if (pcs.paddingBottom) setVar('--gp-native-header-pb', pcs.paddingBottom);
 
