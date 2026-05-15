@@ -1344,9 +1344,6 @@
         const gcs = getComputedStyle(glyph);
         if (gcs.fontSize && gcs.fontSize !== '0px') setVar('--gp-native-icon-font-size', gcs.fontSize);
         if (gcs.lineHeight && gcs.lineHeight !== '0px') setVar('--gp-native-icon-lh', gcs.lineHeight);
-        if (gcs.fontWeight) setVar('--gp-native-icon-font-weight', gcs.fontWeight);
-        if (gcs.fontVariationSettings && gcs.fontVariationSettings !== 'normal')
-          setVar('--gp-native-icon-fvs', gcs.fontVariationSettings);
       }
     }
 
