@@ -1591,6 +1591,16 @@
       );
       if (Number.isFinite(delta)) setVar('--gp-my-goals-booking-edge-nudge', `${delta}px`);
 
+      for (const el of bookingRow.querySelectorAll('span, div')) {
+        if (!bookingRow.contains(el) || el === bookingRow) continue;
+        const t = normalizeSidebarRowText(el.textContent || '');
+        if (!t || t.length > 48 || el.querySelector('span, div, svg, button')) continue;
+        if (!/booking\s*pages/i.test(t)) continue;
+        const tw = getComputedStyle(el).fontWeight;
+        if (tw) setVar('--gp-native-title-font-weight', tw);
+        break;
+      }
+
       const bookingNested = nativeSidebarNestedTriggers(bookingRow);
       const bookingAddHost = gpPickSidebarRowAddTrigger(bookingNested);
       if (bookingAddHost) {
