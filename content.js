@@ -2003,7 +2003,7 @@
       }
     }
 
-    await saveGoals(goals.filter(g => g.id !== goalId));
+    await persistGpGoalsAndUnified(goals.filter(g => g.id !== goalId));
     await renderHomeScreen();
   }
 

@@ -292,6 +292,7 @@
     upsertGoal: upsertGoal,
     migrateFromLegacy: migrateFromLegacy,
     hydrateUnifiedFromStorageRaw: hydrateUnifiedFromStorageRaw,
+    syncUnifiedWithLegacyGoals: syncUnifiedWithLegacyGoals,
     loadUnifiedState: loadUnifiedState,
     saveUnifiedState: saveUnifiedState,
   };
