@@ -1957,7 +1957,7 @@
         : await loadMergedChipDoneForSidebar(legacyArr);
     st = Model.syncUnifiedWithLegacyGoals(st, legacyArr, chipDone);
 
-  if (meta?.reason === 'sessionCompletion') {
+    if (meta?.reason === 'sessionCompletion') {
       try {
         await Model.saveUnifiedState(st, { silent: true });
       } catch (_) {
