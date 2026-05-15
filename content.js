@@ -4039,7 +4039,18 @@
             }
 
             try {
-              await renderGoalsSidebar(undefined, metaSidebar);
+              const ModelPatch = globalThis.GoalPlannerModel;
+              if (ModelPatch?.syncUnifiedWithLegacyGoals) {
+                const legacyForPatch = await getGoals();
+                const chipForPatch = await loadMergedChipDoneForSidebar(legacyForPatch);
+                const stPatch = await ModelPatch.loadUnifiedState();
+                const mergedPatch = ModelPatch.syncUnifiedWithLegacyGoals(
+                  stPatch,
+                  legacyForPatch,
+                  chipForPatch
+                );
+                await patchMyGoalsSidebarProgressRows(mergedPatch, metaSidebar);
+              }
             } catch (_) {
               /* ignore */
             }
