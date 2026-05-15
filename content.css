@@ -191,7 +191,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   border-radius: var(--gp-native-header-br, 8px);
-  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
+  cursor: var(--gp-native-cursor, pointer);
+  transition: var(
+    --gp-native-header-bg-transition,
+    background-color 200ms cubic-bezier(0.2, 0, 0, 1)
+  );
 }
 .gp-gcal-sidebar-label-btn:hover {
   background-color: var(--gp-m3-state-hover);
