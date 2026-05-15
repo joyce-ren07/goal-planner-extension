@@ -513,8 +513,6 @@
 
         <!-- ── SCREEN 1: Empty / home ── -->
         <div class="gp-screen active" id="gp-screen-home">
-          <!-- Read-only: bound to goalPlannerUnifiedState only; no inputs, no calendar hooks -->
-          <div id="gp-my-goals-progress" class="gp-my-goals-progress" aria-live="polite" hidden></div>
           <div class="gp-empty-body" id="gp-empty-state">
             <div class="gp-illustration">
               <svg viewBox="0 0 177 147" fill="none" xmlns="http://www.w3.org/2000/svg">
