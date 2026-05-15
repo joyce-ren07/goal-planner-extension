@@ -256,6 +256,14 @@
   transform: rotate(-90deg);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .gp-gcal-sidebar-label-btn,
+  .gp-gcal-sidebar-icon-btn,
+  .gp-gcal-sidebar-chevron-icon {
+    transition: none;
+  }
+}
+
 .gp-gcal-sidebar-section-body {
   padding: 4px 12px 12px 16px;
 }
