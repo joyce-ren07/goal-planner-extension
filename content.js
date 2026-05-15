@@ -841,8 +841,88 @@
     if (name === 'form') removeGhostEvents();
   }
 
+  // ── My Goals — read-only progress strip (GoalPlannerModel / goalPlannerUnifiedState only) ──
+  function escapeHtmlGp(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderMyGoalsProgressPanelFromState(unifiedState) {
+    const el = document.getElementById('gp-my-goals-progress');
+    if (!el) return;
+    const goals = unifiedState && Array.isArray(unifiedState.goals) ? unifiedState.goals : [];
+    if (!goals.length) {
+      el.hidden = true;
+      el.innerHTML = '';
+      return;
+    }
+    el.hidden = false;
+    const header =
+      '<div class="gp-section-header gp-mgg-section-head">' +
+      '<span class="gp-section-label">Goal progress</span></div>';
+    el.innerHTML =
+      header +
+      goals
+        .map((g) => {
+          const sessions = g.sessions || [];
+          const total = sessions.length;
+          const done = sessions.filter((s) => s.completed).length;
+          const pct = Math.max(
+            0,
+            Math.min(
+              100,
+              typeof g.progressPct === 'number'
+                ? g.progressPct
+                : total
+                  ? Math.round((done / total) * 100)
+                  : 0
+            )
+          );
+          const title = escapeHtmlGp(g.title || 'Untitled goal');
+          return (
+            `<div class="gp-mgg-row" role="group" aria-label="${title}, ${done} of ${total} sessions complete">` +
+            `<div class="gp-mgg-row-head">` +
+            `<span class="gp-mgg-title">${title}</span>` +
+            `<span class="gp-mgg-count">${done}/${total} sessions</span>` +
+            `</div>` +
+            `<div class="gp-progress-bar" aria-hidden="true"><div class="gp-progress-fill" style="width:${pct}%"></div></div>` +
+            `</div>`
+          );
+        })
+        .join('');
+  }
+
+  async function renderMyGoalsProgressPanel() {
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model) {
+      renderMyGoalsProgressPanelFromState({ goals: [] });
+      return;
+    }
+    const state = await Model.loadUnifiedState();
+    renderMyGoalsProgressPanelFromState(state);
+  }
+
+  function setupMyGoalsUnifiedBinding() {
+    if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+    try {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local' || !changes.goalPlannerUnifiedState) return;
+        renderMyGoalsProgressPanel();
+      });
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   // ── Home screen ──
   async function renderHomeScreen() {
+    const Model = globalThis.GoalPlannerModel;
+    const unifiedSnapshot = Model ? await Model.loadUnifiedState() : { goals: [] };
+    renderMyGoalsProgressPanelFromState(unifiedSnapshot);
+
     const goals     = await getGoals();
     const completed = await new Promise(r => chrome.storage.local.get(['gp_chip_done'], d => r(d.gp_chip_done || {})));
     const emptyEl = document.getElementById('gp-empty-state');
