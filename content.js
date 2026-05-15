@@ -1795,19 +1795,33 @@
     });
   }
 
-  /** Signature string per goal for O(1) sidebar list change detection (unified model only). */
-  function goalSidebarMetricToken(g) {
+  /**
+   * Structure vs progress signatures for granular sidebar patches.
+   * When only progress changes (session checkbox), we patch fill + count text without touching title or colors.
+   */
+  function goalSidebarCardSigs(g, legacyById) {
+    const legacy = legacyById.get(g.id);
+    const legacyRow = legacy || {};
+    const colorSource = {
+      ...legacyRow,
+      color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
+    };
+    const displayColor = getGoalDisplayColor(colorSource);
     const sessions = g.sessions || [];
     const total = sessions.length;
-    const completed = total ? sessions.filter((s) => !!s.completed).length : 0;
-    const pctRaw =
-      typeof g.progressPct === 'number'
-        ? g.progressPct
-        : total > 0
-          ? (completed / total) * 100
-          : 0;
-    const pct = Math.max(0, Math.min(100, Math.round(pctRaw)));
-    return `${g.id}|${total}|${completed}|${pct}|${String(g.title || '')}`;
+    const { completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const struct = `${g.id}|${total}|${String(g.title || '')}|${displayColor}`;
+    const prog = `${completed}|${pctClamped}`;
+    return { struct, prog };
+  }
+
+  function ensureSidebarGoalSessionsSpans(goalSessionsEl) {
+    if (!goalSessionsEl) return;
+    if (goalSessionsEl.querySelector('.gcal-ext-goal-session-count')) return;
+    goalSessionsEl.innerHTML =
+      '<span class="gcal-ext-goal-session-count"></span>' +
+      '<span class="gcal-ext-goal-session-sep"> • </span>' +
+      '<span class="gcal-ext-goal-session-pct"></span>';
   }
 
   function computeGoalSidebarNumbers(g) {
