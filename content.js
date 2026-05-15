@@ -3563,7 +3563,9 @@
         // navigation, panel open/close changes column widths).
         if (chip.querySelector('.ext-goal-root')) {
           boundChipHeight(chip);
-          const isDone = !!doneMap[chip.dataset.gpChipKey];
+          const eidAttr = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
+          if (eidAttr && chip.dataset.gpChipKey !== eidAttr) chip.dataset.gpChipKey = eidAttr;
+          const isDone = !!(doneMap[eidAttr] || doneMap[chip.dataset.gpChipKey]);
           GoalInteractionController.applyGoalSessionCompletionUI(chip, isDone);
           const ec = chip.closest('[data-eventid]');
           requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
