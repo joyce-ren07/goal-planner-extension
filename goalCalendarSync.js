@@ -312,6 +312,28 @@
     var merged = Model.syncUnifiedWithLegacyGoals(state, legacy.goals, legacy.doneMap);
     var hit = Model.findSessionByEventId(merged, eventId);
     var goalId = hit ? hit.goal.id : null;
+    if (!goalId && Array.isArray(legacy.goals)) {
+      var gj;
+      for (gj = 0; gj < legacy.goals.length; gj++) {
+        var lg = legacy.goals[gj];
+        var ce = lg.calEventIds || [];
+        var ck;
+        for (ck = 0; ck < ce.length; ck++) {
+          var one = ce[ck];
+          if (one != null && one !== '') {
+            if (String(one) === String(eventId)) {
+              goalId = lg.id;
+              break;
+            }
+            if (gpChipDoneKeyMatchesCalEventId(String(one), String(eventId))) {
+              goalId = lg.id;
+              break;
+            }
+          }
+        }
+        if (goalId != null && goalId !== '') break;
+      }
+    }
     await Model.saveUnifiedState(merged, {
       reason: 'sessionCompletion',
       eventId: eventId,
