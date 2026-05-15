@@ -4973,6 +4973,12 @@
       chip.classList.add('ext-goal-chip');
       chip.classList.remove('ext-goal-done');
       chip.classList.toggle('ext-goal-completed', isDone);
+      if (goalData.id != null && goalData.id !== '') {
+        chip.dataset.gpGoalId = String(goalData.id);
+      }
+      if (goalData.slotIdx != null && goalData.slotIdx !== '' && Number.isFinite(Number(goalData.slotIdx))) {
+        chip.dataset.gpSlotIdx = String(goalData.slotIdx);
+      }
       {
         const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
         chip.dataset.gpChipKey = liveEid || goalData.chipKey;
