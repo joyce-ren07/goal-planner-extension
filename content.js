@@ -4634,6 +4634,7 @@
           if (slotIdx >= 0 && allowed[slotIdx] != null) {
             plannerEventId = String(allowed[slotIdx]);
             chip.dataset.gpCalEventId = plannerEventId;
+            chip.dataset.gpSlotIdx = String(slotIdx);
             if (gid && storageKey) {
               await persistCalEventDomIdForGoalSlot(gid, slotIdx, storageKey, legacyGoals);
             }
