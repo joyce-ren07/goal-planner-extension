@@ -5291,10 +5291,16 @@
         const goal = goals.find(g => chip.textContent.includes(g.title));
         let resolvedEid = eid ? resolvePlannerEventIdForChip(eid, goals) || eid : '';
         if (goal) {
-          const slotFromTime = resolveSlotIndexByAnchorTime(chip, goal);
-          if (slotFromTime >= 0 && goal.calEventIds?.[slotFromTime]) {
-            resolvedEid = String(goal.calEventIds[slotFromTime]);
+          let slot =
+            resolveDomSlotIndexFromGoalRow(goal, eid) ??
+            resolveSlotIndexByGoalChipsOnCalendar(chip, goal);
+          if (slot < 0) slot = resolveSlotIndexByAnchorTime(chip, goal);
+          if (slot >= 0 && goal.calEventIds?.[slot]) {
+            resolvedEid = String(goal.calEventIds[slot]);
             chip.dataset.gpCalEventId = resolvedEid;
+            if (eid) {
+              void persistCalEventDomIdForGoalSlot(goal.id, slot, eid, goals);
+            }
           }
         }
         const chipKey =
