@@ -3765,7 +3765,9 @@
           chrome.storage.local.set({ gp_chip_done: map, gp_goal_slot_done: slotPackPrev }, async () => {
             try {
               const persistId =
-                allowed.find((id) => mirrorKeys.includes(String(id))) || plannerEventId;
+                allowed.find((id) =>
+                  mirrorKeys.some((mk) => String(mk) === String(id))
+                ) || plannerEventId;
               await globalThis.GoalCalendarSync?.persistSessionCompleted?.(persistId, nextDone);
             } catch (_) {
               /* ignore */
