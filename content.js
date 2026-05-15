@@ -1033,6 +1033,67 @@
     return m;
   }
 
+  /** Native header vertical padding (px) — uses row box, then inner padEl when row has no Y padding. */
+  function nativeHeaderVerticalPaddingPx(rowEl) {
+    const rcs = getComputedStyle(rowEl);
+    let padEl = rowEl;
+    if (rcs.paddingLeft === '0px' && rcs.paddingRight === '0px' && rowEl.firstElementChild) {
+      const sub = getComputedStyle(rowEl.firstElementChild);
+      if (sub.paddingLeft !== '0px' || sub.paddingRight !== '0px') padEl = rowEl.firstElementChild;
+    }
+    const st = getComputedStyle(padEl);
+    const pt =
+      rcs.paddingTop && rcs.paddingTop !== '0px'
+        ? parseFloat(rcs.paddingTop) || 0
+        : parseFloat(st.paddingTop) || 0;
+    const pb =
+      rcs.paddingBottom && rcs.paddingBottom !== '0px'
+        ? parseFloat(rcs.paddingBottom) || 0
+        : parseFloat(st.paddingBottom) || 0;
+    return { pt, pb };
+  }
+
+  /** Tightest native header density (min padding-top/bottom across drawer accordions). */
+  function minNativeSidebarHeaderVerticalPaddingPx(scrollEl) {
+    if (!scrollEl) return { pt: 0, pb: 0 };
+    let minPt = Infinity;
+    let minPb = Infinity;
+    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      const { pt, pb } = nativeHeaderVerticalPaddingPx(row);
+      minPt = Math.min(minPt, pt);
+      minPb = Math.min(minPb, pb);
+    }
+    return {
+      pt: minPt === Infinity ? 0 : minPt,
+      pb: minPb === Infinity ? 0 : minPb,
+    };
+  }
+
+  /** Max computed padding-right on native headers (row + inner pad container) — catches outer flex padding. */
+  function maxNativeSidebarHeaderPaddingRightPx(scrollEl) {
+    if (!scrollEl) return 0;
+    let m = 0;
+    for (const row of scrollEl.querySelectorAll('[role="button"], button')) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
+      const rcs = getComputedStyle(row);
+      let padEl = row;
+      if (rcs.paddingLeft === '0px' && rcs.paddingRight === '0px' && row.firstElementChild) {
+        const sub = getComputedStyle(row.firstElementChild);
+        if (sub.paddingLeft !== '0px' || sub.paddingRight !== '0px') padEl = row.firstElementChild;
+      }
+      const pes = getComputedStyle(padEl);
+      m = Math.max(m, parseFloat(rcs.paddingRight) || 0, parseFloat(pes.paddingRight) || 0);
+    }
+    return m;
+  }
+
   function findNativeSectionContentSibling(headerRef, scrollEl) {
     if (!headerRef || !scrollEl) return null;
     let sib = headerRef.nextElementSibling;
