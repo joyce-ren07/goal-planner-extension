@@ -272,6 +272,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .gp-gcal-sidebar-section-header,
   .gp-gcal-sidebar-label-btn,
   .gp-gcal-sidebar-icon-btn,
   .gp-gcal-sidebar-chevron-icon {
