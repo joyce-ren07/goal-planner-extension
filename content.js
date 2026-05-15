@@ -1892,7 +1892,7 @@
 
       const ec = chip.closest('[data-eventid]');
       requestAnimationFrame(() => {
-        syncExtGoalTimeFromContainer(chip, ec);
+        syncExtGoalTimeFromContainer(chip);
       });
     } finally {
       // Clear after mutation observer microtasks run (macrotask > microtask).
