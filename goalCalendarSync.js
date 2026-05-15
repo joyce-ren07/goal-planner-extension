@@ -149,7 +149,7 @@
       startTime: range.startTime,
       endTime: range.endTime,
     });
-    await Model.saveUnifiedState(state);
+    await Model.saveUnifiedState(state, { silent: true });
   }
 
   async function persistSessionCompleted(eventId, completed) {
