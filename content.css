@@ -196,7 +196,6 @@
 #gp-gcal-sidebar-goals-root > .gp-gcal-sidebar-section-header {
   padding-top: max(0px, calc(var(--gp-native-header-pt, 0px) - 16px));
   padding-bottom: max(0px, calc(var(--gp-native-header-pb, 0px) - 16px));
-  /* Native accordion min-height was stretching the hover pill taller than contents + padded height. */
   min-height: fit-content !important;
 }
 
