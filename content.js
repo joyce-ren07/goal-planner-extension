@@ -1003,6 +1003,7 @@
       if (!ref.contains(el) || el === ref) continue;
       const t = normalizeSidebarRowText(el.textContent || '');
       if (!t || t.length > 48 || el.querySelector('span, div, svg, button')) continue;
+      if (!NATIVE_SIDEBAR_SECTION_LABEL_RES.some((re) => re.test(t))) continue;
       titleEl = el;
       break;
     }
