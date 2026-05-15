@@ -2209,8 +2209,8 @@
     const pack = slotPack && typeof slotPack === 'object' ? slotPack : {};
     for (const g of legacyGoals || []) {
       const ids = g.calEventIds || [];
-      const arr = pack[String(g.id)];
-      if (!Array.isArray(arr) || !ids.length) continue;
+      const arrRaw = pack[String(g.id)] ?? pack[g.id];
+      const arr = Array.isArray(arrRaw) ? arrRaw : [];
       for (const idx of arr) {
         const i = Number(idx);
         if (Number.isFinite(i) && i >= 0 && i < ids.length) out[String(ids[i])] = true;
