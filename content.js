@@ -1986,8 +1986,10 @@
       return;
     }
 
+    const legacyRowsRaw = legacyByIdCache ? null : await getGoals();
+    const legacyRows = Array.isArray(legacyRowsRaw) ? legacyRowsRaw : [];
     const legacyById =
-      legacyByIdCache || new Map((await getGoals()).map((gk) => [gk.id, gk]));
+      legacyByIdCache || new Map(legacyRows.map((gk) => [gk.id, gk]));
     const goals = Array.isArray(state?.goals) ? state.goals : [];
 
     root.hidden = false;
