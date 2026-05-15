@@ -1974,12 +1974,17 @@
         chip.classList.remove('ext-goal-resizing');
 
         // Prefer the authoritative aria-label for the final stored value
-        const finalLabel = eventContainer.getAttribute('aria-label')
-          || eventContainer.getAttribute('data-tooltip') || '';
-        const timeMatch = finalLabel.match(
-          /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i
-        );
-        const newTime = timeMatch ? timeMatch[1] : '';
+        const finalLabel =
+          extractTimeRangeLabelForGoalChip(chip, eventContainer) ||
+          (() => {
+            const raw =
+              eventContainer.getAttribute('aria-label') ||
+              eventContainer.getAttribute('data-tooltip') ||
+              '';
+            const m = raw.match(GP_TIME_RANGE_RE);
+            return m ? m[1] : '';
+          })();
+        const newTime = finalLabel || '';
 
         const timeEl = chip.querySelector('.ext-goal-time');
         if (timeEl && newTime) {
