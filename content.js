@@ -2095,7 +2095,8 @@
       queueMicrotask(() => {
         (async () => {
           try {
-            const legacyGoals = await getGoals();
+            const legacyGoalsRaw = await getGoals();
+            const legacyGoals = Array.isArray(legacyGoalsRaw) ? legacyGoalsRaw : [];
             const chipDone = await new Promise((r) =>
               chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
             );
