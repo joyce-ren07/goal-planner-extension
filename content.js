@@ -2429,7 +2429,7 @@
           colorId: '9',
         });
       }
-      await saveGoals(goals);
+      await persistGpGoalsAndUnified(goals);
 
       clearGoalCreationPreview();
       resetEditMode();
