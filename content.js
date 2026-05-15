@@ -4282,13 +4282,25 @@
             try {
               await globalThis.GoalCalendarSync?.persistSessionCompleted?.(
                 persistEventId,
-                nextDone
+                nextDone,
+                {
+                  legacyGoals,
+                  chipDoneMap: map,
+                  slotPack: slotPackPrev,
+                }
               );
             } catch (_) {
               /* ignore */
             }
 
-            let metaSidebar = { reason: 'sessionCompletion' };
+            let metaSidebar = {
+              reason: 'sessionCompletion',
+              chipDoneOverride: injectSlotDoneIntoExpandedChipDone(
+                expandChipDoneOntoCalEventIds(map, legacyGoals),
+                legacyGoals,
+                slotPackPrev
+              ),
+            };
             if (goalId != null && goalId !== '') metaSidebar.goalId = goalId;
             try {
               const Model = globalThis.GoalPlannerModel;
