@@ -1230,7 +1230,14 @@
     if (plNum >= 8) plVal = `${Math.round(plNum)}px`;
     const maxPrAcross = maxNativeSidebarTrailingPaddingPx(scroll);
     const maxPrComputed = maxNativeSidebarHeaderPaddingRightPx(scroll);
-    let prNum = Math.max(maxPrAcross, maxPrComputed, parseFloat(pcs.paddingRight) || 0, parseFloat(cs.paddingRight) || 0);
+    const maxPrScrollGap = maxNativeSidebarIconToScrollInnerRightGapPx(scroll);
+    let prNum = Math.max(
+      maxPrAcross,
+      maxPrComputed,
+      maxPrScrollGap,
+      parseFloat(pcs.paddingRight) || 0,
+      parseFloat(cs.paddingRight) || 0
+    );
     if (nestedClickables.length && rr.width > 0) {
       let maxIconRight = rr.left;
       for (const b of nestedClickables) {
