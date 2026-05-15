@@ -296,13 +296,22 @@
     });
   }
 
-  function saveUnifiedState(state) {
+  /**
+   * @param {GoalPlannerUnifiedState} state
+   * @param {Record<string, unknown>} [meta] Optional: `{ silent?: true }` skips subscriber notify (geometry-only churn).
+   */
+  function saveUnifiedState(state, meta) {
     state.version = MODEL_VERSION;
     recomputeAllProgress(state);
     var payload = {};
     payload[STORAGE_KEY] = state;
     return new Promise(function (resolve) {
-      chrome.storage.local.set(payload, resolve);
+      chrome.storage.local.set(payload, function () {
+        if (!meta || !meta.silent) {
+          _emitGoalsState({ state: state, meta: meta ? Object.assign({}, meta) : {} });
+        }
+        resolve();
+      });
     });
   }
 
@@ -322,6 +331,7 @@
     syncUnifiedWithLegacyGoals: syncUnifiedWithLegacyGoals,
     loadUnifiedState: loadUnifiedState,
     saveUnifiedState: saveUnifiedState,
+    subscribeGoalsState: subscribeGoalsState,
   };
 
   global.GoalPlannerModel = GoalPlannerModel;
