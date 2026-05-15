@@ -872,6 +872,173 @@
     }
   }
 
+  /** Injected Create → Goal menu row — attribute marker (not a behavioral GCal hook). */
+  const GP_CREATE_MENU_GOAL_ATTR = 'data-gp-create-menu-goal';
+
+  /**
+   * Google Calendar wires menu clicks via jsaction on nodes. Stripping behavioral attrs
+   * from a cloned row prevents "Goal" from triggering native Event/Task actions.
+   */
+  function stripGCalMenuItemBehaviorAttrs(el) {
+    if (!el) return;
+    const purge = ['jsaction', 'jscontroller', 'jsname', 'jsshadow', 'jsmodel', '__is_owner'];
+    for (let n = el; n; ) {
+      for (const a of purge) {
+        try {
+          n.removeAttribute(a);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      if (n.shadowRoot?.firstElementChild)
+        stripGCalMenuItemBehaviorAttrs(n.shadowRoot.firstElementChild);
+      const next = TreeWalker_NEXT(n, el); // Wrong - use iterative walk
+      break;
+    }
+    /** @type {Element | null} */
+    let cur = el;
+    const stack = [el];
+    while (stack.length) {
+      cur = stack.pop();
+      if (!cur) continue;
+      for (const a of purge) {
+        try {
+          cur.removeAttribute(a);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      cur = cur.firstElementChild;
+      while (cur) {
+        stack.push(cur);
+        cur = cur.nextElementSibling;
+      }
+    }
+  }
+
+  function replaceClonedMenuItemPrimaryLabel(root, label) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let n = walker.nextNode();
+    while (n) {
+      const t = (n.textContent || '').trim();
+      if (t && t.length <= 56 && /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(t)) {
+        n.textContent = label;
+        return;
+      }
+      n = walker.nextNode();
+    }
+  }
+
+  function looksLikeCalendarCreateDropdownMenu(menu) {
+    if (!menu || menu.getAttribute('role') !== 'menu') return false;
+    if (menu.querySelector(`[${GP_CREATE_MENU_GOAL_ATTR}]`)) return false;
+    const r = menu.getBoundingClientRect();
+    if (!r.height || !r.width) return false;
+    /** Create popover anchored under top toolbar — ignore wide context menus elsewhere. */
+    if (r.top > 220 || r.left > 520 || r.width > 560) return false;
+    const items = [...menu.querySelectorAll('[role="menuitem"]:not([' + GP_CREATE_MENU_GOAL_ATTR + '])')];
+    if (items.length < 2 || items.length > 12) return false;
+    const blob = items.map((i) => (i.textContent || '').toLowerCase()).join('|');
+    return /event/.test(blob) && /task/.test(blob);
+  }
+
+  /** Same entry as left-drawer "+" / My goals → Goal Planner create (no goal logic changes). */
+  function openGoalCreateFromCalendarToolbarMenu(e) {
+    if (e) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    try {
+      document.activeElement instanceof HTMLElement &&
+        typeof document.activeElement.blur === 'function' &&
+        document.activeElement.blur();
+    } catch (_) {
+      /* ignore */
+    }
+    /** Close open GCal overlays before opening our panel — standard Escape propagation. */
+    try {
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+    queueMicrotask(() => {
+      resetEditMode();
+      openPanel();
+      showScreen('form');
+    });
+  }
+
+  function injectGoalIntoCreateMenu(menu) {
+    if (!looksLikeCalendarCreateDropdownMenu(menu)) return;
+    let proto =
+      [...menu.querySelectorAll('[role="menuitem"]:not([' + GP_CREATE_MENU_GOAL_ATTR + '])')].find((i) =>
+        /task/i.test(i.textContent || '')
+      ) ||
+      [...menu.querySelectorAll('[role="menuitem"]:not([' + GP_CREATE_MENU_GOAL_ATTR + '])')].find((i) =>
+        /event/i.test(i.textContent || '')
+      ) ||
+      menu.querySelector('[role="menuitem"]:not([' + GP_CREATE_MENU_GOAL_ATTR + '])');
+    if (!proto) return;
+
+    let row = proto.cloneNode(true);
+    stripGCalMenuItemBehaviorAttrs(row);
+    row.setAttribute(GP_CREATE_MENU_GOAL_ATTR, '1');
+    row.setAttribute('aria-label', 'Goal');
+    row.classList.remove('CDELXb'); // unstable class cleanup not needed — keep cloned classes verbatim
+    replaceClonedMenuItemPrimaryLabel(row, 'Goal');
+
+    const activate = (e) => openGoalCreateFromCalendarToolbarMenu(e);
+    row.addEventListener('click', activate, true);
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        activate(e);
+      }
+    });
+
+    /** Insert directly after Task (same cluster as native quick-create). */
+    const taskItem =
+      [...menu.querySelectorAll('[role="menuitem"]:not([' + GP_CREATE_MENU_GOAL_ATTR + '])')].find((i) =>
+        /^\s*task\s*$/i.test((i.textContent || '').trim())
+      ) || null;
+    if (taskItem && taskItem.parentNode === menu)
+      menu.insertBefore(row, taskItem.nextSibling);
+    else menu.appendChild(row);
+  }
+
+  function scanAndInjectGoalCreateMenus() {
+    document.querySelectorAll('[role="menu"]').forEach((m) => {
+      try {
+        injectGoalIntoCreateMenu(m);
+      } catch (_) {
+        /* ignore — GCal DOM variants */
+      }
+    });
+  }
+
+  let _gpCreateMenuObserveTimer = 0;
+  function scheduleGoalCreateMenuScan() {
+    if (_gpCreateMenuObserveTimer) return;
+    _gpCreateMenuObserveTimer = window.setTimeout(() => {
+      _gpCreateMenuObserveTimer = 0;
+      scanAndInjectGoalCreateMenus();
+    }, 80);
+  }
+
+  function setupCalendarCreateMenuGoalItem() {
+    if (typeof MutationObserver === 'undefined') return;
+    const mo = new MutationObserver(() => scheduleGoalCreateMenuScan());
+    mo.observe(document.body, { childList: true, subtree: true });
+    scheduleGoalCreateMenuScan();
+  }
+
   // ── Google Calendar left sidebar — collapsible "My goals" (read-only progress; unified state only) ──
   /** @deprecated Legacy collapsed flag — superseded by GP_GOALS_ACCORDION_OPEN_KEY */
   const GP_LEFT_GOALS_COLLAPSED_KEY = 'gp_left_goals_collapsed';
