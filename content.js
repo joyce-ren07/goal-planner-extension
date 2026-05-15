@@ -2107,7 +2107,8 @@
       if (!container || !root) return;
       const legacyById = new Map(goals.map((gk) => [gk.id, gk]));
       for (const lg of goals) {
-        const slotArr = Array.isArray(slotPack[String(lg.id)]) ? slotPack[String(lg.id)] : [];
+        const slotRaw = slotPack[String(lg.id)] ?? slotPack[lg.id];
+        const slotArr = Array.isArray(slotRaw) ? slotRaw : [];
         const virtualG = buildSidebarVirtualGoalFromExpanded(lg, expanded, slotArr);
         const card = [...container.children].find(
           (el) =>
