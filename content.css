@@ -210,7 +210,7 @@
     )
   );
   font-size: var(--gp-native-title-font-size, 14px);
-  font-weight: 400;
+  font-weight: var(--gp-native-title-font-weight, 400);
   line-height: var(--gp-native-title-line-height, 20px);
   letter-spacing: var(--gp-native-title-letter-spacing, 0.00625em);
   color: var(--gm3-sys-color-on-surface, var(--gp-m3-on-surface));
