@@ -384,7 +384,7 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 4px var(--gp-native-goals-body-pr, var(--gp-native-header-pr, 16px)) 8px
+  padding: 0 var(--gp-native-goals-body-pr, var(--gp-native-header-pr, 16px)) 0
     var(--gp-native-goals-body-pl, var(--gp-native-header-pl, 24px));
   display: flex;
   flex-direction: column;
