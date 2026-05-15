@@ -2078,6 +2078,7 @@
         }
       }
       syncExtGoalTimeFromContainer(chip);
+      globalThis.GoalCalendarSync?.schedulePersistSessionGeometry?.(chip);
 
       clearTimeout(chip._resizeDebounce);
       chip._resizeDebounce = setTimeout(() => {
