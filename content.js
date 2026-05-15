@@ -1910,6 +1910,27 @@
     console.log('[gp-my-goals-sidebar]', ...args);
   }
 
+  /** When true, sidebar progress DOM is owned exclusively by goalPlannerUnifiedState. */
+  function goalPlannerModelAvailable() {
+    return !!globalThis.GoalPlannerModel;
+  }
+
+  function isSidebarStructuralMeta(meta) {
+    const r = meta?.reason;
+    return r === 'goalsStructure' || r === 'goalsSync';
+  }
+
+  async function loadAuthoritativeUnifiedForSidebar(preloaded) {
+    if (preloaded && Array.isArray(preloaded.goals)) return preloaded;
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.loadUnifiedState) return { goals: [] };
+    try {
+      return await Model.loadUnifiedState();
+    } catch (_) {
+      return { goals: [] };
+    }
+  }
+
   let _gpSidebarPatchTraceSeq = 0;
 
   function inspectSidebarGoalCardDom(card) {
