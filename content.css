@@ -116,8 +116,7 @@
   --gp-m3-state-focus: rgba(31, 31, 31, 0.1);
   --gp-m3-state-pressed: rgba(31, 31, 31, 0.12);
   --gp-m3-focus-ring: var(--gm3-sys-color-primary, #0b57d0);
-  --gp-fallback-icon-btn-transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1),
-    color 200ms cubic-bezier(0.2, 0, 0, 1);
+  --gp-fallback-icon-btn-transition: color 200ms cubic-bezier(0.2, 0, 0, 1);
 
   box-sizing: border-box;
   width: 100%;
