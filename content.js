@@ -1737,14 +1737,11 @@
       );
       card.tabIndex = 0;
       card.innerHTML =
-        `<div class="gcal-ext-goal-accent" style="background-color:${color}"></div>` +
-        `<div class="gcal-ext-goal-body">` +
         `<div class="gcal-ext-goal-name">${name}</div>` +
         `<div class="gcal-ext-goal-progress-track">` +
-        `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%;background-color:${color}"></div>` +
+        `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%"></div>` +
         `</div>` +
-        `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>` +
-        `</div>`;
+        `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>`;
 
       card.addEventListener('click', () => handleGoalCardClick(g.id));
       card.addEventListener('keydown', (e) => {
