@@ -3681,7 +3681,24 @@
             for (const k of mirrorKeys) delete map[k];
           }
 
-          chrome.storage.local.set({ gp_chip_done: map }, async () => {
+          const gid = goalRow?.id != null ? String(goalRow.id) : '';
+          const slotIdx = computeSlotIndexForGoalSession(
+            chip,
+            goalRow,
+            plannerEventId,
+            storageKey
+          );
+          if (gid && slotIdx >= 0) {
+            const prevArr = Array.isArray(slotPackPrev[gid]) ? slotPackPrev[gid] : [];
+            const sset = new Set(
+              prevArr.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n >= 0)
+            );
+            if (nextDone) sset.add(slotIdx);
+            else sset.delete(slotIdx);
+            slotPackPrev[gid] = [...sset].sort((a, b) => a - b);
+          }
+
+          chrome.storage.local.set({ gp_chip_done: map, gp_goal_slot_done: slotPackPrev }, async () => {
             try {
               const persistId =
                 allowed.find((id) => mirrorKeys.includes(String(id))) || plannerEventId;
