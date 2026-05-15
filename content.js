@@ -3347,6 +3347,35 @@
     renderSuggestions();
   }
 
+  function ymdFromIsoStart(isoStart) {
+    const d = new Date(isoStart);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function earliestSuggestionStartYmd(suggestions) {
+    const list = Array.isArray(suggestions) ? suggestions : [];
+    let best = null;
+    for (const s of list) {
+      if (!s?.isoStart) continue;
+      const ymd = ymdFromIsoStart(s.isoStart);
+      if (!best || ymd < best) best = ymd;
+    }
+    return best;
+  }
+
+  /** Recurrence-only total for creation preview (not from calendar DOM). */
+  function getPreviewTotalSessions() {
+    const r = state.recurrence;
+    if (!r) return 0;
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.computeTotalRecurringSessions) return 0;
+    const start =
+      earliestSuggestionStartYmd(state.suggestions) ||
+      ymdFromIsoStart(new Date().toISOString());
+    return Model.computeTotalRecurringSessions(r, start);
+  }
+
   // ── Update Schedule chips on Screen 3 from current state.recurrence ──
   function updateConfirmChips(schedLabel, endsLabel) {
     if (!schedLabel || !endsLabel) {
@@ -3360,6 +3389,10 @@
         if (r.ends === 'on' && r.endDate) endsLabel = `Ends ${formatDate(r.endDate)}`;
         else if (r.ends === 'after') endsLabel = `Ends after ${r.occurrences} sessions`;
       }
+    }
+    const previewTotal = getPreviewTotalSessions();
+    if (previewTotal > 0) {
+      endsLabel = `${endsLabel} · ${previewTotal} sessions`;
     }
     const schedEl = document.getElementById('gp-confirm-schedule');
     if (schedEl) schedEl.querySelector('.gp-confirm-chip-label').textContent = schedLabel;
