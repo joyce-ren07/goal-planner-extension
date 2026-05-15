@@ -158,7 +158,7 @@
   min-height: var(--gp-native-header-min-height, 48px);
   margin: 0;
   padding: var(--gp-native-header-pt, 0px) var(--gp-native-header-pr, 16px) var(--gp-native-header-pb, 0px)
-    var(--gp-native-header-pl, 20px);
+    var(--gp-native-header-pl, 24px);
   border-radius: var(--gp-native-header-br, 9999px);
   box-sizing: border-box;
   user-select: none;
