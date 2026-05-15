@@ -2855,7 +2855,14 @@
               }
             }
             if (meta.reason === 'sessionCompletion') {
-              await patchMyGoalsSidebarProgressRows(st, meta);
+              const legacyForEvt = await getGoals();
+              const slotPackEvt = await new Promise((r) =>
+                chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
+              );
+              await patchMyGoalsSidebarProgressRows(st, {
+                ...meta,
+                slotPackOverride: slotPackEvt,
+              });
               return;
             }
             const applyMeta = isSidebarStructuralMeta(meta) ? meta : { reason: 'goalsSync' };
