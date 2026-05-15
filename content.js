@@ -2861,6 +2861,41 @@
     await Model.saveUnifiedState(next, { reason: 'goalsSync' });
   }
 
+  /**
+   * Copy session start times from unified state into gp_goals[].sessionAnchors when geometry sync has populated them.
+   * Runs once after load so multi-session checkbox → sidebar works without re-creating the goal.
+   */
+  async function maybeBackfillSessionAnchorsIntoStorage() {
+    try {
+      const Model = globalThis.GoalPlannerModel;
+      if (!Model?.syncUnifiedWithLegacyGoals) return;
+      const goals = await getGoals();
+      if (!goals.length) return;
+      const chipDone = await new Promise((r) =>
+        chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
+      );
+      const prev = await Model.loadUnifiedState();
+      const merged = Model.syncUnifiedWithLegacyGoals(prev, goals, chipDone || {});
+      let changed = false;
+      for (const lg of goals) {
+        if (lg.sessionAnchors?.length || !(lg.calEventIds || []).length) continue;
+        const ug = merged.goals.find((g) => String(g.id) === String(lg.id));
+        const syn = [];
+        for (const id of lg.calEventIds) {
+          const s = ug?.sessions?.find((x) => x.eventId === id);
+          if (s?.startTime) syn.push({ eventId: id, isoStart: s.startTime });
+        }
+        if (syn.length) {
+          lg.sessionAnchors = syn;
+          changed = true;
+        }
+      }
+      if (changed) await saveGoals(goals);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
   // ── Date helpers ──
   function defaultEndDate() {
     const d = new Date(); d.setMonth(d.getMonth() + 3);
