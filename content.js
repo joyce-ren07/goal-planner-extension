@@ -1995,14 +1995,14 @@
       if (chip._gpLabelSyncRaf != null) return;
       chip._gpLabelSyncRaf = requestAnimationFrame(() => {
         chip._gpLabelSyncRaf = null;
-        syncExtGoalTimeFromContainer(chip, eventContainer);
+        syncExtGoalTimeFromContainer(chip);
       });
     };
     const labelObs = new MutationObserver((mutations) => {
       if (!mutations.some(goalChipTimeLabelMutationRelevant)) return;
       scheduleLabelSync();
     });
-    labelObs.observe(eventContainer, {
+    labelObs.observe(chip, {
       attributes: true,
       attributeFilter: ['aria-label', 'data-tooltip', 'title'],
       characterData: true,
@@ -2013,17 +2013,14 @@
 
     // ── Track 2: ResizeObserver — pixel-based live duration + debounced persistence ──
     const resizeObserver = new ResizeObserver(() => {
-      // Immediate visual update: derive duration from current pixel height
-      const containerH = eventContainer.getBoundingClientRect().height;
+      const ecLive = chip.closest('[data-eventid]');
+      if (!ecLive) return;
+      const containerH = ecLive.getBoundingClientRect().height;
 
-      // Keep the chip height in sync with the container so it never overflows
-      // its event boundary mid-drag (mirrors boundChipHeight but synchronously
-      // since we already have the container height in hand).
       if (containerH > 0) chip.style.height = containerH + 'px';
 
       const metrics = getGridMetrics();
       if (metrics && metrics.pxPerHour > 0) {
-        // Round to nearest 15-min interval, matching GCal's snap behaviour
         const rawMins = (containerH / metrics.pxPerHour) * 60;
         const durationMins = Math.max(15, Math.round(rawMins / 15) * 15);
         const timeEl = chip.querySelector('.ext-goal-time');
@@ -2032,15 +2029,16 @@
           timeEl.style.display = containerH < 42 ? 'none' : 'block';
         }
       }
-      // Prefer live clock range from DOM when GCal exposes it (move + resize).
-      syncExtGoalTimeFromContainer(chip, eventContainer);
+      syncExtGoalTimeFromContainer(chip);
 
-      // Debounced: persist final value once the drag settles
       clearTimeout(chip._resizeDebounce);
       chip._resizeDebounce = setTimeout(() => {
         chip.classList.remove('ext-goal-resizing');
 
-        const newTime = syncExtGoalTimeFromContainer(chip, eventContainer);
+        const ecDone = chip.closest('[data-eventid]');
+        const containerHFinal = ecDone ? ecDone.getBoundingClientRect().height : 0;
+        const newTime = syncExtGoalTimeFromContainer(chip);
+
         chrome.storage.local.get(['goalStates'], (result) => {
           const states = result.goalStates || {};
           if (states[goalData.id]) {
@@ -2053,14 +2051,15 @@
           type: 'GOAL_RESIZE',
           id: goalData.id,
           newTime,
-          newHeight: containerH,
+          newHeight: containerHFinal,
         });
 
-        console.log('GOAL RESIZE SETTLED — new time:', newTime, 'height:', containerH);
+        console.log('GOAL RESIZE SETTLED — new time:', newTime, 'height:', containerHFinal);
       }, 400);
     });
 
-    resizeObserver.observe(eventContainer);
+    resizeObserver.observe(chip);
+    if (document.documentElement.contains(eventContainer)) resizeObserver.observe(eventContainer);
     chip._resizeObserver = resizeObserver;
 
     // ── Track 3: resize-handle mousedown — enter visual "resizing" state ──
