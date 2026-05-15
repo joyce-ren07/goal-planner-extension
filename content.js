@@ -1847,7 +1847,7 @@
   }
 
   function buildSidebarGoalCardElement(g, legacyById) {
-    const legacy = legacyById.get(g.id);
+    const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
       ...legacyRow,
@@ -1941,7 +1941,7 @@
 
     const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
     if (fillEl) fillEl.style.width = `${pctClamped}%`;
-    const legacy = legacyById.get(g.id);
+    const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
       ...legacyRow,
