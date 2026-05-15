@@ -3201,7 +3201,9 @@
 
       chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
         const legacyGoals = d.gp_goals || [];
-        const plannerEventId = resolvePlannerEventIdForChip(storageKey, legacyGoals);
+        const target = resolveChipCompletionTarget(chip, legacyGoals);
+        let plannerEventId = target.plannerEventId || resolvePlannerEventIdForChip(storageKey, legacyGoals);
+        if (!plannerEventId) plannerEventId = storageKey;
         const map = { ...(d.gp_chip_done || {}) };
         if (nextDone) map[plannerEventId] = true;
         else delete map[plannerEventId];
@@ -3212,12 +3214,17 @@
             /* ignore */
           }
           let metaSidebar = {};
+          if (target.goalId != null && target.goalId !== '') {
+            metaSidebar = { reason: 'sessionCompletion', goalId: target.goalId };
+          }
           try {
             const Model = globalThis.GoalPlannerModel;
-            if (Model && plannerEventId) {
-              const st = await Model.loadUnifiedState();
-              const hit = Model.findSessionByEventId(st, plannerEventId);
-              if (hit?.goal?.id) metaSidebar = { reason: 'sessionCompletion', goalId: hit.goal.id };
+            if (!metaSidebar.goalId && Model && plannerEventId) {
+              const stHit = await Model.loadUnifiedState();
+              const hit = Model.findSessionByEventId(stHit, plannerEventId);
+              if (hit?.goal?.id != null && hit.goal.id !== '') {
+                metaSidebar = { reason: 'sessionCompletion', goalId: hit.goal.id };
+              }
             }
           } catch (_) {
             /* sidebar optional */
