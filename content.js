@@ -3686,9 +3686,21 @@
           }
 
           const gid = goalRow?.id != null ? String(goalRow.id) : '';
+          let slotGoalRow = goalRow;
+          if (goalRow) {
+            try {
+              slotGoalRow = await enrichGoalRowWithUnifiedAnchors(
+                goalRow,
+                legacyGoals,
+                chipDoneSnapshot
+              );
+            } catch (_) {
+              slotGoalRow = goalRow;
+            }
+          }
           const slotIdx = computeSlotIndexForGoalSession(
             chip,
-            goalRow,
+            slotGoalRow,
             plannerEventId,
             storageKey
           );
