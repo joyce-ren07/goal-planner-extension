@@ -1829,10 +1829,10 @@
     const total = sessions.length;
     const completed = total ? sessions.filter((s) => !!s.completed).length : 0;
     const pctClamped =
-      typeof g.progressPct === 'number'
-        ? Math.max(0, Math.min(100, Math.round(g.progressPct)))
-        : total > 0
-          ? Math.max(0, Math.min(100, Math.round((completed / total) * 100)))
+      total > 0
+        ? Math.max(0, Math.min(100, Math.round((completed / total) * 100)))
+        : typeof g.progressPct === 'number'
+          ? Math.max(0, Math.min(100, Math.round(g.progressPct)))
           : 0;
     return { total, completed, pctClamped };
   }
