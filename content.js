@@ -233,7 +233,7 @@
       .filter(Boolean);
     const sessionMins = parseInt(document.getElementById('gp-session-mins')?.value, 10) || 60;
     const endsVal =
-      document.querySelector('#gp-recurrence-overlay input[name="gp-ends"]:checked')?.value || 'on';
+      ov.querySelector('input[name="gp-ends"]:checked')?.value || 'on';
     const endDate = document.getElementById('gp-end-date')?.value || '';
     const occurrences = parseInt(document.getElementById('gp-occurrences')?.value, 10) || 13;
     return {
