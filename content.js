@@ -1229,9 +1229,8 @@
 
     const suggScr = document.getElementById('gp-screen-suggestions');
     if (suggScr?.classList.contains('active')) {
-      return refreshSuggestionsPreview();
+      await refreshSuggestionsPreview();
     }
-    return Promise.resolve();
   }
 
   // ── Go to suggestions screen ──
