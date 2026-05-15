@@ -890,7 +890,7 @@
       if (r.height < 120) continue;
       if (r.left > Math.min(mainLeft + 40, 400)) continue;
       const tx = (el.textContent || '');
-      if (!/My calendars|Other calendars|Booking pages/i.test(tx)) continue;
+      if (!/My calendars|Other calendars|Booking pages|Booking insights?|Time insights?/i.test(tx)) continue;
       return el;
     }
     return null;
