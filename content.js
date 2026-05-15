@@ -4174,17 +4174,9 @@
             }
 
             try {
-              const ModelPatch = globalThis.GoalPlannerModel;
-              if (ModelPatch?.syncUnifiedWithLegacyGoals) {
-                const legacyForPatch = await getGoals();
-                const chipForPatch = await loadMergedChipDoneForSidebar(legacyForPatch);
-                const stPatch = await ModelPatch.loadUnifiedState();
-                const mergedPatch = ModelPatch.syncUnifiedWithLegacyGoals(
-                  stPatch,
-                  legacyForPatch,
-                  chipForPatch
-                );
-                await patchMyGoalsSidebarProgressRows(mergedPatch, metaSidebar);
+              if (goalPlannerModelAvailable()) {
+                const stPatch = await loadAuthoritativeUnifiedForSidebar(null);
+                await patchMyGoalsSidebarProgressRows(stPatch, metaSidebar);
               }
             } catch (_) {
               /* ignore */
