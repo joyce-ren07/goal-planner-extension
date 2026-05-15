@@ -1284,11 +1284,14 @@
     body.id = 'gp-gcal-sidebar-goals-cards';
     body.setAttribute('aria-live', 'polite');
 
+    const chevronGlyph = chevronBtn.querySelector('.gp-gcal-sidebar-chevron-icon');
+
     function applyCollapsed(collapsed) {
       root.classList.toggle('gp-gcal-sidebar-collapsed', collapsed);
       const exp = String(!collapsed);
       labelBtn.setAttribute('aria-expanded', exp);
       chevronBtn.setAttribute('aria-expanded', exp);
+      if (chevronGlyph) chevronGlyph.textContent = collapsed ? 'expand_more' : 'expand_less';
       try {
         chrome.storage.local.set({ [GP_LEFT_GOALS_COLLAPSED_KEY]: collapsed });
       } catch (_) {
