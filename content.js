@@ -2413,6 +2413,7 @@
             recurrence: { ...r },
             endDate: r.endDate || '',
             calEventIds: eventIds,
+            colorId: goals[idx].colorId || '9',
           };
         }
       } else {
