@@ -171,7 +171,6 @@
   padding: 0;
   border: none;
   background: transparent;
-  cursor: pointer;
   font-family: var(
     --gp-native-title-font-family,
     var(
