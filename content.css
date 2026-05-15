@@ -155,12 +155,30 @@
   gap: var(--gp-native-header-gap, 0px);
   min-height: var(--gp-native-header-min-height, 48px);
   margin: 0;
-  padding: var(--gp-native-header-pt, 0px) var(--gp-native-header-pr, 8px) var(--gp-native-header-pb, 0px)
-    var(--gp-native-header-pl, 12px);
-  border-radius: var(--gp-native-header-br, 8px);
+  padding: var(--gp-native-header-pt, 0px) var(--gp-native-header-pr, 16px) var(--gp-native-header-pb, 0px)
+    var(--gp-native-header-pl, 20px);
+  border-radius: var(--gp-native-header-br, 9999px);
   box-sizing: border-box;
   user-select: none;
-  cursor: var(--gp-native-cursor, default);
+  cursor: var(--gp-native-cursor, pointer);
+  background-color: transparent;
+  transition: var(
+    --gp-native-header-bg-transition,
+    background-color 200ms cubic-bezier(0.2, 0, 0, 1)
+  );
+}
+
+.gp-gcal-sidebar-section-header:hover {
+  background-color: var(--gp-m3-state-hover);
+}
+
+.gp-gcal-sidebar-section-header:active {
+  background-color: var(--gp-m3-state-pressed);
+}
+
+.gp-gcal-sidebar-section-header:focus-within {
+  outline: 2px solid var(--gp-m3-focus-ring);
+  outline-offset: 2px;
 }
 
 /* M3 label-large: section title — metrics match native title span when synced */
@@ -170,6 +188,7 @@
   margin: 0;
   padding: 0;
   border: none;
+  border-radius: 0;
   background: transparent;
   font-family: var(
     --gp-native-title-font-family,
@@ -191,18 +210,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  border-radius: var(--gp-native-header-br, 8px);
   cursor: var(--gp-native-cursor, pointer);
-  transition: var(
-    --gp-native-header-bg-transition,
-    background-color 200ms cubic-bezier(0.2, 0, 0, 1)
-  );
-}
-.gp-gcal-sidebar-label-btn:hover {
-  background-color: var(--gp-m3-state-hover);
-}
-.gp-gcal-sidebar-label-btn:active {
-  background-color: var(--gp-m3-state-pressed);
 }
 
 .gp-gcal-sidebar-actions {
