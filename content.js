@@ -1364,9 +1364,6 @@
         const ags = getComputedStyle(ag);
         if (ags.fontSize && ags.fontSize !== '0px') setVar('--gp-native-add-icon-font-size', ags.fontSize);
         if (ags.lineHeight && ags.lineHeight !== '0px') setVar('--gp-native-add-icon-lh', ags.lineHeight);
-        if (ags.fontWeight) setVar('--gp-native-add-icon-weight', ags.fontWeight);
-        if (ags.fontVariationSettings && ags.fontVariationSettings !== 'normal')
-          setVar('--gp-native-add-icon-fvs', ags.fontVariationSettings);
       }
     }
 
