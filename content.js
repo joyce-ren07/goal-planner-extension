@@ -4341,23 +4341,18 @@
       if (norm && calEventIdsContain(ids, norm)) plannerEventId = norm;
     }
 
-    const anchorGoal =
-      anchorGoal && anchorGoal !== goal
-        ? anchorGoal
-        : await enrichGoalRowWithUnifiedAnchors(goal, legacyGoals, chipDoneMap);
-
     if (!plannerEventId && anchorGoal) {
       const fromAnchors = pickPlannerEventIdFromAnchors(chip, anchorGoal);
-      if (fromAnchors) plannerEventId = fromAnchors;
+      if (fromAnchors && calEventIdsContain(ids, fromAnchors)) plannerEventId = fromAnchors;
     }
-    if (!plannerEventId && goal) {
+    if (!plannerEventId && anchorGoal) {
       const fromUnified = await pickPlannerEventIdFromUnifiedSessions(
         chip,
-        goal,
+        anchorGoal,
         legacyGoals,
         chipDoneMap
       );
-      if (fromUnified) plannerEventId = fromUnified;
+      if (fromUnified && calEventIdsContain(ids, fromUnified)) plannerEventId = fromUnified;
     }
     if (!plannerEventId && goal && ids.length === 1) plannerEventId = ids[0];
     if (!plannerEventId && domId && calEventIdsContain(ids, domId)) plannerEventId = domId;
