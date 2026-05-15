@@ -377,7 +377,8 @@
     var(--gp-native-goals-body-pl, var(--gp-native-header-pl, 24px));
   display: flex;
   flex-direction: column;
-  gap: 0;
+  /* Figma CAPSTONE GoalCard stack — vertical rhythm between cards (screenshot: airy stack). */
+  gap: 8px;
 }
 
 .gp-gcal-sidebar-goals-root .gcal-ext-goals-empty {
