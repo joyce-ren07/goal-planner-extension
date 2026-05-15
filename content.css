@@ -292,12 +292,8 @@
 }
 
 .gp-gcal-sidebar-add-btn:hover {
-  height: calc(
-    var(--gp-booking-add-btn-h, calc(var(--gp-native-add-btn-h, var(--gp-native-icon-btn-h, 40px)) + 4px)) + 4px - 6px
-  ) !important;
-  border-radius: calc(
-    var(--gp-native-add-btn-br, var(--gp-native-icon-btn-br, 9999px)) - 3px
-  ) !important;
+  padding: 4px !important;
+  border-radius: 50% !important;
 }
 
 /* M3 focus indicator — single ring on the full header row (matches native accordion hit target) */
