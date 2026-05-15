@@ -1096,6 +1096,26 @@
       return d > 0 && d <= 4;
     });
 
+    const pane = findNativeSectionContentSibling(ref, scroll);
+
+    function pickNativeAddTrigger(nodes) {
+      for (const b of nodes) {
+        const al = (b.getAttribute('aria-label') || '').toLowerCase();
+        if (/\badd\b/i.test(al) || /create|new\s/i.test(al)) return b;
+        const mat = b.querySelector('.material-symbols-outlined, .google-symbols, .google-material-icons, span');
+        const mt = mat ? String(mat.textContent || '').trim().toLowerCase() : '';
+        if (mt === 'add' || mt === '+') return b;
+      }
+      return null;
+    }
+    const addBtnHost = pickNativeAddTrigger(nestedClickables);
+    const chevronBtnHost =
+      nestedClickables.length === 0
+        ? null
+        : nestedClickables.length === 1
+          ? nestedClickables[0]
+          : nestedClickables.filter((b) => b !== addBtnHost).pop() || nestedClickables[nestedClickables.length - 1];
+
     let padEl = ref;
     if (cs.paddingLeft === '0px' && cs.paddingRight === '0px' && ref.firstElementChild) {
       const sub = getComputedStyle(ref.firstElementChild);
