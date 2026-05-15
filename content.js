@@ -2338,7 +2338,8 @@
     const displayColor = getGoalDisplayColor(colorSource);
     card.style.setProperty('--goal-progress-color', displayColor);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(displayColor, 0.18));
-    if (fillEl) fillEl.style.width = `${pctClamped}%`;
+    card.style.setProperty('--goal-progress-pct', `${pctClamped}%`);
+    if (fillEl) fillEl.style.removeProperty('width');
   }
 
   /**
