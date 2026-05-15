@@ -1003,6 +1003,19 @@
     };
 
     const cs = getComputedStyle(ref);
+    const rr = ref.getBoundingClientRect();
+
+    const nestedClickables = [...ref.querySelectorAll('[role="button"], button')].filter((n) => {
+      if (n === ref || !ref.contains(n)) return false;
+      let d = 0;
+      let p = n;
+      while (p && p !== ref) {
+        d++;
+        p = p.parentElement;
+      }
+      return d > 0 && d <= 4;
+    });
+
     let padEl = ref;
     if (cs.paddingLeft === '0px' && cs.paddingRight === '0px' && ref.firstElementChild) {
       const sub = getComputedStyle(ref.firstElementChild);
@@ -1012,23 +1025,8 @@
 
     setVar('--gp-native-font-family', cs.fontFamily);
 
-    setVar('--gp-native-header-pt', pcs.paddingTop);
-    setVar('--gp-native-header-pr', pcs.paddingRight);
-    setVar('--gp-native-header-pb', pcs.paddingBottom);
-    setVar('--gp-native-header-pl', pcs.paddingLeft);
-
-    let minH = '';
-    if (cs.minHeight && cs.minHeight !== '0px') minH = cs.minHeight;
-    else if (pcs.minHeight && pcs.minHeight !== '0px') minH = pcs.minHeight;
-    setVar('--gp-native-header-min-height', minH);
-
-    if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
-    setVar('--gp-native-header-align', cs.alignItems);
-    if (cs.borderRadius && cs.borderRadius !== '0px') setVar('--gp-native-header-br', cs.borderRadius);
-
     let titleEl = null;
-    const innerSpans = ref.querySelectorAll('span, div');
-    for (const el of innerSpans) {
+    for (const el of ref.querySelectorAll('span, div')) {
       if (!ref.contains(el) || el === ref) continue;
       const t = normalizeSidebarRowText(el.textContent || '');
       if (!t || t.length > 48 || el.querySelector('span, div, svg, button')) continue;
@@ -1036,6 +1034,42 @@
       titleEl = el;
       break;
     }
+
+    let plVal = pcs.paddingLeft;
+    let prVal = pcs.paddingRight;
+    if (titleEl && rr.width > 0) {
+      const tr = titleEl.getBoundingClientRect();
+      const plMeas = Math.round(tr.left - rr.left);
+      if (plMeas >= 8) plVal = `${plMeas}px`;
+    }
+    if (nestedClickables.length && rr.width > 0) {
+      let maxIconRight = rr.left;
+      for (const b of nestedClickables) {
+        const br = b.getBoundingClientRect();
+        if (br.right > maxIconRight) maxIconRight = br.right;
+      }
+      const prMeas = Math.round(rr.right - maxIconRight);
+      if (prMeas >= 4) prVal = `${prMeas}px`;
+    }
+    setVar('--gp-native-header-pl', plVal);
+    setVar('--gp-native-header-pr', prVal);
+    if (pcs.paddingTop) setVar('--gp-native-header-pt', pcs.paddingTop);
+    if (pcs.paddingBottom) setVar('--gp-native-header-pb', pcs.paddingBottom);
+
+    let minH = '';
+    if (cs.minHeight && cs.minHeight !== '0px') minH = cs.minHeight;
+    else if (pcs.minHeight && pcs.minHeight !== '0px') minH = pcs.minHeight;
+    setVar('--gp-native-header-min-height', minH);
+
+    const mhNum = parseFloat(String(minH || '48px').replace(/px$/i, '')) || 48;
+    const brParsed = parseFloat(String(cs.borderRadius || '0').replace(/px$/i, '')) || 0;
+    if (cs.borderRadius && cs.borderRadius !== '0px') {
+      if (brParsed >= mhNum / 2 - 1) setVar('--gp-native-header-br', cs.borderRadius);
+      else setVar('--gp-native-header-br', `${Math.max(20, Math.round(mhNum / 2))}px`);
+    } else {
+      setVar('--gp-native-header-br', `${Math.max(20, Math.round(mhNum / 2))}px`);
+    }
+
     if (titleEl) {
       const ts = getComputedStyle(titleEl);
       setVar('--gp-native-title-font-size', ts.fontSize);
@@ -1050,16 +1084,6 @@
       setVar('--gp-native-title-letter-spacing', cs.letterSpacing);
     }
 
-    const nestedClickables = [...ref.querySelectorAll('[role="button"], button')].filter((n) => {
-      if (n === ref || !ref.contains(n)) return false;
-      let d = 0;
-      let p = n;
-      while (p && p !== ref) {
-        d++;
-        p = p.parentElement;
-      }
-      return d > 0 && d <= 4;
-    });
     const iconHost =
       nestedClickables.find((b) => {
         const r = b.getBoundingClientRect();
