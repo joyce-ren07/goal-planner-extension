@@ -2993,6 +2993,38 @@
   // Queries [data-eventchip] on each mutation, matches goal events by 🎯 in title,
   // injects .ext-goal-root decoration; checkbox clicks use GoalInteractionController (document capture delegation).
 
+  /**
+   * Align DOM `data-eventid` / transient chip keys with `gp_goals[].calEventIds[]` so `gp_chip_done` ↔ sidebar merge works.
+   */
+  function resolvePlannerEventIdForChip(domOrStoredId, legacyGoals) {
+    const raw = domOrStoredId && String(domOrStoredId).trim();
+    if (!raw) return '';
+    const goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    const allIds = [];
+    for (const g of goals) {
+      for (const id of g.calEventIds || []) {
+        if (id) allIds.push(id);
+      }
+    }
+    if (allIds.includes(raw)) return raw;
+    let decoded = raw;
+    try {
+      decoded = decodeURIComponent(raw.replace(/\+/g, ' '));
+    } catch (_) {
+      decoded = raw;
+    }
+    if (decoded !== raw && allIds.includes(decoded)) return decoded;
+
+    for (const id of allIds) {
+      if (!id) continue;
+      const instPrefix = `${id}_`;
+      if (raw === id || decoded === id) return id;
+      if (raw.startsWith(instPrefix) || decoded.startsWith(instPrefix)) return id;
+    }
+
+    return raw;
+  }
+
   /* Active session — coral accent; completed — Google muted grays (#5f6368 / #80868b) */
   const SVG_CHECK_ACTIVE  = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="#fff"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#D3564B" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const SVG_CIRCLE_ACTIVE = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="none"/></svg>';
