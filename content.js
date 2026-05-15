@@ -1766,7 +1766,9 @@
     _leftSidebarGoalsMountTimer = setTimeout(() => {
       _leftSidebarGoalsMountTimer = null;
       mountLeftSidebarGoalsSection();
-      renderGoalsSidebar();
+      const cards = document.getElementById('gp-gcal-sidebar-goals-cards');
+      const hasCards = !!cards?.querySelector?.('.gcal-ext-goal-card[data-goal-id]');
+      if (!hasCards) renderGoalsSidebar();
     }, 400);
   }
 
