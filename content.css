@@ -113,9 +113,6 @@
   --gp-m3-on-surface: var(--gm3-sys-color-on-surface, #1f1f1f);
   --gp-m3-on-surface-variant: var(--gm3-sys-color-on-surface-variant, #44474f);
   --gp-m3-primary: var(--gm3-sys-color-primary, #0b57d0);
-  --gp-m3-on-primary: var(--gm3-sys-color-on-primary, #ffffff);
-  --gp-m3-outline: var(--gm3-sys-color-outline, #747775);
-  --gp-m3-surface: var(--gm3-sys-color-surface, #ffffff);
   /* State layers: solid fallbacks; refined when color-mix available */
   --gp-m3-state-hover: rgba(31, 31, 31, 0.08);
   --gp-m3-state-focus: rgba(31, 31, 31, 0.1);
