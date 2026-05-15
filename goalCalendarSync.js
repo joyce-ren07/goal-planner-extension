@@ -255,7 +255,7 @@
     var legacy = await loadLegacyGoalsAndChipDone();
     var g = legacy.goals.find(function (x) {
       return (x.calEventIds || []).some(function (id) {
-        return id === eventId;
+        return String(id) === String(eventId);
       });
     });
     if (!g) return;
