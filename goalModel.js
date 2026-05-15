@@ -42,7 +42,7 @@
   var STORAGE_KEY = 'goalPlannerUnifiedState';
   var MODEL_VERSION = 1;
 
-  /** @type {Set<function(import('.').GoalsStateEvt): void>} */
+  /** @type {Set<function({ state: GoalPlannerUnifiedState, meta: Record<string, unknown> }): void>} */
   var _goalsStateSubscribers = new Set();
 
   /**
