@@ -1042,6 +1042,41 @@
     return null;
   }
 
+  /** Native accordion header whose visible title matches `labelRe` (e.g. Booking pages). */
+  function findNativeSidebarAccordionRowByLabel(scrollEl, labelRe) {
+    if (!scrollEl || !labelRe) return null;
+    const roleEls = scrollEl.querySelectorAll('[role="button"], button');
+    for (const row of roleEls) {
+      if (row.closest('#gp-gcal-sidebar-goals-root')) continue;
+      const t = normalizeSidebarRowText(row.textContent || '');
+      if (!t || t.length > 96) continue;
+      if (!labelRe.test(t)) continue;
+      return row;
+    }
+    for (const el of scrollEl.querySelectorAll('span, div')) {
+      if (el.closest('#gp-gcal-sidebar-goals-root')) continue;
+      if (el.children.length) continue;
+      const t = normalizeSidebarRowText(el.textContent || '');
+      if (!t || t.length > 40) continue;
+      if (!labelRe.test(t)) continue;
+      const row = el.closest('[role="button"]') || el.closest('button');
+      if (row && scrollEl.contains(row) && row !== scrollEl) return row;
+    }
+    return null;
+  }
+
+  /** Add (+) control inside a native sidebar accordion header row. */
+  function gpPickSidebarRowAddTrigger(nodes) {
+    for (const b of nodes) {
+      const al = (b.getAttribute('aria-label') || '').toLowerCase();
+      if (/\badd\b/i.test(al) || /create|new\s/i.test(al)) return b;
+      const mat = b.querySelector('.material-symbols-outlined, .google-symbols, .google-material-icons, span');
+      const mt = mat ? String(mat.textContent || '').trim().toLowerCase() : '';
+      if (mt === 'add' || mt === '+') return b;
+    }
+    return null;
+  }
+
   /** Left inset (px) from native row edge to section title — used to align “My goals” with Booking / Calendars. */
   function nativeSidebarTitleLeftInsetPx(rowEl) {
     if (!rowEl) return 0;
