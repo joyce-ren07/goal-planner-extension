@@ -3373,9 +3373,17 @@
             plannerEventId = '';
           }
           if (!plannerEventId && allowed.length === 1) plannerEventId = allowed[0];
-          if (!plannerEventId) {
+
+          let valid = plannerEventId && (!allowed.length || allowed.includes(plannerEventId));
+          if (!valid && !allowed.length && (storageKey || canonicalEventKey)) {
             plannerEventId = storageKey || canonicalEventKey || '';
+            valid = !!plannerEventId;
           }
+          if (!valid) {
+            GoalInteractionController.applyGoalSessionCompletionUI(chip, !nextDone);
+            return;
+          }
+
           if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
 
           const map = { ...chipDoneSnapshot };
