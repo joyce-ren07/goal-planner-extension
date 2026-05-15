@@ -2142,6 +2142,9 @@
       progressPct: 0,
     };
   }
+
+  /**
+   * Projection-only: map gp_chip_done keys (often GCal DOM event ids) onto gp_goals[].calEventIds[]
    * for merge/sidebar counts. Does not write to storage. Per-goal scoping limits false matches.
    */
   function expandChipDoneOntoCalEventIds(chipDone, legacyGoals) {
