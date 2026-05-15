@@ -1073,6 +1073,9 @@
       setVar('--gp-native-icon-btn-h', `${Math.round(r.height)}px`);
       setVar('--gp-native-icon-btn-br', bcs.borderRadius);
       setVar('--gp-native-icon-btn-margin', bcs.margin);
+      if (bcs.transition && gpMaxTransitionDurationMs(bcs.transitionDuration) > 0) {
+        setVar('--gp-native-icon-bg-transition', bcs.transition);
+      }
       const glyph = iconHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
       if (glyph) {
         const gcs = getComputedStyle(glyph);
@@ -1093,6 +1096,73 @@
         setVar('--gp-native-actions-align', cls.alignItems);
       }
     }
+
+    if (cs.cursor) setVar('--gp-native-cursor', cs.cursor);
+
+    const headerDur = gpMaxTransitionDurationMs(cs.transitionDuration);
+    if (headerDur > 0) {
+      if (cs.transition && !/^all\s+0s\b/i.test(cs.transition.trim())) {
+        setVar('--gp-native-header-bg-transition', cs.transition);
+      } else {
+        setVar(
+          '--gp-native-header-bg-transition',
+          [cs.transitionProperty, cs.transitionDuration, cs.transitionTimingFunction, cs.transitionDelay]
+            .filter(Boolean)
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+        );
+      }
+    }
+
+    let chevTrans = '';
+    for (const el of ref.querySelectorAll('*')) {
+      const st = getComputedStyle(el);
+      if (gpMaxTransitionDurationMs(st.transitionDuration) === 0) continue;
+      const tp = (st.transitionProperty || '').toLowerCase();
+      if (/\btransform\b/.test(tp)) {
+        chevTrans = st.transition;
+        break;
+      }
+    }
+    if (chevTrans) setVar('--gp-native-chevron-transition', chevTrans);
+
+    let collapseMode = 'instant';
+    const pane = findNativeSectionContentSibling(ref, scroll);
+    if (pane && scroll.contains(pane)) {
+      const ps = getComputedStyle(pane);
+      const pDur = gpMaxTransitionDurationMs(ps.transitionDuration);
+      const props = (ps.transitionProperty || '')
+        .split(',')
+        .map((x) => x.trim().toLowerCase());
+      const canMirror =
+        pDur > 0 &&
+        ps.transition &&
+        !/^all\s+0s\b/i.test(ps.transition.trim()) &&
+        props.some((p) =>
+          [
+            'max-height',
+            'height',
+            'opacity',
+            'grid-template-rows',
+            'flex',
+            'flex-basis',
+            'transform',
+            'padding',
+            'padding-top',
+            'padding-bottom',
+            'margin',
+            'margin-top',
+            'margin-bottom',
+          ].some((k) => p === k || p.startsWith(`${k}`))
+        );
+      if (canMirror) {
+        setVar('--gp-native-pane-transition', ps.transition);
+        if (ps.overflow && ps.overflow !== 'visible') setVar('--gp-native-pane-overflow', ps.overflow);
+        collapseMode = 'css';
+      }
+    }
+    root.dataset.gpCollapseMode = collapseMode;
 
     root.dataset.gpNativeSidebarSyncTs = String(Date.now());
   }
