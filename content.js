@@ -2307,8 +2307,7 @@
       el.matches?.('.gcal-ext-goal-card[data-goal-id]')
     );
 
-    const structuralReason =
-      meta && (meta.reason === 'goalsSync' || meta.reason === 'goalsStructure');
+    const structuralReason = isSidebarStructuralMeta(meta);
 
     let needFullRebuild =
       structuralReason ||
@@ -2324,6 +2323,12 @@
       return;
     }
 
+    /** Unified model owns progress DOM — structure-only apply; patchMyGoalsSidebarProgressRows is sole progress writer. */
+    if (goalPlannerModelAvailable() && !structuralReason) {
+      root.dataset.gpSidebarGoalsSig = sigJoined;
+      return;
+    }
+
     if (sigJoined !== root.dataset.gpSidebarGoalsSig) {
       for (let i = 0; i < goals.length; i++) {
         syncSingleSidebarGoalCard(existingCards[i], goals[i], legacyById);
@@ -2331,7 +2336,6 @@
       root.dataset.gpSidebarGoalsSig = sigJoined;
     }
 
-    /** Session completion: patch only affected row(s); never rebuild accordion/cards. */
     if (meta?.reason === 'sessionCompletion') {
       const narrowId =
         meta.goalId != null && meta.goalId !== '' ? String(meta.goalId) : null;
