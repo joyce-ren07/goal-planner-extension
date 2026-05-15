@@ -1794,11 +1794,117 @@
     });
   }
 
+  /** Signature string per goal for O(1) sidebar list change detection (unified model only). */
+  function goalSidebarMetricToken(g) {
+    const sessions = g.sessions || [];
+    const total = sessions.length;
+    const completed = total ? sessions.filter((s) => !!s.completed).length : 0;
+    const pctRaw =
+      typeof g.progressPct === 'number'
+        ? g.progressPct
+        : total > 0
+          ? (completed / total) * 100
+          : 0;
+    const pct = Math.max(0, Math.min(100, Math.round(pctRaw)));
+    return `${g.id}|${total}|${completed}|${pct}|${String(g.title || '')}`;
+  }
+
+  function computeGoalSidebarNumbers(g) {
+    const sessions = g.sessions || [];
+    const total = sessions.length;
+    const completed = total ? sessions.filter((s) => !!s.completed).length : 0;
+    const pctClamped =
+      typeof g.progressPct === 'number'
+        ? Math.max(0, Math.min(100, Math.round(g.progressPct)))
+        : total > 0
+          ? Math.max(0, Math.min(100, Math.round((completed / total) * 100)))
+          : 0;
+    return { total, completed, pctClamped };
+  }
+
+  function buildSidebarGoalCardElement(g, legacyById) {
+    const legacy = legacyById.get(g.id);
+    const legacyRow = legacy || {};
+    const colorSource = {
+      ...legacyRow,
+      color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
+    };
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const displayColor = getGoalDisplayColor(colorSource);
+    const name = escapeHtmlGp(g.title || 'Untitled goal');
+    const card = document.createElement('div');
+    card.className = 'gcal-ext-goal-card';
+    card.dataset.goalId = g.id;
+    card.dataset.extension = 'goal-card';
+    card.setAttribute('role', 'button');
+    const plainTitle = String(g.title || 'Untitled goal').trim();
+    card.setAttribute(
+      'aria-label',
+      `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
+    );
+    card.tabIndex = 0;
+    card.innerHTML =
+      `<div class="gcal-ext-goal-name">${name}</div>` +
+      `<div class="gcal-ext-goal-progress-track">` +
+      `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%"></div>` +
+      `</div>` +
+      `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>`;
+    const goalColor = displayColor;
+    card.style.setProperty('--goal-progress-color', goalColor);
+    card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
+    card.style.setProperty('background-color', hexToTint(goalColor, 0.12), 'important');
+    card.style.setProperty('border', `1.5px solid ${hexToTint(goalColor, 0.4)}`, 'important');
+    const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
+    if (trackEl) trackEl.style.setProperty('background-color', hexToTint(goalColor, 0.25), 'important');
+    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
+    if (fillEl) fillEl.style.setProperty('background-color', goalColor, 'important');
+    card.addEventListener('click', () => handleGoalCardClick(g.id));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleGoalCardClick(g.id);
+      }
+    });
+    return card;
+  }
+
+  function updateSidebarGoalCardElement(card, g, legacyById) {
+    if (!card || !g) return;
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const plainTitle = String(g.title || 'Untitled goal').trim();
+    card.setAttribute(
+      'aria-label',
+      `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
+    );
+    const nameEl = card.querySelector('.gcal-ext-goal-name');
+    if (nameEl) nameEl.innerHTML = escapeHtmlGp(g.title || 'Untitled goal');
+    const sessEl = card.querySelector('.gcal-ext-goal-sessions');
+    if (sessEl) sessEl.textContent = `${completed} of ${total} sessions • ${pctClamped}%`;
+    const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
+    if (fillEl) fillEl.style.width = `${pctClamped}%`;
+    const legacy = legacyById.get(g.id);
+    const legacyRow = legacy || {};
+    const colorSource = {
+      ...legacyRow,
+      color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
+    };
+    const displayColor = getGoalDisplayColor(colorSource);
+    card.style.setProperty('--goal-progress-color', displayColor);
+    card.style.setProperty('--gp-card-bg-hover', hexToTint(displayColor, 0.18));
+    card.style.setProperty('background-color', hexToTint(displayColor, 0.12), 'important');
+    card.style.setProperty('border', `1.5px solid ${hexToTint(displayColor, 0.4)}`, 'important');
+    const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
+    if (trackEl) trackEl.style.setProperty('background-color', hexToTint(displayColor, 0.25), 'important');
+    if (fillEl) fillEl.style.setProperty('background-color', displayColor, 'important');
+  }
+
   /**
-   * Render goal cards into the injected left-sidebar list using GoalPlannerModel + live gp_chip_done.
-   * @param {{ goals?: unknown[] } | null | undefined} [preloadedUnified] Optional snapshot (avoids duplicate load from home screen).
+   * Pure projection of GoalPlannerUnifiedState onto the injected sidebar cards.
+   * @param {{ goals?: unknown[] }} state Unified snapshot / model state
+   * @param {Map<string, unknown> | null} [legacyByIdCache] Planner palette rows keyed by goal id (not used for counts)
+   * @param {{ reason?: string, goalId?: string }} [meta] Session toggles narrow to one card when safe
    */
-  async function renderGoalsSidebar(preloadedUnified) {
+  async function applyGoalsSidebarFromUnifiedState(state, legacyByIdCache, meta) {
     mountLeftSidebarGoalsSection();
     const container =
       document.querySelector('.gcal-ext-goals-list') ||
@@ -1807,92 +1913,94 @@
     const root = document.getElementById('gp-gcal-sidebar-goals-root');
     if (!container || !root) return;
 
-    const legacyDone = await new Promise((r) =>
-      chrome.storage.local.get(['gp_chip_done'], (d) => r(d.gp_chip_done || {}))
-    );
-    const legacyGoals = await getGoals();
-    const legacyById = new Map(legacyGoals.map((g) => [g.id, g]));
-
-    const Model = globalThis.GoalPlannerModel;
-    let goals = [];
-    if (preloadedUnified && Array.isArray(preloadedUnified.goals)) goals = preloadedUnified.goals;
-    else if (Model) {
-      const state = await Model.loadUnifiedState();
-      goals = state.goals || [];
-    }
+    const legacyById =
+      legacyByIdCache || new Map((await getGoals()).map((gk) => [gk.id, gk]));
+    const goals = Array.isArray(state?.goals) ? state.goals : [];
 
     root.hidden = false;
-    container.innerHTML = '';
 
     if (!goals.length) {
       container.innerHTML =
         '<div class="gcal-ext-goals-empty">No goals yet. Click + to add one.</div>';
+      root.dataset.gpSidebarGoalsSig = '';
       return;
     }
 
-    goals.forEach((g) => {
-      const legacy = legacyById.get(g.id);
-      const legacyRow = legacy || {};
-      const colorSource = {
-        ...legacyRow,
-        color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
-      };
-      const sessions = g.sessions || [];
-      const total = sessions.length;
-      let completed = 0;
-      if (total > 0) {
-        completed = sessions.filter((s) => gpSidebarSessionCompleted(s, legacyDone)).length;
-      }
-      const pct =
-        total > 0 ? Math.round((completed / total) * 100) : typeof g.progressPct === 'number' ? g.progressPct : 0;
-      const pctClamped = Math.max(0, Math.min(100, pct));
-      const displayColor = getGoalDisplayColor(colorSource);
-      const name = escapeHtmlGp(g.title || 'Untitled goal');
+    const sigJoined = goals.map(goalSidebarMetricToken).join('||');
+    const orderedIds = goals.map((g) => g.id);
+    const existingCards = [...container.children].filter((el) =>
+      el.matches?.('.gcal-ext-goal-card[data-goal-id]')
+    );
 
-      const card = document.createElement('div');
-      card.className = 'gcal-ext-goal-card';
-      card.dataset.goalId = g.id;
-      card.dataset.extension = 'goal-card';
-      card.setAttribute(
-        'role',
-        'button'
-      );
-      const plainTitle = String(g.title || 'Untitled goal').trim();
-      card.setAttribute(
-        'aria-label',
-        `${plainTitle}, ${completed} of ${total} sessions complete, ${pctClamped} percent`
-      );
-      card.tabIndex = 0;
-      card.innerHTML =
-        `<div class="gcal-ext-goal-name">${name}</div>` +
-        `<div class="gcal-ext-goal-progress-track">` +
-        `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%"></div>` +
-        `</div>` +
-        `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>`;
+    const structuralReason =
+      meta && (meta.reason === 'goalsSync' || meta.reason === 'goalsStructure');
 
-      const goalColor = displayColor;
-      card.style.setProperty('--goal-progress-color', goalColor);
-      card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
-      card.style.setProperty('background-color', hexToTint(goalColor, 0.12), 'important');
-      card.style.setProperty('border', `1.5px solid ${hexToTint(goalColor, 0.4)}`, 'important');
-      const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
-      if (trackEl) {
-        trackEl.style.setProperty('background-color', hexToTint(goalColor, 0.25), 'important');
-      }
-      const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
-      if (fillEl) {
-        fillEl.style.setProperty('background-color', goalColor, 'important');
-      }
+    let needFullRebuild =
+      structuralReason ||
+      existingCards.length !== goals.length ||
+      existingCards.some((el, idx) => el.dataset.goalId !== orderedIds[idx]);
 
-      card.addEventListener('click', () => handleGoalCardClick(g.id));
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleGoalCardClick(g.id);
-        }
+    if (needFullRebuild) {
+      container.innerHTML = '';
+      for (const g of goals) {
+        container.appendChild(buildSidebarGoalCardElement(g, legacyById));
+      }
+      root.dataset.gpSidebarGoalsSig = sigJoined;
+      return;
+    }
+
+    if (meta?.reason === 'sessionCompletion' && meta.goalId) {
+      const g = goals.find((x) => x.id === meta.goalId);
+      let card = null;
+      try {
+        card = container.querySelector(
+          `.gcal-ext-goal-card[data-goal-id="${CSS.escape(String(meta.goalId))}"]`
+        );
+      } catch (_) {
+        card = container.querySelector(
+          `.gcal-ext-goal-card[data-goal-id="${String(meta.goalId).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`
+        );
+      }
+      if (g && card) {
+        updateSidebarGoalCardElement(card, g, legacyById);
+        root.dataset.gpSidebarGoalsSig = sigJoined;
+        return;
+      }
+    }
+
+    if (sigJoined !== root.dataset.gpSidebarGoalsSig) {
+      for (let i = 0; i < goals.length; i++) {
+        updateSidebarGoalCardElement(existingCards[i], goals[i], legacyById);
+      }
+      root.dataset.gpSidebarGoalsSig = sigJoined;
+    }
+  }
+
+  /**
+   * Load state (optional) and sync sidebar DOM with GoalPlannerModel.
+   * @param {{ goals?: unknown[] } | null | undefined} [preloadedUnified]
+   * @param {{ reason?: string, goalId?: string }} [meta] Hint for incremental projections
+   */
+  async function renderGoalsSidebar(preloadedUnified, meta) {
+    const Model = globalThis.GoalPlannerModel;
+    let st = preloadedUnified;
+    if (!st || !Array.isArray(st.goals)) {
+      if (Model) st = await Model.loadUnifiedState();
+      else st = { goals: [] };
+    }
+    await applyGoalsSidebarFromUnifiedState(st, null, meta || {});
+  }
+
+  function setupGoalsSidebarReactiveBinding() {
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.subscribeGoalsState) return;
+    if (globalThis.__gpGoalsSidebarReactiveBound) return;
+    globalThis.__gpGoalsSidebarReactiveBound = true;
+    Model.subscribeGoalsState((evt) => {
+      if (!evt?.state) return;
+      queueMicrotask(() => {
+        applyGoalsSidebarFromUnifiedState(evt.state, null, evt.meta || {}).catch(() => {});
       });
-
-      container.appendChild(card);
     });
   }
 
@@ -1901,11 +2009,13 @@
     try {
       chrome.storage.onChanged.addListener((changes, area) => {
         if (area !== 'local') return;
-        if (
-          changes.goalPlannerUnifiedState ||
-          changes.gp_goals ||
-          changes.gp_chip_done
-        ) {
+        if (changes.gp_goals) {
+          renderGoalsSidebar(undefined, { reason: 'goalsStructure' });
+        }
+        if (changes.goalPlannerUnifiedState?.newValue && typeof changes.goalPlannerUnifiedState.newValue === 'object') {
+          renderGoalsSidebar(changes.goalPlannerUnifiedState.newValue, { reason: 'storage' });
+        }
+        if (changes.gp_chip_done && !changes.goalPlannerUnifiedState) {
           renderGoalsSidebar();
         }
       });
