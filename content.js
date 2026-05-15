@@ -2201,7 +2201,7 @@
             gpMyGoalsSidebarDiag('OVERWRITE or patch failed', {
               traceId,
               goalId: gid,
-              hint: 'Check reinforceMyGoalsSidebarProgressFromStorage / renderGoalsSidebar / mount observer',
+              hint: 'Non-unified writer overwrote patch (reinforce is blocked when GoalPlannerModel exists)',
             });
           }
         });
