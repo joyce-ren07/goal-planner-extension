@@ -2089,25 +2089,92 @@
     ];
     if (!idsToPatch.length) return;
 
+    const traceId = `gp-patch-${++_gpSidebarPatchTraceSeq}-${Date.now()}`;
+    gpMyGoalsSidebarDiag('patch flow start', { traceId, reason: meta?.reason, goalIds: idsToPatch });
+
     for (const gid of idsToPatch) {
       const g = goals.find((x) => String(x.id) === gid);
       if (!g) continue;
-      const card = findSidebarGoalCardById(container, gid);
-      const diffEntry = (meta?.progressDiffs || []).find((d) => d.goalId === gid);
+
+      const numbers = computeGoalSidebarNumbers(g);
       const snap = goalUnifiedProgressSnapshot(g);
-      gpMyGoalsSidebarDiag('Goal state → sidebar verify', {
+      const diffEntry = (meta?.progressDiffs || []).find((d) => d.goalId === gid);
+      gpMyGoalsSidebarDiag('1 state before DOM', {
+        traceId,
         goalId: gid,
-        completedSessions: diffEntry
-          ? { old: diffEntry.prev.completedSessions, new: diffEntry.next.completedSessions }
-          : snap.completedSessions,
-        progressPct: diffEntry
-          ? { old: diffEntry.prev.progressPct, new: diffEntry.next.progressPct }
-          : snap.progressPct,
+        completedSessions: numbers.completed,
+        totalSessions: numbers.total,
+        progressPct: numbers.pctClamped,
+        progressPctStored: snap.progressPct,
+        diff: diffEntry
+          ? {
+              completedSessions: {
+                old: diffEntry.prev.completedSessions,
+                new: diffEntry.next.completedSessions,
+              },
+              progressPct: { old: diffEntry.prev.progressPct, new: diffEntry.next.progressPct },
+            }
+          : null,
+      });
+
+      let selectorUsed = '';
+      try {
+        const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(gid) : gid;
+        selectorUsed = `#${container.id} .gcal-ext-goal-card[data-goal-id="${esc}"]`;
+      } catch (_) {
+        selectorUsed = `fallback-scan[data-goal-id=${gid}]`;
+      }
+      const card = findSidebarGoalCardById(container, gid);
+      gpMyGoalsSidebarDiag('2 row selection', {
+        traceId,
+        goalId: gid,
         rowFound: !!card,
+        selectorUsed,
+        containerId: container.id,
+        nodeName: card?.nodeName,
+        cardGoalId: card?.dataset?.goalId,
+        isConnected: !!card?.isConnected,
       });
       if (!card) continue;
-      syncSingleSidebarGoalCard(card, g, legacyById, true);
-      gpMyGoalsSidebarDiag('sidebar row update triggered', { goalId: gid });
+
+      const patchReport = patchSidebarGoalCardProgressOnly(card, g, traceId);
+      const pair = goalSidebarCardSigs(g, legacyById);
+      card.dataset.gpSidebarStructSig = pair.struct;
+      card.dataset.gpSidebarProgSig = pair.prog;
+
+      const expected = patchReport
+        ? {
+            widthStyle: patchReport.widthAssign,
+            countText: patchReport.countAssign,
+            pctText: patchReport.pctAssign,
+          }
+        : null;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const post = inspectSidebarGoalCardDom(card);
+          const persisted =
+            !!expected &&
+            post?.widthStyle === expected.widthStyle &&
+            post?.countText === expected.countText &&
+            post?.pctText === expected.pctText;
+          gpMyGoalsSidebarDiag('5 DOM persistence (2×rAF)', {
+            traceId,
+            goalId: gid,
+            persisted,
+            expected,
+            actual: post,
+            overwritten: !persisted,
+          });
+          if (!persisted) {
+            gpMyGoalsSidebarDiag('OVERWRITE or patch failed', {
+              traceId,
+              goalId: gid,
+              hint: 'Check reinforceMyGoalsSidebarProgressFromStorage / renderGoalsSidebar / mount observer',
+            });
+          }
+        });
+      });
     }
     refreshSidebarGoalsSigDataset(goals, legacyById, root);
   }
