@@ -3050,9 +3050,9 @@
           chip.closest('[data-eventid]')?.getAttribute('data-eventid') || chipKey;
         chrome.storage.local.set({ gp_chip_done: map }, async () => {
           try {
-            await globalThis.GoalCalendarSync.persistSessionCompleted(eventId, nextDone);
+            await globalThis.GoalCalendarSync?.persistSessionCompleted?.(eventId, nextDone);
           } catch (_) {
-            /* GoalCalendarSync optional in tests */
+            /* ignore */
           }
           try {
             const Model = globalThis.GoalPlannerModel;
