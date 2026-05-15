@@ -867,7 +867,148 @@
     }
   }
 
-  // ── My Goals — read-only progress strip (GoalPlannerModel / goalPlannerUnifiedState only) ──
+  // ── Google Calendar left sidebar — collapsible "My goals" (read-only progress; unified state only) ──
+  const GP_LEFT_GOALS_COLLAPSED_KEY = 'gp_left_goals_collapsed';
+
+  function gpSkipForSidebarScan(el) {
+    return el && el.closest && el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback');
+  }
+
+  /** Scrollable left drawer that lists calendars (contains "My calendars" etc.). */
+  function findGCalLeftSidebarScrollEl() {
+    const main = document.querySelector('[role="main"]');
+    const mainLeft = main ? main.getBoundingClientRect().left : window.innerWidth;
+
+    for (const el of document.querySelectorAll('div')) {
+      if (gpSkipForSidebarScan(el)) continue;
+      const st = window.getComputedStyle(el);
+      if (st.overflowY !== 'auto' && st.overflowY !== 'scroll' && st.overflow !== 'auto' && st.overflow !== 'scroll')
+        continue;
+      if (el.scrollHeight <= el.clientHeight + 32) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 80 || r.width > 560) continue;
+      if (r.height < 120) continue;
+      if (r.left > Math.min(mainLeft + 40, 400)) continue;
+      const tx (el.textContent || '');
+      if (!/My calendars|Other calendars|Booking pages/i.test(tx)) continue;
+      return el;
+    }
+    return null;
+  }
+
+  function findSidebarSectionTopBlock(scrollEl, regex) {
+    for (const child of scrollEl.children) {
+      if (gpSkipForSidebarScan(child)) continue;
+      if (child.id === 'gp-gcal-sidebar-goals-root') continue;
+      if (regex.test(child.textContent || '')) return child;
+    }
+    return null;
+  }
+
+  function insertGoalsSectionIntoSidebarScroll(scrollEl, root) {
+    const booking = findSidebarSectionTopBlock(scrollEl, /Booking pages/i);
+    const other = findSidebarSectionTopBlock(scrollEl, /Other calendars/i);
+    const after = booking || other;
+    if (after && after.parentElement === scrollEl) {
+      if (after.nextElementSibling) scrollEl.insertBefore(root, after.nextElementSibling);
+      else scrollEl.appendChild(root);
+    } else scrollEl.appendChild(root);
+  }
+
+  function buildLeftSidebarGoalsSection() {
+    const root = document.createElement('div');
+    root.id = 'gp-gcal-sidebar-goals-root';
+    root.className = 'gp-gcal-sidebar-goals-root';
+
+    const headerBtn = document.createElement('div');
+    headerBtn.className = 'gp-gcal-sidebar-section-header';
+    headerBtn.setAttribute('role', 'button');
+    headerBtn.setAttribute('tabindex', '0');
+    headerBtn.setAttribute('aria-expanded', 'true');
+    headerBtn.setAttribute('aria-controls', 'gp-gcal-sidebar-goals-cards');
+    headerBtn.innerHTML =
+      '<span class="material-symbols-outlined gp-gcal-sidebar-chevron" aria-hidden="true">expand_more</span>' +
+      '<span class="gp-gcal-sidebar-heading">My goals</span>';
+
+    const body = document.createElement('div');
+    body.className = 'gp-gcal-sidebar-section-body';
+    body.id = 'gp-gcal-sidebar-goals-cards';
+    body.setAttribute('aria-live', 'polite');
+
+    function applyCollapsed(collapsed) {
+      root.classList.toggle('gp-gcal-sidebar-collapsed', collapsed);
+      headerBtn.setAttribute('aria-expanded', String(!collapsed));
+      try {
+        chrome.storage.local.set({ [GP_LEFT_GOALS_COLLAPSED_KEY]: collapsed });
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    function toggle() {
+      applyCollapsed(!root.classList.contains('gp-gcal-sidebar-collapsed'));
+    }
+    headerBtn.addEventListener('click', toggle);
+    headerBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle();
+      }
+    });
+
+    chrome.storage.local.get([GP_LEFT_GOALS_COLLAPSED_KEY], (d) => {
+      if (!root.isConnected) return;
+      if (d[GP_LEFT_GOALS_COLLAPSED_KEY]) applyCollapsed(true);
+    });
+
+    root.append(headerBtn, body);
+    return root;
+  }
+
+  /** Mount (or re-mount) the extension sidebar block into Google Calendar’s left stack. */
+  function mountLeftSidebarGoalsSection() {
+    let root = document.getElementById('gp-gcal-sidebar-goals-root');
+    if (root && root.isConnected) return root;
+
+    const scroll = findGCalLeftSidebarScrollEl();
+    if (!scroll) return null;
+
+    if (root) root.remove();
+    root = buildLeftSidebarGoalsSection();
+    insertGoalsSectionIntoSidebarScroll(scroll, root);
+    return root;
+  }
+
+  let _leftSidebarGoalsMountTimer = null;
+  let _leftSidebarGoalsMo = null;
+
+  function scheduleLeftSidebarGoalsMountAttempts() {
+    const run = () => {
+      mountLeftSidebarGoalsSection();
+      renderMyGoalsProgressPanel();
+    };
+    run();
+    requestAnimationFrame(run);
+    setTimeout(run, 500);
+    setTimeout(run, 1500);
+    setTimeout(run, 3500);
+  }
+
+  function scheduleLeftSidebarGoalsMount() {
+    if (_leftSidebarGoalsMountTimer) clearTimeout(_leftSidebarGoalsMountTimer);
+    _leftSidebarGoalsMountTimer = setTimeout(() => {
+      _leftSidebarGoalsMountTimer = null;
+      mountLeftSidebarGoalsSection();
+      renderMyGoalsProgressPanel();
+    }, 400);
+  }
+
+  function setupLeftSidebarGoalsMountObserver() {
+    if (_leftSidebarGoalsMo) return;
+    _leftSidebarGoalsMo = new MutationObserver(() => scheduleLeftSidebarGoalsMount());
+    _leftSidebarGoalsMo.observe(document.body, { childList: true, subtree: true });
+  }
+
   function escapeHtmlGp(str) {
     return String(str)
       .replace(/&/g, '&amp;')
@@ -877,48 +1018,48 @@
   }
 
   function renderMyGoalsProgressPanelFromState(unifiedState) {
-    const el = document.getElementById('gp-my-goals-progress');
-    if (!el) return;
+    mountLeftSidebarGoalsSection();
+    const el = document.getElementById('gp-gcal-sidebar-goals-cards');
+    const root = document.getElementById('gp-gcal-sidebar-goals-root');
+    if (!el || !root) return;
+
     const goals = unifiedState && Array.isArray(unifiedState.goals) ? unifiedState.goals : [];
     if (!goals.length) {
-      el.hidden = true;
+      root.hidden = true;
       el.innerHTML = '';
       return;
     }
-    el.hidden = false;
-    const header =
-      '<div class="gp-section-header gp-mgg-section-head">' +
-      '<span class="gp-section-label">Goal progress</span></div>';
-    el.innerHTML =
-      header +
-      goals
-        .map((g) => {
-          const sessions = g.sessions || [];
-          const total = sessions.length;
-          const done = sessions.filter((s) => s.completed).length;
-          const pct = Math.max(
-            0,
-            Math.min(
-              100,
-              typeof g.progressPct === 'number'
-                ? g.progressPct
-                : total
-                  ? Math.round((done / total) * 100)
-                  : 0
-            )
-          );
-          const title = escapeHtmlGp(g.title || 'Untitled goal');
-          return (
-            `<div class="gp-mgg-row" role="group" aria-label="${title}, ${done} of ${total} sessions complete">` +
-            `<div class="gp-mgg-row-head">` +
-            `<span class="gp-mgg-title">${title}</span>` +
-            `<span class="gp-mgg-count">${done}/${total} sessions</span>` +
-            `</div>` +
-            `<div class="gp-progress-bar" aria-hidden="true"><div class="gp-progress-fill" style="width:${pct}%"></div></div>` +
-            `</div>`
-          );
-        })
-        .join('');
+    root.hidden = false;
+
+    el.innerHTML = goals
+      .map((g) => {
+        const sessions = g.sessions || [];
+        const total = sessions.length;
+        const done = sessions.filter((s) => s.completed).length;
+        const pct = Math.max(
+          0,
+          Math.min(
+            100,
+            typeof g.progressPct === 'number'
+              ? g.progressPct
+              : total
+                ? Math.round((done / total) * 100)
+                : 0
+          )
+        );
+        const title = escapeHtmlGp(g.title || 'Untitled goal');
+        return (
+          `<article class="gp-gcal-mgg-card" role="group" aria-label="${title}, ${done} of ${total} sessions complete">` +
+          `<div class="gp-gcal-mgg-eyebrow">Goal progress</div>` +
+          `<div class="gp-mgg-row-head">` +
+          `<span class="gp-mgg-title">${title}</span>` +
+          `<span class="gp-mgg-count">${done}/${total} sessions</span>` +
+          `</div>` +
+          `<div class="gp-progress-bar" aria-hidden="true"><div class="gp-progress-fill" style="width:${pct}%"></div></div>` +
+          `</article>`
+        );
+      })
+      .join('');
   }
 
   async function renderMyGoalsProgressPanel() {
