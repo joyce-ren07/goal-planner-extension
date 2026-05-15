@@ -1320,6 +1320,9 @@
     root.style.removeProperty('--gp-native-add-icon-weight');
     root.style.removeProperty('--gp-native-add-icon-fvs');
 
+    root.style.removeProperty('--gp-native-icon-fvs');
+    root.style.removeProperty('--gp-native-icon-glyph-weight');
+
     const iconProbe = chevronBtnHost || addBtnHost || nestedClickables[0];
     if (iconProbe) {
       const r = iconProbe.getBoundingClientRect();
