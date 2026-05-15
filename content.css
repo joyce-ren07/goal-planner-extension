@@ -126,7 +126,7 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  margin-left: calc(var(--gp-native-root-ml, 0px) - 12px);
+  margin-left: calc(var(--gp-native-root-ml, 0px) - 12px + var(--gp-my-goals-booking-edge-nudge, 0px));
   margin-right: calc(var(--gp-native-root-mr, 0px) + 12px);
   margin-top: 0;
   margin-bottom: 0;
