@@ -130,7 +130,8 @@
   margin-right: var(--gp-native-root-mr, 0);
   margin-top: 0;
   margin-bottom: 0;
-  padding: 0;
+  /* Extra inset so “My goals” + cards sit slightly narrower than the raw sidebar column. */
+  padding: 0 12px;
   font-family: var(
     --gp-native-font-family,
     'Google Sans Flex',
