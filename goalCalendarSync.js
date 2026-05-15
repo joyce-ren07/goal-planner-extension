@@ -303,13 +303,26 @@
    * from gp_goals + chip map so completions always match sidebar + chips (avoids orphaned
    * unified sessions rows that setSessionCompleted could not find).
    */
-  async function persistSessionCompleted(eventId, completed) {
+  async function persistSessionCompleted(eventId, completed, writeOpts) {
     var Model = global.GoalPlannerModel;
     if (!Model || !eventId) return;
-    void completed;
-    var legacy = await loadLegacyGoalsAndChipDone();
+    writeOpts = writeOpts || {};
+    var legacy;
+    if (writeOpts.legacyGoals && writeOpts.chipDoneMap) {
+      var goalsArr = Array.isArray(writeOpts.legacyGoals) ? writeOpts.legacyGoals : [];
+      var expanded = expandChipDoneOntoCalEventIds(writeOpts.chipDoneMap, goalsArr);
+      var doneMap = injectSlotDoneIntoExpandedChipDone(
+        expanded,
+        goalsArr,
+        writeOpts.slotPack || {}
+      );
+      legacy = { goals: goalsArr, doneMap: doneMap };
+    } else {
+      legacy = await loadLegacyGoalsAndChipDone();
+    }
     var state = await Model.loadUnifiedState();
     var merged = Model.syncUnifiedWithLegacyGoals(state, legacy.goals, legacy.doneMap);
+    Model.setSessionCompleted(merged, eventId, !!completed);
     var hit = Model.findSessionByEventId(merged, eventId);
     var goalId = hit ? hit.goal.id : null;
     if (!goalId && Array.isArray(legacy.goals)) {

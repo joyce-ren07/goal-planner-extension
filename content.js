@@ -2211,7 +2211,7 @@
    */
   async function patchMyGoalsSidebarProgressRows(mergedState, meta) {
     meta = meta || {};
-    mergedState = await ensureAuthoritativeSidebarState(mergedState);
+    mergedState = await ensureAuthoritativeSidebarState(mergedState, meta);
     mountLeftSidebarGoalsSection();
     const root = document.getElementById('gp-gcal-sidebar-goals-root');
     if (!root?.isConnected) {
