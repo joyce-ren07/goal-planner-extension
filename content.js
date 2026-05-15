@@ -1773,7 +1773,8 @@
         const chip = ec.querySelector('[data-eventchip].ext-goal-chip');
         if (!chip?.querySelector?.('.ext-goal-root')) return;
 
-        if (chip._gpGoalDragActive) return;
+        if (chip._gpGoalDragEndHandler) chip._gpGoalDragEndHandler();
+
         chip._gpGoalDragActive = true;
 
         const teardownMove = () => {
