@@ -3508,7 +3508,7 @@
     let best = '';
     let bestDelta = Infinity;
     for (const s of sessions) {
-      if (!s?.eventId || !ids.includes(s.eventId) || !s.startTime) continue;
+      if (!s?.eventId || !calEventIdsContain(ids, s.eventId) || !s.startTime) continue;
       const ms = Date.parse(s.startTime);
       if (!Number.isFinite(ms)) continue;
       const d = Math.abs(ms - target);
