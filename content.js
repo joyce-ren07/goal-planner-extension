@@ -1370,12 +1370,21 @@
 
     root.style.removeProperty('--gp-native-body-pad-top');
     root.style.removeProperty('--gp-native-body-pad-bottom');
+    root.style.removeProperty('--gp-native-goals-body-pl');
+    root.style.removeProperty('--gp-native-goals-body-pr');
     if (pane && scroll.contains(pane)) {
       const panCs = getComputedStyle(pane);
       const panPt = parseFloat(panCs.paddingTop) || 0;
       const panPb = parseFloat(panCs.paddingBottom) || 0;
+      const panPl = parseFloat(panCs.paddingLeft) || 0;
+      const panPr = parseFloat(panCs.paddingRight) || 0;
       setVar('--gp-native-body-pad-top', `${Math.min(panPt, headerPt)}px`);
       setVar('--gp-native-body-pad-bottom', `${Math.min(panPb, headerPb)}px`);
+      /* List bodies (calendar rows) often sit inside a pane with extra horizontal inset vs header rows alone — match that so cards don’t overrun native sections. */
+      const goalsPl = Math.max(plNum, panPl);
+      const goalsPr = Math.max(prNum, panPr);
+      setVar('--gp-native-goals-body-pl', `${Math.round(goalsPl)}px`);
+      setVar('--gp-native-goals-body-pr', `${Math.round(goalsPr)}px`);
     }
     if (cs.gap && cs.gap !== 'normal') setVar('--gp-native-header-gap', cs.gap);
     setVar('--gp-native-header-align', cs.alignItems);
