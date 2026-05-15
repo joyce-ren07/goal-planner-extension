@@ -252,10 +252,11 @@
     var prevById = new Map();
     (prevState.goals || []).forEach(function (g) {
       prevById.set(g.id, g);
+      prevById.set(String(g.id), g);
     });
     var nextGoals = [];
     (Array.isArray(legacyGoals) ? legacyGoals : []).forEach(function (lg) {
-      var prev = prevById.get(lg.id);
+      var prev = prevById.get(lg.id) || prevById.get(String(lg.id));
       var ids = lg.calEventIds || [];
       var prevSessionsByEvent = new Map();
       if (prev && prev.sessions) {
