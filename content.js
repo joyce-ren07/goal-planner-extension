@@ -1771,21 +1771,23 @@
   const GP_TIME_RANGE_RE =
     /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i;
 
-  function extractTimeRangeLabelForGoalChip(chip, eventContainer) {
-    if (!chip || !eventContainer) return null;
+  function extractTimeRangeLabelForGoalChip(chip) {
+    if (!chip) return null;
+    const ec = chip.closest('[data-eventid]');
     const tryStr = (s) => {
       if (s == null || s === '') return null;
       const m = String(s).match(GP_TIME_RANGE_RE);
       return m ? m[1] : null;
     };
-    for (const el of [eventContainer, chip]) {
+    for (const el of [ec, chip].filter(Boolean)) {
       const hit =
         tryStr(el.getAttribute?.('aria-label')) ||
         tryStr(el.getAttribute?.('data-tooltip')) ||
         tryStr(el.getAttribute?.('title'));
       if (hit) return hit;
     }
-    const walker = document.createTreeWalker(eventContainer, NodeFilter.SHOW_TEXT, {
+    const walkRoot = ec && chip && ec.contains(chip) ? ec : chip;
+    const walker = document.createTreeWalker(walkRoot, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         if (!node.parentElement) return NodeFilter.FILTER_REJECT;
         if (node.parentElement.closest('.ext-goal-root')) return NodeFilter.FILTER_REJECT;
@@ -1797,14 +1799,16 @@
       const hit = tryStr(node.textContent.trim());
       if (hit) return hit;
     }
-    const jsNameEl =
-      eventContainer.querySelector('[jsname="tKELmd"]') ||
-      eventContainer.querySelector('[jsname="r4nke"]') ||
-      eventContainer.querySelector('.gVNoLb') ||
-      eventContainer.querySelector('.Jmftzc');
-    if (jsNameEl && !jsNameEl.closest('.ext-goal-root')) {
-      const hit = tryStr(jsNameEl.textContent.trim());
-      if (hit) return hit;
+    if (ec) {
+      const jsNameEl =
+        ec.querySelector('[jsname="tKELmd"]') ||
+        ec.querySelector('[jsname="r4nke"]') ||
+        ec.querySelector('.gVNoLb') ||
+        ec.querySelector('.Jmftzc');
+      if (jsNameEl && !jsNameEl.closest('.ext-goal-root')) {
+        const hit = tryStr(jsNameEl.textContent.trim());
+        if (hit) return hit;
+      }
     }
     return null;
   }
