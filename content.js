@@ -1939,6 +1939,77 @@
     }
   }
 
+  function isEventIdMarkedDoneInChipMap(eventId, chipDone) {
+    if (!chipDone || eventId == null || eventId === '') return false;
+    if (chipDone[eventId] || chipDone[String(eventId)]) return true;
+    const e = String(eventId);
+    for (const k of Object.keys(chipDone)) {
+      if (!chipDone[k]) continue;
+      if (gpChipDoneKeyMatchesCalEventId(e, k) || gpChipDoneKeyMatchesCalEventId(k, e)) return true;
+    }
+    return false;
+  }
+
+  /** Re-apply chip + slot completion onto unified goals (handles id skew / slot-only toggles). */
+  function reconcileUnifiedGoalsWithChipAndSlots(st, legacyArr, chipDone, slotPack) {
+    const legacyById = new Map();
+    (legacyArr || []).forEach((lg) => {
+      legacyById.set(lg.id, lg);
+      legacyById.set(String(lg.id), lg);
+    });
+    const pack = slotPack && typeof slotPack === 'object' ? slotPack : {};
+    const goals = (st.goals || []).map((g) => {
+      const lg = legacyById.get(g.id) || legacyById.get(String(g.id));
+      const calIds = lg?.calEventIds || [];
+      const slotRaw = pack[String(g.id)] ?? pack[g.id];
+      const slotArr = Array.isArray(slotRaw) ? slotRaw : [];
+      const slotSet = new Set(
+        slotArr.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n >= 0)
+      );
+      const prevByEvent = new Map();
+      (g.sessions || []).forEach((s) => {
+        prevByEvent.set(s.eventId, s);
+        prevByEvent.set(String(s.eventId), s);
+      });
+
+      let sessions;
+      if (calIds.length) {
+        sessions = calIds.map((eventId, idx) => {
+          const ps = prevByEvent.get(eventId) || prevByEvent.get(String(eventId));
+          const completed = !!(
+            isEventIdMarkedDoneInChipMap(eventId, chipDone) ||
+            slotSet.has(idx) ||
+            (ps && ps.completed)
+          );
+          return {
+            eventId,
+            goalId: g.id,
+            startTime: ps?.startTime || '',
+            endTime: ps?.endTime || '',
+            completed,
+          };
+        });
+      } else if ((g.sessions || []).length) {
+        sessions = (g.sessions || []).map((s, idx) => ({
+          ...s,
+          completed: !!(
+            s.completed ||
+            isEventIdMarkedDoneInChipMap(s.eventId, chipDone) ||
+            slotSet.has(idx)
+          ),
+        }));
+      } else {
+        return g;
+      }
+      const done = sessions.filter((s) => s.completed).length;
+      const progressPct = sessions.length
+        ? Math.max(0, Math.min(100, Math.round((done / sessions.length) * 100)))
+        : 0;
+      return { ...g, sessions, progressPct };
+    });
+    return { ...st, goals };
+  }
+
   /**
    * Unified state for sidebar: always merge gp_goals + gp_chip_done + gp_goal_slot_done
    * so session completions match what the calendar checkbox just wrote.
@@ -1951,11 +2022,18 @@
     const legacyArr = Array.isArray(legacyRows) ? legacyRows : [];
     if (!legacyArr.length || !Model.syncUnifiedWithLegacyGoals) return st;
 
+    const slotPack =
+      meta?.slotPackOverride && typeof meta.slotPackOverride === 'object'
+        ? meta.slotPackOverride
+        : await new Promise((r) =>
+            chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
+          );
     const chipDone =
       meta?.chipDoneOverride && typeof meta.chipDoneOverride === 'object'
         ? meta.chipDoneOverride
         : await loadMergedChipDoneForSidebar(legacyArr);
     st = Model.syncUnifiedWithLegacyGoals(st, legacyArr, chipDone);
+    st = reconcileUnifiedGoalsWithChipAndSlots(st, legacyArr, chipDone, slotPack);
 
     if (meta?.reason === 'sessionCompletion') {
       try {
