@@ -169,7 +169,6 @@
     goals.forEach(function (g) {
       var ids = g.calEventIds || [];
       var sessions = ids.map(function (eventId) {
-        var st = goalStates[g.id];
         return {
           eventId: eventId,
           goalId: g.id,
