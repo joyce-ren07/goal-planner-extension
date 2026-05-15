@@ -3203,8 +3203,10 @@
     const ids = goal?.calEventIds || [];
     if (quick.plannerEventId && ids.includes(quick.plannerEventId)) {
       plannerEventId = quick.plannerEventId;
-    } else if (quick.plannerEventId && ids.includes(resolvePlannerEventIdForChip(quick.plannerEventId, [goal]))) {
-      plannerEventId = resolvePlannerEventIdForChip(quick.plannerEventId, [goal]);
+    }
+    if (!plannerEventId && goal) {
+      const norm = resolvePlannerEventIdForChip(domId || storageKey || '', [goal]);
+      if (norm && ids.includes(norm)) plannerEventId = norm;
     }
     if (!plannerEventId && goal) {
       const fromAnchors = pickPlannerEventIdFromAnchors(chip, goal);
