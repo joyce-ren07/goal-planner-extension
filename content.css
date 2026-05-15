@@ -111,14 +111,15 @@
 .gp-gcal-sidebar-goals-root {
   /* Fallback GM3 map when host tokens exist; font/geometry overridden by native probe when sync runs */
   --gp-m3-on-surface: var(--gm3-sys-color-on-surface, #1f1f1f);
-  --gp-m3-on-surface-variant: var(--gm3-sys-color-on-surface-variant, #44474f);
+  --gp-m3-on-surface-variant: var(--gm3-sys-color-on-surface-variant, #444746);
   --gp-m3-state-hover: rgba(31, 31, 31, 0.08);
   --gp-m3-state-focus: rgba(31, 31, 31, 0.1);
   --gp-m3-state-pressed: rgba(31, 31, 31, 0.12);
   --gp-m3-focus-ring: var(--gm3-sys-color-primary, #0b57d0);
   --gp-fallback-icon-btn-transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1),
     color 200ms cubic-bezier(0.2, 0, 0, 1);
-  --gp-native-icon-fvs: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  /* Outlined Material Symbols: wght 400 + opsz 20 matches Calendar sidebar icon stroke (not 500/24). */
+  --gp-native-icon-fvs: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
 
   /* Contain to sidebar column: width:100% + horizontal margins overflows parent; min-width:0 respects flex shrink. */
   box-sizing: border-box;
