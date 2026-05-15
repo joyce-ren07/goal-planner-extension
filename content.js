@@ -335,6 +335,7 @@
     setupRailFallbackPositioner();
 
     wireEvents();
+    setupCalendarCreateMenuGoalItem();
     setupMyGoalsSidebarStorageSync();
     setupGoalsSidebarReactiveBinding();
     setupLeftSidebarGoalsMountObserver();
