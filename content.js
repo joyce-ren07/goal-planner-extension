@@ -1888,7 +1888,7 @@
     for (const g of goals) {
       if (!g.id) { g.id = generateId(); changed = true; }
     }
-    if (changed) await saveGoals(goals);
+    if (changed) await persistGpGoalsAndUnified(goals);
   }
 
   // ── Open edit mode for an existing goal ──
