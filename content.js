@@ -1578,6 +1578,34 @@
     }
     root.dataset.gpCollapseMode = collapseMode;
 
+    root.style.removeProperty('--gp-my-goals-booking-edge-nudge');
+    root.style.removeProperty('--gp-booking-add-btn-w');
+    root.style.removeProperty('--gp-booking-add-btn-h');
+    root.style.removeProperty('--gp-booking-add-icon-font-size');
+
+    const bookingRow = findNativeSidebarAccordionRowByLabel(scroll, /booking\s*pages/i);
+    const goalsSectionHeader = root.querySelector('.gp-gcal-sidebar-section-header');
+    if (bookingRow && goalsSectionHeader && scroll.contains(bookingRow)) {
+      const delta = Math.round(
+        bookingRow.getBoundingClientRect().left - goalsSectionHeader.getBoundingClientRect().left
+      );
+      if (Number.isFinite(delta)) setVar('--gp-my-goals-booking-edge-nudge', `${delta}px`);
+
+      const bookingNested = nativeSidebarNestedTriggers(bookingRow);
+      const bookingAddHost = gpPickSidebarRowAddTrigger(bookingNested);
+      if (bookingAddHost) {
+        const ar = bookingAddHost.getBoundingClientRect();
+        setVar('--gp-booking-add-btn-w', `${Math.round(ar.width)}px`);
+        setVar('--gp-booking-add-btn-h', `${Math.round(ar.height)}px`);
+        const bg =
+          bookingAddHost.querySelector('svg, .google-symbols, [class*="google-material"], span, i');
+        if (bg) {
+          const ags = getComputedStyle(bg);
+          if (ags.fontSize && ags.fontSize !== '0px') setVar('--gp-booking-add-icon-font-size', ags.fontSize);
+        }
+      }
+    }
+
     root.dataset.gpNativeSidebarSyncTs = String(Date.now());
   }
 
