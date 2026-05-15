@@ -1828,9 +1828,7 @@
       color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
     };
     const displayColor = getGoalDisplayColor(colorSource);
-    const sessions = g.sessions || [];
-    const total = sessions.length;
-    const { completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
     const struct = `${g.id}|${total}|${String(g.title || '')}|${displayColor}`;
     const prog = `${completed}|${pctClamped}`;
     return { struct, prog };
