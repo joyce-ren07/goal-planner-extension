@@ -3025,6 +3025,85 @@
     return raw;
   }
 
+  /**
+   * Which Planner goal row this decorated chip belongs to (title on chip vs gp_goals.title).
+   */
+  function findLegacyGoalForGoalChip(chip, legacyGoals) {
+    const goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    const titleFromChip =
+      chip.querySelector('.ext-goal-title')?.textContent?.replace(/🎯\s*/g, '').trim() || '';
+    const blob = `${titleFromChip}\n${chip.textContent || ''}`;
+    const hits = goals.filter((g) => {
+      const t = String(g.title || '').trim();
+      return t && (blob.includes(t) || titleFromChip.includes(t));
+    });
+    if (hits.length === 1) return hits[0];
+    if (hits.length > 1) {
+      const domId = chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || '';
+      if (domId) {
+        const narrowed = hits.filter((g) =>
+          (g.calEventIds || []).some(
+            (id) =>
+              id &&
+              (domId === id ||
+                domId.startsWith(`${id}_`) ||
+                String(domId).includes(String(id)) ||
+                String(id).includes(String(domId)))
+          )
+        );
+        if (narrowed.length === 1) return narrowed[0];
+      }
+      return hits[0];
+    }
+    return goals.find((g) => {
+      const t = String(g.title || '').trim();
+      return t && blob.includes(t);
+    }) || null;
+  }
+
+  /**
+   * Map a calendar chip → stable id in gp_goals[].calEventIds[] + goal id for sidebar refresh.
+   * DOM `data-eventid` often !== API id string; title match + single-session shortcut fixes gp_chip_done writes.
+   */
+  function resolveChipCompletionTarget(chip, legacyGoals) {
+    const domId =
+      chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || '';
+    const goal = findLegacyGoalForGoalChip(chip, legacyGoals);
+    if (!goal) {
+      const plannerEventId = resolvePlannerEventIdForChip(domId, legacyGoals);
+      return { plannerEventId: plannerEventId || domId, goalId: null };
+    }
+    const ids = goal.calEventIds || [];
+    const viaResolve = resolvePlannerEventIdForChip(domId, [goal]);
+    if (viaResolve && ids.includes(viaResolve)) {
+      return { plannerEventId: viaResolve, goalId: goal.id };
+    }
+    if (domId && ids.includes(domId)) {
+      return { plannerEventId: domId, goalId: goal.id };
+    }
+    const related = ids.filter((id) => {
+      if (!id || !domId) return false;
+      return (
+        domId === id ||
+        domId.startsWith(`${id}_`) ||
+        String(id).startsWith(`${domId}_`) ||
+        String(domId).includes(String(id)) ||
+        String(id).includes(String(domId))
+      );
+    });
+    if (related.length === 1) {
+      return { plannerEventId: related[0], goalId: goal.id };
+    }
+    if (ids.length === 1) {
+      return { plannerEventId: ids[0], goalId: goal.id };
+    }
+    const fallback = resolvePlannerEventIdForChip(domId, legacyGoals);
+    if (fallback && ids.includes(fallback)) {
+      return { plannerEventId: fallback, goalId: goal.id };
+    }
+    return { plannerEventId: domId || fallback || '', goalId: goal.id };
+  }
+
   /* Active session — coral accent; completed — Google muted grays (#5f6368 / #80868b) */
   const SVG_CHECK_ACTIVE  = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="#fff"/><polyline points="6,10 8.5,12.5 14,7.5" stroke="#D3564B" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const SVG_CIRCLE_ACTIVE = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" stroke="#D3564B" stroke-width="1.75" fill="none"/></svg>';
