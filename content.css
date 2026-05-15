@@ -475,6 +475,11 @@
   #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
     transition: none;
   }
+
+  /* Lock width jumps when transitions are disabled. */
+  #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-progress-fill {
+    transition: none !important;
+  }
 }
 
 /* ── Goals list (populated state) ── */
