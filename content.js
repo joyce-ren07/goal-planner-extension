@@ -3789,31 +3789,48 @@
           }
 
           chrome.storage.local.set({ gp_chip_done: map, gp_goal_slot_done: slotPackPrev }, async () => {
+            const persistEventId =
+              allowed.find((id) =>
+                mirrorKeys.some((mk) => String(mk) === String(id))
+              ) || plannerEventId;
             try {
-              const persistId =
-                allowed.find((id) =>
-                  mirrorKeys.some((mk) => String(mk) === String(id))
-                ) || plannerEventId;
-              await globalThis.GoalCalendarSync?.persistSessionCompleted?.(persistId, nextDone);
+              await globalThis.GoalCalendarSync?.persistSessionCompleted?.(
+                persistEventId,
+                nextDone
+              );
             } catch (_) {
               /* ignore */
             }
-            let metaSidebar = {};
-            if (goalId != null && goalId !== '') {
-              metaSidebar = { reason: 'sessionCompletion', goalId };
-            }
+
+            let metaSidebar = { reason: 'sessionCompletion' };
+            if (goalId != null && goalId !== '') metaSidebar.goalId = goalId;
             try {
               const Model = globalThis.GoalPlannerModel;
-              if (!metaSidebar.goalId && Model && plannerEventId) {
+              if ((!metaSidebar.goalId || metaSidebar.goalId === '') && Model && persistEventId) {
                 const stHit = await Model.loadUnifiedState();
-                const hit = Model.findSessionByEventId(stHit, plannerEventId);
-                if (hit?.goal?.id != null && hit.goal.id !== '') {
-                  metaSidebar = { reason: 'sessionCompletion', goalId: hit.goal.id };
+                let hit = Model.findSessionByEventId(stHit, persistEventId);
+                if (
+                  !hit &&
+                  plannerEventId &&
+                  String(plannerEventId) !== String(persistEventId)
+                ) {
+                  hit = Model.findSessionByEventId(stHit, plannerEventId);
                 }
+                if (hit?.goal?.id != null && hit.goal.id !== '') metaSidebar.goalId = hit.goal.id;
+              }
+              if (!metaSidebar.goalId) {
+                const lid = legacyGoalIdForPlannerEventCandidates(
+                  legacyGoals,
+                  persistEventId,
+                  plannerEventId,
+                  storageKey
+                );
+                if (lid) metaSidebar.goalId = lid;
               }
             } catch (_) {
               /* sidebar optional */
             }
+
             try {
               await renderGoalsSidebar(undefined, metaSidebar);
             } catch (_) {
