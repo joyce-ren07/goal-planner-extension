@@ -79,7 +79,6 @@
 
   // ── Ghost events: remove all from DOM and tear down scroll listener ──
   function removeGhostEvents() {
-    document.querySelectorAll('.goal-ghost-event[data-gp-ghost-preview]').forEach((el) => el.remove());
     document.querySelectorAll('.goal-ghost-event').forEach((el) => el.remove());
     if (_ghostScrollEl && _ghostScrollHandler) {
       _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
