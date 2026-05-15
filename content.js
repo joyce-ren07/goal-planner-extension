@@ -1742,7 +1742,22 @@
 
   GoalInteractionController.install();
 
-  /** Live time label during move-drag (GCal often transforms without mutating a stable wrapper). */
+  /**
+   * After move/resize release, GCal applies the final slot in its own handlers.
+   * We must patch .ext-goal-time only AFTER that commit (bubble phase + next frames).
+   */
+  function commitGoalTimeLabelAfterDrop(chip) {
+    if (!chip?.querySelector?.('.ext-goal-time')) return;
+    const patch = () => syncExtGoalTimeFromContainer(chip);
+    patch();
+    queueMicrotask(patch);
+    requestAnimationFrame(() => {
+      patch();
+      requestAnimationFrame(patch);
+    });
+  }
+
+  /** Move-drag end hook: bubble-phase pointer/mouse up = after GCal commits position. */
   let _gpGoalTimeLabelDragSyncInstalled = false;
   function installGoalTimeLabelLiveDragSync() {
     if (_gpGoalTimeLabelDragSyncInstalled) return;
@@ -1758,24 +1773,39 @@
         const chip = ec.querySelector('[data-eventchip].ext-goal-chip');
         if (!chip?.querySelector?.('.ext-goal-root')) return;
 
-        const cleanup = () => {
+        if (chip._gpGoalDragActive) return;
+        chip._gpGoalDragActive = true;
+
+        const teardownMove = () => {
           if (chip._gpGoalDragMoveRaf != null) {
             cancelAnimationFrame(chip._gpGoalDragMoveRaf);
             chip._gpGoalDragMoveRaf = null;
           }
           const mv = chip._gpGoalDragMoveHandler;
-          const en = chip._gpGoalDragEndHandler;
           if (mv) document.removeEventListener('pointermove', mv, true);
-          if (en) {
-            document.removeEventListener('pointerup', en, true);
-            document.removeEventListener('pointercancel', en, true);
-          }
           chip._gpGoalDragMoveHandler = null;
-          chip._gpGoalDragEndHandler = null;
-          syncExtGoalTimeFromContainer(chip);
         };
 
-        if (chip._gpGoalDragEndHandler) cleanup();
+        const endDrag = () => {
+          if (!chip._gpGoalDragActive) return;
+          chip._gpGoalDragActive = false;
+
+          const en = chip._gpGoalDragEndHandler;
+          if (en) {
+            document.removeEventListener('pointerup', en, false);
+            document.removeEventListener('pointercancel', en, false);
+            document.removeEventListener('mouseup', en, false);
+            document.removeEventListener('lostpointercapture', en, false);
+          }
+          chip._gpGoalDragEndHandler = null;
+
+          teardownMove();
+          commitGoalTimeLabelAfterDrop(chip);
+        };
+
+        if (chip._gpGoalDragEndHandler) {
+          chip._gpGoalDragEndHandler();
+        }
 
         const onMove = () => {
           if (chip._gpGoalDragMoveRaf != null) return;
@@ -1784,14 +1814,16 @@
             syncExtGoalTimeFromContainer(chip);
           });
         };
-        const onEnd = () => cleanup();
 
         chip._gpGoalDragMoveHandler = onMove;
-        chip._gpGoalDragEndHandler = onEnd;
+        chip._gpGoalDragEndHandler = endDrag;
 
         document.addEventListener('pointermove', onMove, { passive: true, capture: true });
-        document.addEventListener('pointerup', onEnd, true);
-        document.addEventListener('pointercancel', onEnd, true);
+        // Bubble phase so GCal drop runs first; then we read finalized DOM.
+        document.addEventListener('pointerup', endDrag, false);
+        document.addEventListener('pointercancel', endDrag, false);
+        document.addEventListener('mouseup', endDrag, false);
+        document.addEventListener('lostpointercapture', endDrag, false);
       },
       true
     );
