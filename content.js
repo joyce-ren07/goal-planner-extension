@@ -1744,7 +1744,6 @@
       card.className = 'gcal-ext-goal-card';
       card.dataset.goalId = g.id;
       card.dataset.extension = 'goal-card';
-      card.style.setProperty('--goal-color', color);
       card.setAttribute(
         'role',
         'button'
@@ -1761,6 +1760,20 @@
         `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%"></div>` +
         `</div>` +
         `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>`;
+
+      const goalColor = color;
+      card.style.setProperty('--goal-progress-color', goalColor);
+      card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
+      card.style.setProperty('background-color', hexToTint(goalColor, 0.12), 'important');
+      card.style.setProperty('border', `1.5px solid ${hexToTint(goalColor, 0.4)}`, 'important');
+      const trackEl = card.querySelector('.gcal-ext-goal-progress-track');
+      if (trackEl) {
+        trackEl.style.setProperty('background-color', hexToTint(goalColor, 0.25), 'important');
+      }
+      const fillEl = card.querySelector('.gcal-ext-goal-progress-fill');
+      if (fillEl) {
+        fillEl.style.setProperty('background-color', goalColor, 'important');
+      }
 
       card.addEventListener('click', () => handleGoalCardClick(g.id));
       card.addEventListener('keydown', (e) => {
