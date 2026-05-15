@@ -3416,36 +3416,30 @@
 
       chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
         void (async () => {
-          const legacyGoals = d.gp_goals || [];
+          const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : [];
           const chipDoneSnapshot = { ...(d.gp_chip_done || {}) };
+          let plannerEventId = '';
+          let goalId = null;
           try {
-            await globalThis.GoalCalendarSync?.flushPersistSessionGeometry?.(chip);
+            const resolved = await resolvePlannerEventIdForSidebarSync(
+              chip,
+              storageKey,
+              legacyGoals,
+              chipDoneSnapshot
+            );
+            plannerEventId = resolved.plannerEventId || '';
+            goalId = resolved.goalId;
           } catch (_) {
-            /* geometry optional */
+            plannerEventId = '';
           }
-          let { plannerEventId, goalId } = await resolvePlannerEventIdForSidebarSync(
-            chip,
-            storageKey,
-            legacyGoals,
-            chipDoneSnapshot
-          );
           const goalRow = findLegacyGoalForGoalChip(chip, legacyGoals);
           const allowed = goalRow?.calEventIds || [];
           if (allowed.length && plannerEventId && !allowed.includes(plannerEventId)) {
-            plannerEventId = '';
+            const alt = resolvePlannerEventIdForChip(storageKey || plannerEventId, legacyGoals);
+            if (alt && allowed.includes(alt)) plannerEventId = alt;
           }
           if (!plannerEventId && allowed.length === 1) plannerEventId = allowed[0];
-
-          let valid = plannerEventId && (!allowed.length || allowed.includes(plannerEventId));
-          if (!valid && !allowed.length && (storageKey || canonicalEventKey)) {
-            plannerEventId = storageKey || canonicalEventKey || '';
-            valid = !!plannerEventId;
-          }
-          if (!valid) {
-            GoalInteractionController.applyGoalSessionCompletionUI(chip, !nextDone);
-            return;
-          }
-
+          if (!plannerEventId) plannerEventId = storageKey || canonicalEventKey || '';
           if (plannerEventId) chip.dataset.gpChipKey = plannerEventId;
 
           const map = { ...chipDoneSnapshot };
