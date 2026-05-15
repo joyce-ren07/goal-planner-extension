@@ -950,6 +950,14 @@
   overflow: hidden;
   box-sizing: border-box;
 }
+.goal-ghost-event[data-gp-ghost-ephemeral='true'] {
+  opacity: 0.88;
+  background: rgba(246, 179, 172, 0.16);
+  border-color: rgba(211, 86, 75, 0.48);
+}
+.goal-ghost-event[data-gp-ghost-ephemeral='true'] .goal-ghost-event-name {
+  color: rgba(145, 60, 55, 0.7);
+}
 .goal-ghost-event-name {
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 12px; font-weight: 500;
