@@ -1223,14 +1223,15 @@
     let prVal = pcs.paddingRight;
     const maxPlAcross = maxNativeSidebarTitleLeftInsetPx(scroll);
     let plNum = Math.max(maxPlAcross, parseFloat(pcs.paddingLeft) || 0);
-    if (titleEl && rr.width > 0) {
-      const plMeas = Math.round(titleEl.getBoundingClientRect().left - rr.left);
-      plNum = Math.max(plNum, plMeas);
-    }
     const scrSt = getComputedStyle(scroll);
     const scrPadL = Math.round(parseFloat(scrSt.paddingLeft) || 0);
     const scrPadR = Math.round(parseFloat(scrSt.paddingRight) || 0);
-    plNum = Math.max(plNum, scrPadL);
+    if (titleEl && root.isConnected && rr.width > 0) {
+      const rootR = root.getBoundingClientRect();
+      plNum = Math.max(plNum, Math.round(titleEl.getBoundingClientRect().left - rootR.left));
+    } else {
+      plNum = Math.max(plNum, scrPadL);
+    }
 
     if (plNum >= 8) plVal = `${Math.round(plNum)}px`;
     const maxPrAcross = maxNativeSidebarTrailingPaddingPx(scroll);
