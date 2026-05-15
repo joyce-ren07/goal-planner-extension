@@ -4331,8 +4331,7 @@
 
             try {
               if (goalPlannerModelAvailable()) {
-                const stPatch = await loadAuthoritativeUnifiedForSidebar(null);
-                await patchMyGoalsSidebarProgressRows(stPatch, metaSidebar);
+                await patchMyGoalsSidebarProgressRows(null, metaSidebar);
               }
             } catch (_) {
               /* ignore */
