@@ -229,17 +229,11 @@
 .gp-gcal-sidebar-label-btn:focus-visible {
   outline: 2px solid var(--gp-m3-focus-ring);
   outline-offset: 2px;
-  background-color: var(--gp-m3-state-focus, rgba(31, 31, 31, 0.1));
+  background-color: var(--gp-m3-state-focus);
 }
 .gp-gcal-sidebar-icon-btn:focus-visible {
   outline: 2px solid var(--gp-m3-focus-ring);
   outline-offset: 2px;
-}
-
-@supports (color: color-mix(in lch, black 50%, white)) {
-  .gp-gcal-sidebar-label-btn:focus-visible {
-    background-color: var(--gp-m3-state-focus);
-  }
 }
 
 .gp-gcal-sidebar-header-icon {
