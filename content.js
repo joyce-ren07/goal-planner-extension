@@ -193,6 +193,15 @@
     return columns;
   }
 
+  if (typeof globalThis.GoalCalendarSync !== 'undefined') {
+    globalThis.GoalCalendarSync.init({
+      findCalendarScrollContainer,
+      findHourAbsolutePositions,
+      findDayColumnPositions,
+      getGridMetrics,
+    });
+  }
+
   // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
   function renderGhostEvents() {
     removeGhostEvents();

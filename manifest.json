@@ -16,7 +16,7 @@
   "content_scripts": [
     {
       "matches": ["https://calendar.google.com/*"],
-      "js": ["goalModel.js", "content.js"],
+      "js": ["goalModel.js", "goalCalendarSync.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
