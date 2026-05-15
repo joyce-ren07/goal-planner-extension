@@ -289,9 +289,6 @@
     const days = Array.isArray(r.days) ? r.days : [];
     const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-    /** Wait until user selects at least one weekday (or defer to fallback suggestions on screen 3). */
-    if ((r.period || 'week') === 'week' && !days.length) return [];
-
     const cols = findDayColumnPositions();
     if (!cols.length) return [];
 
@@ -301,6 +298,9 @@
     const sessionMins = Math.max(15, Number(r.sessionMins) || 60);
     const every = Math.max(1, Number(r.every) || 1);
     const period = r.period || 'week';
+
+    /** Daily uses column stepping; week/month need at least one weekday. */
+    if (period !== 'day' && !days.length) return [];
 
     let endCap = null;
     if (r.ends === 'on' && r.endDate) endCap = new Date(r.endDate + 'T23:59:59');
