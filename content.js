@@ -4088,6 +4088,68 @@
     return -1;
   }
 
+  /** Resolve calEventIds[] index for this checkbox (mirror keys → anchors → grid time). */
+  async function resolveSlotIndexForGoalToggle(
+    chip,
+    goalRow,
+    plannerEventId,
+    storageKey,
+    mirrorKeys,
+    legacyGoals
+  ) {
+    const allowed = goalRow?.calEventIds || [];
+    if (!allowed.length) return -1;
+
+    let idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
+    if (idx >= 0) return idx;
+
+    const probes = [...(mirrorKeys || []), plannerEventId, storageKey]
+      .filter((x) => x != null && x !== '')
+      .map(String);
+    idx = allowed.findIndex((id) =>
+      probes.some(
+        (mk) =>
+          String(id) === mk ||
+          gpChipDoneMirrorStrictPair(String(id), mk) ||
+          gpChipDoneKeyMatchesCalEventId(String(id), mk)
+      )
+    );
+    if (idx >= 0) return idx;
+
+    const fromAnchors = pickPlannerEventIdFromAnchors(chip, goalRow);
+    if (fromAnchors) {
+      idx = allowed.findIndex((id) => String(id) === String(fromAnchors));
+      if (idx >= 0) return idx;
+    }
+
+    try {
+      const fromUnified = await pickPlannerEventIdFromUnifiedSessions(
+        chip,
+        goalRow,
+        legacyGoals || [],
+        {}
+      );
+      if (fromUnified) {
+        idx = allowed.findIndex((id) => String(id) === String(fromUnified));
+        if (idx >= 0) return idx;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    if (allowed.length === 1) return 0;
+    return -1;
+  }
+
+  function stampCalEventIdOnChipMap(map, allowedIds, slotIdx, nextDone) {
+    if (slotIdx < 0 || !Array.isArray(allowedIds) || slotIdx >= allowedIds.length) return map;
+    const calKey = String(allowedIds[slotIdx]);
+    if (!calKey) return map;
+    if (nextDone) map[calKey] = true;
+    else delete map[calKey];
+    return map;
+  }
+
   /** When unified sessions have startTime from geometry sync, pick best calEventId for this chip. */
   async function pickPlannerEventIdFromUnifiedSessions(chip, goal, legacyGoals, chipDoneMap) {
     const ids = goal?.calEventIds || [];
