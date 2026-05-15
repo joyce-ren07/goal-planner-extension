@@ -86,6 +86,52 @@
     };
   }
 
+  function calEventIdsContain(calIds, candidate) {
+    if (candidate == null || candidate === '') return false;
+    var c = String(candidate);
+    var ids = Array.isArray(calIds) ? calIds : [];
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i]) === c) return true;
+    }
+    return false;
+  }
+
+  function resolvePlannerEventIdForChip(domOrStoredId, legacyGoals) {
+    var raw = domOrStoredId && String(domOrStoredId).trim();
+    if (!raw) return '';
+    var goals = Array.isArray(legacyGoals) ? legacyGoals : [];
+    var allIds = [];
+    for (var gi = 0; gi < goals.length; gi++) {
+      var ce = goals[gi].calEventIds || [];
+      for (var ci = 0; ci < ce.length; ci++) {
+        if (ce[ci] || ce[ci] === 0) allIds.push(ce[ci]);
+      }
+    }
+    var ai;
+    for (ai = 0; ai < allIds.length; ai++) {
+      if (String(allIds[ai]) === String(raw)) return allIds[ai];
+    }
+    var decoded = raw;
+    try {
+      decoded = decodeURIComponent(raw.replace(/\+/g, ' '));
+    } catch (_) {
+      decoded = raw;
+    }
+    if (decoded !== raw) {
+      for (ai = 0; ai < allIds.length; ai++) {
+        if (String(allIds[ai]) === String(decoded)) return allIds[ai];
+      }
+    }
+    for (ai = 0; ai < allIds.length; ai++) {
+      var id = allIds[ai];
+      if (!id && id !== 0) continue;
+      var instPrefix = String(id) + '_';
+      if (raw === id || decoded === id || String(raw) === String(id)) return id;
+      if (raw.indexOf(instPrefix) === 0 || decoded.indexOf(instPrefix) === 0) return id;
+    }
+    return raw;
+  }
+
   function gpChipDoneKeyMatchesCalEventId(calId, chipKey) {
     if (!calId || chipKey == null || chipKey === '') return false;
     var a = String(calId);
