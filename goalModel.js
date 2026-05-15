@@ -162,7 +162,6 @@
   function migrateFromLegacy(legacy) {
     var goals = legacy.gp_goals || [];
     var doneMap = legacy.gp_chip_done || {};
-    var goalStates = legacy.goal_states || legacy.goalStates || {};
 
     var state = createEmptyState();
 
