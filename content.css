@@ -158,6 +158,7 @@
   border-radius: var(--gp-native-header-br, 8px);
   box-sizing: border-box;
   user-select: none;
+  cursor: var(--gp-native-cursor, default);
 }
 
 /* M3 label-large: section title — metrics match native title span when synced */
