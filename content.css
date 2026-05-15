@@ -201,21 +201,22 @@
 
 .gp-gcal-sidebar-actions {
   display: flex;
-  align-items: center;
+  align-items: var(--gp-native-actions-align, center);
   flex-shrink: 0;
-  gap: 0;
-  padding-inline-end: 8px;
-}
-
-/* M3 standard icon button: 40×40 touch target, circular state layer */
-.gp-gcal-sidebar-icon-btn {
-  box-sizing: border-box;
-  width: 40px;
-  height: 40px;
+  gap: var(--gp-native-actions-gap, 0px);
   padding: 0;
   margin: 0;
+}
+
+/* Icon targets — width/height/radius copied from native trailing icon buttons */
+.gp-gcal-sidebar-icon-btn {
+  box-sizing: border-box;
+  width: var(--gp-native-icon-btn-w, 40px);
+  height: var(--gp-native-icon-btn-h, 40px);
+  padding: 0;
+  margin: var(--gp-native-icon-btn-margin, 0);
   border: none;
-  border-radius: 9999px;
+  border-radius: var(--gp-native-icon-btn-br, 9999px);
   background: transparent;
   cursor: pointer;
   color: var(--gp-m3-on-surface-variant);
