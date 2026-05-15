@@ -1065,7 +1065,8 @@
     setVar('--gp-native-header-align', cs.alignItems);
 
     const mhNum = parseFloat(String(minH || '48px').replace(/px$/i, '')) || 48;
-    const brParsed = parseFloat(String(cs.borderRadius || '0').replace(/px$/i, '')) || 0;
+    const brToken = String(cs.borderRadius || '0').trim().split(/[\s/]/)[0];
+    const brParsed = parseFloat(brToken.replace(/px$/i, '')) || 0;
     if (cs.borderRadius && cs.borderRadius !== '0px') {
       if (brParsed >= mhNum / 2 - 1) setVar('--gp-native-header-br', cs.borderRadius);
       else setVar('--gp-native-header-br', `${Math.max(20, Math.round(mhNum / 2))}px`);
