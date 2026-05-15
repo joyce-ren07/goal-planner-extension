@@ -720,12 +720,14 @@
   background: #e79992;
 }
 
-/* Title & time: identical font metrics in both states (GCal-like 13px / 11px event copy). */
+/* Title & time: shared metrics = native GCal timed-event chip scale (both states identical).
+   GS/Roboto via inherit from [data-eventchip]. State = color + title strike only. */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title,
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   font-family: inherit;
   font-weight: 400;
   letter-spacing: normal;
+  -webkit-font-smoothing: antialiased;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -733,16 +735,18 @@
   align-self: flex-start;
 }
 
+/* Primary line — matches native event/task summary (12px / 16px, regular). */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-title {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 16px;
   color: #d3564b;
 }
 
+/* Secondary line — matches native event time / caption (11px / 14px, regular, standard GCal muted gray). */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   font-size: 11px;
   line-height: 14px;
-  color: #d3564b;
+  color: #5f6368;
   opacity: 1;
 }
 
