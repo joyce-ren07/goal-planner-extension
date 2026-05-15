@@ -3554,6 +3554,58 @@
     });
   }
 
+  const GP_RRULE_WEEKDAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+  function bydayFromIsoStart(isoStart) {
+    return GP_RRULE_WEEKDAY[new Date(isoStart).getDay()];
+  }
+
+  /** RRULE UNTIL (UTC Z) at end of the local calendar day for `YYYY-MM-DD`. */
+  function formatRruleUntilUtc(endDateStr) {
+    const parts = String(endDateStr).split('-').map(Number);
+    if (parts.length < 3 || parts.some((n) => !Number.isFinite(n))) return '';
+    const [y, m, day] = parts;
+    const localEnd = new Date(y, m - 1, day, 23, 59, 59);
+    const pad = (n) => String(n).padStart(2, '0');
+    return (
+      `${localEnd.getUTCFullYear()}${pad(localEnd.getUTCMonth() + 1)}${pad(localEnd.getUTCDate())}` +
+      `T${pad(localEnd.getUTCHours())}${pad(localEnd.getUTCMinutes())}${pad(localEnd.getUTCSeconds())}Z`
+    );
+  }
+
+  /** Split "ends after N sessions" across one recurring master per weekday. */
+  function recurrenceCountPerSeries(rec) {
+    const total = parseInt(rec.occurrences, 10);
+    if (!Number.isFinite(total) || total < 1) return 1;
+    const nDays = Math.max(1, (rec.days && rec.days.length) || 1);
+    return Math.max(1, Math.ceil(total / nDays));
+  }
+
+  /**
+   * One RRULE per session slot (preview suggestions = first week only; GCal expands future weeks).
+   * MWF → three weekly masters (BYDAY=MO, BYDAY=WE, BYDAY=FR), not client-side ghost injection.
+   */
+  function buildRecurrenceRrulesForSession(rec, isoStart) {
+    if (!rec || !isoStart) return [];
+    const parts = [];
+    const freq =
+      rec.period === 'day' ? 'DAILY' : rec.period === 'month' ? 'MONTHLY' : 'WEEKLY';
+    parts.push(`FREQ=${freq}`);
+    const interval = parseInt(rec.every, 10);
+    if (interval > 1) parts.push(`INTERVAL=${interval}`);
+    if (freq === 'WEEKLY') parts.push(`BYDAY=${bydayFromIsoStart(isoStart)}`);
+    if (freq === 'MONTHLY') {
+      parts.push(`BYMONTHDAY=${new Date(isoStart).getDate()}`);
+    }
+    if (rec.ends === 'on' && rec.endDate) {
+      const until = formatRruleUntilUtc(rec.endDate);
+      if (until) parts.push(`UNTIL=${until}`);
+    } else if (rec.ends === 'after') {
+      parts.push(`COUNT=${recurrenceCountPerSeries(rec)}`);
+    }
+    return [`RRULE:${parts.join(';')}`];
+  }
+
   // ── Confirm + add to Calendar (handles both create and edit modes) ──
   async function confirmAddToCalendar() {
     // Pick up any edits the user made to the goal name on Screen 3
