@@ -1861,9 +1861,13 @@
     card.innerHTML =
       `<div class="gcal-ext-goal-name">${name}</div>` +
       `<div class="gcal-ext-goal-progress-track">` +
-      `<div class="gcal-ext-goal-progress-fill" style="width:${pctClamped}%"></div>` +
+      `<div class="gcal-ext-goal-progress-fill"></div>` +
       `</div>` +
-      `<div class="gcal-ext-goal-sessions">${completed} of ${total} sessions • ${pctClamped}%</div>`;
+      `<div class="gcal-ext-goal-sessions">` +
+      `<span class="gcal-ext-goal-session-count"></span>` +
+      `<span class="gcal-ext-goal-session-sep"> • </span>` +
+      `<span class="gcal-ext-goal-session-pct"></span>` +
+      `</div>`;
     const goalColor = displayColor;
     card.style.setProperty('--goal-progress-color', goalColor);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(goalColor, 0.18));
