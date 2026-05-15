@@ -221,54 +221,254 @@
     });
   }
 
-  // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
-  function renderGhostEvents() {
+  /** ── Goal creation ghost preview (in-memory only; never persisted) ── */
+
+  function readRecurrenceDraftFromOverlay() {
+    const ov = document.getElementById('gp-recurrence-overlay');
+    if (!ov?.classList.contains('open')) return null;
+    const every = parseInt(document.getElementById('gp-freq-num')?.value, 10) || 1;
+    const period = document.getElementById('gp-freq-period')?.value || 'week';
+    const days = [...document.querySelectorAll('#gp-recurrence-overlay .gp-day-btn.selected')]
+      .map((b) => b.dataset.day)
+      .filter(Boolean);
+    const sessionMins = parseInt(document.getElementById('gp-session-mins')?.value, 10) || 60;
+    const endsVal =
+      document.querySelector('#gp-recurrence-overlay input[name="gp-ends"]:checked')?.value || 'on';
+    const endDate = document.getElementById('gp-end-date')?.value || '';
+    const occurrences = parseInt(document.getElementById('gp-occurrences')?.value, 10) || 13;
+    return {
+      every,
+      period,
+      days,
+      sessionMins,
+      ends: endsVal,
+      endDate,
+      occurrences,
+      time: '09:00',
+    };
+  }
+
+  /** Recurrence shaping current ghost preview — overlay wins when open, else state.recurrence (+ defaults). */
+  function resolveRecurrenceDraftForGhostPreview() {
+    const fromOv = readRecurrenceDraftFromOverlay();
+    if (fromOv) return fromOv;
+    if (state.recurrence) return { ...state.recurrence, time: state.recurrence.time || '09:00' };
+    /** Form screen before “Done”: match goToSuggestions() default shape. */
+    return {
+      every: 1,
+      period: 'week',
+      days: ['MO', 'WE', 'FR'],
+      sessionMins: 60,
+      ends: 'on',
+      endDate: defaultEndDate(),
+      occurrences: 13,
+      time: '09:00',
+    };
+  }
+
+  function dateAtLocalMidnight(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  function mondayAlignedTs(d) {
+    const x = dateAtLocalMidnight(d);
+    const dow = x.getDay();
+    const monOff = dow === 0 ? -6 : 1 - dow;
+    x.setDate(x.getDate() + monOff);
+    return x.getTime();
+  }
+
+  /**
+   * Build { isoStart, isoEnd } for each ghost block on calendar columns visible now.
+   * Pure function — reads only recurrence draft + DOM column geometry (already used for ghosts).
+   */
+  function computeEphemeralGhostSessionsForVisibleDays(rIn) {
+    const r = rIn;
+    const days = Array.isArray(r.days) ? r.days : [];
+    const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+    /** Wait until user selects at least one weekday (or defer to fallback suggestions on screen 3). */
+    if ((r.period || 'week') === 'week' && !days.length) return [];
+
+    const cols = findDayColumnPositions();
+    if (!cols.length) return [];
+
+    const [hour, minRaw] = (r.time || '09:00').split(':').map(Number);
+    const min = Number.isFinite(minRaw) ? minRaw : 0;
+    const hourAdj = Number.isFinite(hour) ? hour : 9;
+    const sessionMins = Math.max(15, Number(r.sessionMins) || 60);
+    const every = Math.max(1, Number(r.every) || 1);
+    const period = r.period || 'week';
+
+    let endCap = null;
+    if (r.ends === 'on' && r.endDate) endCap = new Date(r.endDate + 'T23:59:59');
+
+    const out = [];
+
+    /** Weekly + monthly preview: weekday filter on visible columns. */
+    const matchWeekdays = () => {
+      const anchorMonday = cols.length ? mondayAlignedTs(cols[0].date) : 0;
+      cols.forEach((col) => {
+        const dt = dateAtLocalMidnight(col.date);
+        if (endCap && dt.getTime() > endCap.getTime()) return;
+        const code = dayCodes[col.date.getDay()];
+        if (!days.includes(code)) return;
+        if (period === 'week') {
+          const wm = Math.round((mondayAlignedTs(col.date) - anchorMonday) / (7 * 86400000));
+          if (every > 1 && wm % every !== 0) return;
+        } else if (period === 'month') {
+          const mkA = cols[0].date.getFullYear() * 12 + cols[0].date.getMonth();
+          const mk = col.date.getFullYear() * 12 + col.date.getMonth();
+          if (every > 1 && ((mk - mkA) % every) !== 0) return;
+        }
+        const start = new Date(col.date);
+        start.setHours(hourAdj, min, 0, 0);
+        const end = new Date(start.getTime() + sessionMins * 60000);
+        out.push({
+          isoStart: start.toISOString(),
+          isoEnd: end.toISOString(),
+        });
+      });
+    };
+
+    /** Daily preview: spaced by `every` days from first visible column. */
+    const matchDaily = () => {
+      const anchor = dateAtLocalMidnight(cols[0].date).getTime();
+      cols.forEach((col) => {
+        const dt = dateAtLocalMidnight(col.date);
+        if (endCap && dt.getTime() > endCap.getTime()) return;
+        const dd = Math.round((dt.getTime() - anchor) / 86400000);
+        if (every > 1 && dd % every !== 0) return;
+        const start = new Date(col.date);
+        start.setHours(hourAdj, min, 0, 0);
+        const end = new Date(start.getTime() + sessionMins * 60000);
+        out.push({
+          isoStart: start.toISOString(),
+          isoEnd: end.toISOString(),
+        });
+      });
+    };
+
+    try {
+      if (period === 'day') matchDaily();
+      else matchWeekdays();
+    } catch (_) {
+      return [];
+    }
+    return out;
+  }
+
+  function ghostCreationPreviewTitlePlain() {
+    const c =
+      document.getElementById('gp-confirm-title-input')?.value?.trim() ||
+      document.getElementById('gp-goal-title')?.value?.trim() ||
+      String(state.goalTitle || '').trim();
+    const base =
+      (c ||
+        ({
+          Goal: '🎯 Goal',
+        }.Goal?.replace?.(/^.*$/, 'Goal'))) ? c : '🎯 Goal';
+    if (!c) return 'Goal preview';
+    return c;
+  }
+
+  /**
+   * When Goal Planner creation UI is showing, derive sessions drawn on the calendar.
+   * Returns `false` when preview layer should be omitted entirely.
+   */
+  function deriveGhostSessionsForCreationPreviewLayer() {
+    const panel = document.getElementById('gp-panel');
+    if (!panel?.classList.contains('open')) return false;
+
+    if (document.getElementById('gp-screen-home')?.classList.contains('active')) return false;
+
+    const suggScr = document.getElementById('gp-screen-suggestions');
+    const formScr = document.getElementById('gp-screen-form');
+    const ovOpen = document.getElementById('gp-recurrence-overlay')?.classList.contains('open');
+
+    if (
+      !(suggScr?.classList.contains('active')) &&
+      !(formScr?.classList.contains('active')) &&
+      !ovOpen
+    ) {
+      return false;
+    }
+
+    if (suggScr?.classList.contains('active') && state.suggestions?.length)
+      return { sessions: state.suggestions.slice(), markNonPersisted: false };
+
+    const r = resolveRecurrenceDraftForGhostPreview();
+    if (!r) return [];
+
+    /** Modal open with incomplete weekday picks — suppress until at least one day (weekly/monthly). */
+    if ((r.period === 'week' || r.period === 'month') && (!r.days || !r.days.length)) return [];
+
+    const sessions = computeEphemeralGhostSessionsForVisibleDays(r);
+    return { sessions, markNonPersisted: true };
+  }
+
+  let _ghostPrevDebounceT = 0;
+  function scheduleGhostPreviewRefreshDebounced() {
+    if (_ghostPrevDebounceT) clearTimeout(_ghostPrevDebounceT);
+    _ghostPrevDebounceT = setTimeout(() => {
+      _ghostPrevDebounceT = 0;
+      renderGhostEvents();
+    }, 48);
+  }
+
+  function paintGhostSessionsOnGrid(sessions, labelText, ghostFlags) {
     removeGhostEvents();
-    if (!state.suggestions || !state.suggestions.length) return;
+    if (!sessions || !sessions.length) return false;
 
     const scrollCont = findCalendarScrollContainer();
-    if (!scrollCont) return;
+    if (!scrollCont) return false;
 
     const hourPositions = findHourAbsolutePositions(scrollCont);
-    if (hourPositions.length < 2) return;
+    if (hourPositions.length < 2) return false;
 
     hourPositions.sort((a, b) => a.hour - b.hour);
     const first = hourPositions[0];
-    const last  = hourPositions[hourPositions.length - 1];
+    const last = hourPositions[hourPositions.length - 1];
     const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
-    if (pxPerHour <= 0) return;
+    if (pxPerHour <= 0) return false;
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
     const dayColumns = findDayColumnPositions();
-    const goalLabel = (state.goalTitle || '').length > 18
-      ? state.goalTitle.slice(0, 17) + '…'
-      : (state.goalTitle || '');
+    const goalLabelRaw = ghostFlags?.markNonPersisted
+      ? `Preview · ${labelText}`
+      : labelText;
+    const goalLabel =
+      goalLabelRaw.length > 28 ? goalLabelRaw.slice(0, 27) + '…' : goalLabelRaw;
 
     const contRect = scrollCont.getBoundingClientRect();
     const ghostData = [];
 
-    for (const session of state.suggestions) {
+    for (const session of sessions) {
       const start = new Date(session.isoStart);
-      const end   = new Date(session.isoEnd);
+      const end = new Date(session.isoEnd);
 
-      const col = dayColumns.find(c =>
-        c.date.getFullYear() === start.getFullYear() &&
-        c.date.getMonth()    === start.getMonth()    &&
-        c.date.getDate()     === start.getDate()
+      const col = dayColumns.find(
+        (c) =>
+          c.date.getFullYear() === start.getFullYear() &&
+          c.date.getMonth() === start.getMonth() &&
+          c.date.getDate() === start.getDate()
       );
-      if (!col) continue; // date not visible in current view
+      if (!col) continue;
 
-      const startMins   = start.getHours() * 60 + start.getMinutes();
+      const startMins = start.getHours() * 60 + start.getMinutes();
       const durationMin = (end - start) / 60000;
-      const absTop  = absYAtHour0 + (startMins / 60) * pxPerHour;
-      const height  = Math.max(20, (durationMin / 60) * pxPerHour);
-      const left    = col.left + 2;
-      const width   = Math.max(10, col.width - 4);
+      const absTop = absYAtHour0 + (startMins / 60) * pxPerHour;
+      const height = Math.max(20, (durationMin / 60) * pxPerHour);
+      const left = col.left + 2;
+      const width = Math.max(10, col.width - 4);
       const fixedTop = contRect.top + absTop - scrollCont.scrollTop;
 
       const ghost = document.createElement('div');
       ghost.className = 'goal-ghost-event';
       ghost.setAttribute('data-gp-ghost-preview', 'true');
+      if (ghostFlags?.markNonPersisted) ghost.setAttribute('data-gp-ghost-ephemeral', 'true');
       ghost.setAttribute('aria-hidden', 'true');
       ghost.style.cssText =
         `left:${left}px;top:${fixedTop}px;width:${width}px;height:${height}px;`;
@@ -281,9 +481,8 @@
       ghostData.push({ el: ghost, absTop, left, width, height });
     }
 
-    if (!ghostData.length) return;
+    if (!ghostData.length) return false;
 
-    // Reposition ghosts on every scroll tick using rAF to avoid jank
     let _raf = null;
     _ghostScrollEl = scrollCont;
     _ghostScrollHandler = () => {
@@ -292,11 +491,40 @@
         _raf = null;
         const ct = scrollCont.getBoundingClientRect().top;
         const st = scrollCont.scrollTop;
-        for (const g of ghostData) g.el.style.top = (ct + g.absTop - st) + 'px';
+        for (const g of ghostData) g.el.style.top = `${ct + g.absTop - st}px`;
       });
     };
     scrollCont.addEventListener('scroll', _ghostScrollHandler, { passive: true });
+    return true;
   }
+
+  // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
+  function renderGhostEvents() {
+    const layered = deriveGhostSessionsForCreationPreviewLayer();
+    if (layered === false) {
+      removeGhostEvents();
+      return;
+    }
+
+    let sessions;
+    let markNp = false;
+    if (Array.isArray(layered)) {
+      sessions = layered;
+    } else if (layered && Array.isArray(layered.sessions)) {
+      sessions = layered.sessions;
+      markNp = !!layered.markNonPersisted;
+    } else {
+      removeGhostEvents();
+      return;
+    }
+
+    const lbl = ghostCreationPreviewTitlePlain().replace(/^Preview · /i, '').trim();
+    const labelForChip = markNp ? lbl : lbl;
+    paintGhostSessionsOnGrid(sessions, labelForChip, { markNonPersisted: markNp });
+  }
+
+  /* legacy single implementation replaced by paintGhostSessionsOnGrid via renderGhostEvents */
+  void 0;
 
   // ── Inject once ──
   function inject() {
