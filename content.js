@@ -2983,7 +2983,6 @@
             () => {}
           );
           chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: chipKey, complete: nextDone });
-          renderGoalsSidebar();
           renderHomeScreen();
         });
       });
