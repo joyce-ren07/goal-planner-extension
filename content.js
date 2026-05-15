@@ -2222,7 +2222,7 @@
 
       const expected = patchReport
         ? {
-            widthStyle: patchReport.widthAssign,
+            widthStyle: patchReport.forceVisualTest ? '80%' : patchReport.widthAssign,
             countText: patchReport.countAssign,
             pctText: patchReport.pctAssign,
           }
