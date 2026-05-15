@@ -2242,25 +2242,28 @@
           : null,
       });
 
-      let selectorUsed = '';
-      try {
-        const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(gid) : gid;
-        selectorUsed = `#${container.id} .gcal-ext-goal-card[data-goal-id="${esc}"]`;
-      } catch (_) {
-        selectorUsed = `fallback-scan[data-goal-id=${gid}]`;
-      }
-      const card = findSidebarGoalCardById(container, gid);
+      const resolved = resolveVisibleSidebarGoalCard(gid);
+      const card = resolved?.card;
+      const container = resolved?.container;
       gpMyGoalsSidebarDiag('2 row selection', {
         traceId,
         goalId: gid,
         rowFound: !!card,
-        selectorUsed,
-        containerId: container.id,
-        nodeName: card?.nodeName,
+        visible: resolved?.visible,
+        cardRect: resolved?.rect,
+        containerId: container?.id,
+        rootConnected: resolved?.root?.isConnected,
+        rootCollapsed: resolved?.root?.classList?.contains('gp-gcal-sidebar-collapsed'),
         cardGoalId: card?.dataset?.goalId,
         isConnected: !!card?.isConnected,
       });
       if (!card) continue;
+      if (!resolved.visible) {
+        console.warn(
+          '[gp-my-goals-sidebar] patch target not visible — expand “My goals” in the left drawer or check for a detached duplicate root',
+          { goalId: gid, rect: resolved.rect }
+        );
+      }
 
       const patchReport = patchSidebarGoalCardProgressOnly(card, g, traceId);
       const pair = goalSidebarCardSigs(g, legacyById);
