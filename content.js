@@ -5780,10 +5780,24 @@
     }
 
     const shell =
-      dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body);
+      gpGdFindEventInspectorShell(goal?.title) ||
+      (dialogShell instanceof HTMLElement ? dialogShell : null) ||
+      /** @type {HTMLElement} */ (document.body);
+    if (!shell || gpGdIsCalendarGridContainer(shell)) {
+      gpGdTrace('abort render — no event inspector shell near click');
+      return null;
+    }
     const cardRoot =
       gpGdFindVisibleEventCardForGoal(shell, goal?.title) || gpGdFindEventDetailCardRoot(shell);
+    if (gpGdIsCalendarGridContainer(cardRoot)) {
+      gpGdTrace('abort render — card root is calendar grid');
+      return null;
+    }
     const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(cardRoot);
+    if (gpGdIsCalendarGridContainer(mountParent)) {
+      gpGdTrace('abort render — mount parent is calendar grid');
+      return null;
+    }
 
     /** @type {HTMLElement} */
     const wrap = document.createElement('aside');
