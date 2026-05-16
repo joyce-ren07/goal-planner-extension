@@ -6667,9 +6667,10 @@
       }
       const list = gpGdPickGoalDetailMountParent(cardRoot);
       tryMount(list, null);
-      gpGdAlignInjectedBlockToCard(wrap, shell);
+      gpGdReparentBlockIntoScrollColumn(wrap, shell);
     }
 
+    gpGdReparentBlockIntoScrollColumn(wrap, shell);
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdEnsureDetailDelegates(wrap, hit);

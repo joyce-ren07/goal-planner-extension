@@ -1394,6 +1394,10 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  max-height: min(220px, 36vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 #gp-gcal-detail-goal-extension .gp-gd-st-item {
