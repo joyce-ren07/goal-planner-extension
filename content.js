@@ -6648,6 +6648,7 @@
 
     const tryMount = (parent, beforeNode) => {
       if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
+      if (!gpGdIsElementVisuallyExposed(parent)) return false;
       if (gpGdIsInvalidDetailMountParent(parent, cardRoot)) return false;
       gpGdDiag('Inserting into:', {
         tag: parent.tagName,
@@ -6655,6 +6656,7 @@
         className: String(parent.className || '').slice(0, 80),
         role: parent.getAttribute('role'),
         rect: parent.getBoundingClientRect(),
+        onScreen: gpGdInspectorHostIsOnScreen(parent) || gpGdInspectorHostIsOnScreen(shell),
       });
       try {
         if (
