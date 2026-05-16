@@ -5752,11 +5752,17 @@
   function syncExtGoalTimeFromContainer(chip) {
     const timeEl = chip?.querySelector?.('.ext-goal-time');
     if (!timeEl) return '';
-    const extracted = extractTimeRangeLabelForGoalChip(chip);
-    if (extracted && timeEl.textContent !== extracted) timeEl.textContent = extracted;
+    let label = extractTimeRangeLabelForGoalChip(chip);
+    if (!label) {
+      const range = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
+      if (range?.startTime && range?.endTime) {
+        label = formatIsoRangeNativeStyle(range.startTime, range.endTime);
+      }
+    }
+    if (label && timeEl.textContent !== label) timeEl.textContent = label;
     const h = chip.getBoundingClientRect().height;
     timeEl.style.display = h > 0 && h < 42 ? 'none' : 'block';
-    return extracted || '';
+    return label || '';
   }
 
   // ── Write inner DOM structure into a chip element ──
