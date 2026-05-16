@@ -7731,10 +7731,12 @@
 
       const obs = new MutationObserver(() => {
         gpGdDiag('MO: document childList mutation');
+        gpGdTeardownOrphanedDetailUi();
         if (!gpGdShouldRunDetailScan()) return;
         const ext = __gpGdBlockEl;
         if (
           ext?.isConnected &&
+          gpGdIsDetailUiInEventDialog(ext) &&
           (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
           (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
         ) {
