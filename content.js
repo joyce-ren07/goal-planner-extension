@@ -6966,8 +6966,9 @@
   function gpGdDetailHitFromWrap(wrapHost) {
     const gid = String(wrapHost?.dataset?.gpGoalId ?? '').trim();
     const eid = String(wrapHost?.dataset?.gpSessionEventId ?? '').trim();
-    let sIdx = -1;
-    if (gid && String(_gpGdPinnedGoalId) === gid && _gpGdPinnedSlotIdx >= 0) {
+    const slotRaw = Number(wrapHost?.dataset?.gpSlotIdx);
+    let sIdx = Number.isFinite(slotRaw) && slotRaw >= 0 ? slotRaw : -1;
+    if (sIdx < 0 && gid && String(_gpGdPinnedGoalId) === gid && _gpGdPinnedSlotIdx >= 0) {
       sIdx = _gpGdPinnedSlotIdx;
     }
     return {
@@ -6975,6 +6976,135 @@
       session: { eventId: eid, completed: !!gpGdGetDetailMarkCompleteBtn()?.disabled },
       gIdx: -1,
       sIdx,
+    };
+  }
+
+  /** Resolve goal + session slot for popup “Mark completed” (no grid chip required). */
+  async function gpGdResolvePopupSessionContext(wrapHost, hit) {
+    const hints = [];
+    const pushHint = (h) => {
+      const s = h == null || h === '' ? '' : String(h).trim();
+      if (!s || hints.includes(s)) return;
+      hints.push(s);
+    };
+    pushHint(wrapHost?.dataset?.gpSessionEventId);
+    pushHint(hit?.session?.eventId);
+    pushHint(wrapHost?.dataset?.gpEventToken);
+    for (const h of gpGdConsumePinnedSessionHints()) pushHint(h);
+    if (wrapHost?.isConnected) {
+      const shell =
+        wrapHost.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+        wrapHost.closest('[role="presentation"]');
+      if (shell instanceof HTMLElement) {
+        for (const h of gpCollectEventIdHintsFromRoot(shell)) pushHint(h);
+      }
+    }
+
+    let goalId = String(wrapHost?.dataset?.gpGoalId ?? hit?.goal?.id ?? '').trim();
+    const slotRaw = Number(wrapHost?.dataset?.gpSlotIdx);
+    let slotIdx = typeof hit?.sIdx === 'number' && hit.sIdx >= 0 ? hit.sIdx : -1;
+    if (slotIdx < 0 && Number.isFinite(slotRaw) && slotRaw >= 0) slotIdx = slotRaw;
+    if (slotIdx < 0 && goalId && String(_gpGdPinnedGoalId) === goalId && _gpGdPinnedSlotIdx >= 0) {
+      slotIdx = _gpGdPinnedSlotIdx;
+    }
+
+    let unifiedHit = hit;
+    const Model = globalThis.GoalPlannerModel;
+    if (Model?.loadUnifiedState) {
+      try {
+        const st = await Model.loadUnifiedState();
+        for (const h of hints) {
+          const u = gpFindUnifiedSessionForDomEventKey(st, h);
+          if (u?.goal?.id) {
+            unifiedHit = u;
+            goalId = String(u.goal.id);
+            if (typeof u.sIdx === 'number' && u.sIdx >= 0) slotIdx = u.sIdx;
+            pushHint(u.session?.eventId);
+            break;
+          }
+        }
+        if (goalId && slotIdx < 0) {
+          const ug = (st.goals || []).find((g) => String(g.id) === goalId);
+          if (ug?.sessions?.length === 1) slotIdx = 0;
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    const legacyGoals = await getGoals();
+    let goalRow = legacyGoals.find((g) => String(g.id) === goalId);
+    if (!goalRow && hints.length) {
+      const gid = legacyGoalIdForPlannerEventCandidates(legacyGoals, ...hints);
+      if (gid) {
+        goalId = gid;
+        goalRow = legacyGoals.find((g) => String(g.id) === goalId);
+      }
+    }
+    if (!goalRow && goalId) {
+      goalRow = legacyGoals.find((g) => String(g.id) === String(goalId));
+    }
+
+    const allowed = goalRow?.calEventIds || [];
+    let storageKey = pushHint && hints[0] ? hints[0] : '';
+    storageKey =
+      String(wrapHost?.dataset?.gpSessionEventId ?? hit?.session?.eventId ?? hints[0] ?? '').trim() ||
+      hints[0] ||
+      '';
+
+    let plannerEventId = '';
+    if (slotIdx >= 0 && slotIdx < allowed.length) {
+      plannerEventId = String(allowed[slotIdx]);
+    } else if (unifiedHit?.session?.eventId) {
+      const e = String(unifiedHit.session.eventId);
+      const ix = allowed.findIndex(
+        (id) => gpChipDoneKeyMatchesCalEventId(e, id) || String(id) === e
+      );
+      if (ix >= 0) {
+        slotIdx = ix;
+        plannerEventId = String(allowed[ix]);
+      } else {
+        plannerEventId = e;
+      }
+    }
+    if (!plannerEventId) {
+      for (const h of hints) {
+        const ix = allowed.findIndex(
+          (id) => gpChipDoneKeyMatchesCalEventId(h, id) || String(id) === h
+        );
+        if (ix >= 0) {
+          slotIdx = ix;
+          plannerEventId = String(allowed[ix]);
+          storageKey = storageKey || h;
+          break;
+        }
+      }
+    }
+    if (!plannerEventId && storageKey) {
+      const via = resolvePlannerEventIdForChip(storageKey, legacyGoals);
+      if (via && calEventIdsContain(allowed, via)) {
+        plannerEventId = String(via);
+        slotIdx = allowed.findIndex((id) => String(id) === String(via));
+      } else if (via) {
+        plannerEventId = String(via);
+      } else {
+        plannerEventId = storageKey;
+      }
+    }
+    if (!plannerEventId && allowed.length === 1) {
+      slotIdx = 0;
+      plannerEventId = String(allowed[0]);
+    }
+
+    return {
+      goalId,
+      slotIdx,
+      plannerEventId,
+      storageKey,
+      goalRow,
+      legacyGoals,
+      unifiedHit,
+      hints,
     };
   }
 
