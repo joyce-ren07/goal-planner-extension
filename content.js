@@ -794,7 +794,7 @@
     }
     const sessions = layered?.sessions || [];
     if (!sessions.length) {
-      removeGhostEvents();
+      clearGhostPreviewChipsOnly();
       return;
     }
     const base = ghostCreationPreviewTitlePlain();
