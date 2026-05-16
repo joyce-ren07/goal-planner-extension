@@ -5135,9 +5135,17 @@
       _gpGdAnchorY = e.clientY;
     }
     gpGdPinSessionHintsFromChip(chip);
+    const gestureKey = _gpGdPinnedHints.join('|');
+    const now = Date.now();
+    const duplicateGesture =
+      gestureKey && gestureKey === _gpGdLastOpenGestureKey && now - _gpGdLastOpenGestureAt < 500;
+    _gpGdLastOpenGestureKey = gestureKey;
+    _gpGdLastOpenGestureAt = now;
     _gpGdRemountCount = 0;
     _gpGdRemountGoalKey = '';
+    if (duplicateGesture && gpGdDetailBlockReady()) return;
     scheduleGpGdInspectorOpenBurst();
+    gpGdStartInspectorOpenWatch();
   }
 
   function gpGdConsumePinnedSessionHints() {
