@@ -4772,7 +4772,7 @@
    */
   function gpGdCollectLikelyInspectorRootsFromBeacon(htmlRoot) {
     const LABEL_RE =
-      /\bGuests\b|\bAdd guests\b|\bGoing\?\b|\bGoing\b|\bCalendar\s*\(|Visibility|Notification|Reminder|Join with\b|\bMeeting link\b|\bVideo call\b|\bLocation\b|\bOrganizer\b/i;
+      /\bGuests\b|\bAdd guests\b|\bGoing\?\b|\bGoing\b|\bCalendar\s*\(|\bVisibility\b|\bNotifications?\b|\bReminder\b|\bJoin with\b|\bMeeting link\b|\bVideo call\b|\bLocation\b|\bOrganizer\b|\bMeet\b|\bGoogle Meet\b/i;
 
     /** @returns {HTMLElement | null} */
     function ascendToAnnotatedPanel(beacon, stopAt) {
