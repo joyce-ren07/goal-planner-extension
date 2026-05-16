@@ -46,6 +46,10 @@
   // ── Ghost event state ──
   /** Scroll container we inlined `position:relative` on solely so the ghost host can anchor inside it — reverted when host is torn down. */
   let _gpGhostScrollPositionFixEl = null;
+  /** Stable grid scroll parent while create-flow preview is active (GCal reflow swaps shells). */
+  let _gpGhostScrollContPinned = /** @type {HTMLElement | null} */ (null);
+  let _gpGhostPreviewRecoveryMo = /** @type {MutationObserver | null} */ (null);
+  let _gpGhostPreviewRecoveryDebounce = 0;
   let _gpGhostCueRaf = 0;
   /** Ghost under pointer for “Planned” tooltip cue (interaction only; no Goal state). */
   let _gpGhostTipEl = null;
