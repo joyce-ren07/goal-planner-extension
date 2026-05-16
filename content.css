@@ -1556,7 +1556,7 @@
   cursor: pointer;
 }
 
-#gp-gcal-detail-goal-extension .gp-gd-task-row.gp-cal-task-match {
+#gp-gcal-detail-goal-extension .gp-gd-task-row.gp-gcal-task-match {
   user-select: none;
 }
 
