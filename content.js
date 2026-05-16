@@ -5951,6 +5951,7 @@
   }
 
   function scheduleGpGdDialogScan() {
+    gpGdSyncBlockElRef();
     if (!gpGdShouldRunDetailScan()) return;
     if (gpGdDetailBlockReady()) return;
     if (_gpGdScanTimer) {
