@@ -5991,7 +5991,7 @@
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
           if (gpGdIsGoalBlockVisible(ext)) return;
         }
-        if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
+        if (!gpGdDialogsHasInjectedAside(dialogShell)) gpGdRunDetailHydratePass();
       }, 220);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
