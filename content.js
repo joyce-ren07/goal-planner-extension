@@ -6965,9 +6965,6 @@
       _gpGdPinnedTitleHint || gpGdExtractGoalTitleFromInspector(host) || '';
 
     let hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, titleHint);
-    if (!hit?.goal?.id && gpGdIsGoalPlannerInspector(host) && titleHint) {
-      hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, titleHint);
-    }
     if (hit?.goal?.id && hit.session) {
       hit = await gpGdEnrichHitForDetail(hit);
 
