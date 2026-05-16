@@ -5758,6 +5758,12 @@
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdWireDetailDelegates(wrap, hit);
+    gpGdTrace(
+      'render done',
+      goalId,
+      gpGdIsGoalBlockVisible(wrap) ? 'visible' : 'hidden',
+      Math.round(wrap.getBoundingClientRect().width)
+    );
 
     return wrap;
   }
