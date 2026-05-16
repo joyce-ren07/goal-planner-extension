@@ -6204,7 +6204,9 @@
       return null;
     }
     const cardRoot =
-      gpGdFindVisibleEventCardForGoal(shell, goal?.title) || gpGdFindEventDetailCardRoot(shell);
+      gpGdFindNativeGcalPopupCard(shell) ||
+      gpGdFindVisibleEventCardForGoal(shell, goal?.title) ||
+      gpGdFindEventDetailCardRoot(shell);
     if (gpGdIsCalendarGridContainer(cardRoot)) {
       gpGdTrace('abort render — card root is calendar grid');
       return null;
