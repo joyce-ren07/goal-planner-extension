@@ -6282,13 +6282,16 @@
       gpGdFindNativeGcalPopupCard(shell) ||
       gpGdFindVisibleEventCardForGoal(shell, goal?.title) ||
       gpGdFindEventDetailCardRoot(shell);
-    if (gpGdIsCalendarGridContainer(cardRoot)) {
-      gpGdTrace('abort render — card root is calendar grid');
+    if (!(cardRoot instanceof HTMLElement) || gpGdIsInvalidDetailMountTarget(cardRoot)) {
+      gpGdTrace('abort render — no narrow inspector card');
+      gpGdDiag('inject: abort — card root missing or too wide', {
+        cardWidth: cardRoot?.getBoundingClientRect?.()?.width,
+      });
       return null;
     }
-    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(cardRoot);
-    if (gpGdIsCalendarGridContainer(mountParent)) {
-      gpGdTrace('abort render — mount parent is calendar grid');
+    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell);
+    if (gpGdIsInvalidDetailMountTarget(mountParent)) {
+      gpGdTrace('abort render — mount parent invalid');
       return null;
     }
 
