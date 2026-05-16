@@ -4917,7 +4917,7 @@
         <div class="gp-gd-nat-txt gp-gd-nat-muted">My goals</div>
       </div>
       <div class="gp-gd-nat-row">
-        <div class="gp-gd-nat-ic gp-gd-nat-ic--top" aria-hidden="true">
+        <div class="gp-gd-nat-ic" aria-hidden="true">
           <span class="material-symbols-outlined gp-gd-ms-20">segment</span>
         </div>
         <div class="gp-gd-nat-grow">
