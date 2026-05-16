@@ -5365,22 +5365,10 @@
         /** Only decorate Goal-managed sessions carrying 🎯 linkage (unified GoalSession hit). */
         if (!hit?.goal?.id || !hit.session?.eventId) continue;
 
-        /** Mount target — footer-adjacent or dialog body trailing region for minimal layout disruption */
-        /** @type {HTMLElement} */
-        const mountHostCandidate =
-          (host.tagName !== 'SECTION' &&
-            [...host.children].reverse().find(
-              /** @returns {HTMLElement|null} */
-              function findScroll(x) {
-                return x.scrollHeight > x.clientHeight + 20 ? /** @type {HTMLElement} */ (x) : null;
-              }
-            )) ||
-          /** @type {HTMLElement} */ (host.lastElementChild) ||
-          host;
+        /** Mount into native metadata column; `dialogShell` used for repair observer + orphan cleanup. */
+        if (!(host instanceof HTMLElement)) continue;
 
-        if (!mountHostCandidate) continue;
-
-        gpGdRenderDetailBlock(hit, hints[hi], mountHostCandidate);
+        gpGdRenderDetailBlock(hit, hints[hi], host);
         return;
       }
     }
