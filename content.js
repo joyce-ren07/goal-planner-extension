@@ -5689,19 +5689,36 @@
     return best;
   }
 
+  /** Center popover keeps hidden DOM clones — only accept the host that wins hit-testing at its center. */
+  function gpGdInspectorHostIsOnScreen(host) {
+    if (!(host instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(host)) return false;
+    const r = host.getBoundingClientRect();
+    if (r.width < 180 || r.height < 80) return false;
+    const cx = Math.min(r.right - 10, Math.max(r.left + 10, r.left + r.width / 2));
+    const cy = Math.min(r.bottom - 10, Math.max(r.top + 10, r.top + Math.min(48, r.height / 2)));
+    try {
+      for (const el of document.elementsFromPoint(cx, cy)) {
+        if (!(el instanceof Element)) continue;
+        if (el === host || host.contains(el) || gpGdComposedSubtreeContains(host, el)) return true;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return false;
+  }
+
   function gpGdPickBestVisibleInspectorHost(hosts, goalTitle) {
-    const list = hosts.filter((h) => h instanceof HTMLElement);
+    const list = hosts.filter((h) => h instanceof HTMLElement && gpGdInspectorHostIsOnScreen(h));
     const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
     if (needle.length >= 2) {
       const short = needle.slice(0, Math.min(needle.length, 32));
       for (const h of list) {
-        if (!gpGdIsElementVisuallyExposed(h)) continue;
         if (String(h.innerText || '').includes(short)) return h;
       }
     }
     for (const h of list) {
-      const card = gpGdFindEventDetailCardRoot(h);
-      if (card instanceof HTMLElement && gpGdIsElementVisuallyExposed(card)) return h;
+      const card = gpGdResolveInspectorCardRoot(h, goalTitle);
+      if (card instanceof HTMLElement && gpGdInspectorHostIsOnScreen(h)) return h;
     }
     return list[0] || null;
   }
