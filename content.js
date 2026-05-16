@@ -4830,7 +4830,7 @@
       const tLegacy = Model.resolveGoalTotalSessions(legacyGuess);
       if (typeof tLegacy === 'number' && tLegacy > 0) total = tLegacy;
     }
-    total = Math.max(Number(total) || 0, sessList.length || 0, 1);
+    total = Math.max(Number(total) || 0, sessList.length || 0);
     const done = sessList.filter((s) => s.completed).length;
     let pct = typeof goalRow.progressPct === 'number' ? goalRow.progressPct : 0;
     if (total > 0) pct = Math.round((done / total) * 100);
