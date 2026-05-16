@@ -805,9 +805,33 @@
     });
   }
 
+  /** Wire observers if a prior partial inject left `#gp-panel` in the DOM without sidebar/detail hooks. */
+  function ensureExtensionCoreServicesWired() {
+    if (globalThis.__gpExtensionCoreServicesWired) return;
+    globalThis.__gpExtensionCoreServicesWired = true;
+
+    setupMyGoalsSidebarStorageSync();
+    setupGoalsSidebarReactiveBinding();
+    setupLeftSidebarGoalsMountObserver();
+    scheduleLeftSidebarGoalsMountAttempts();
+    setupCalendarPushObserver();
+    setupNativeSidebarObserver();
+    setupGoalEventObserver();
+    scheduleGoalEventDecoration();
+
+    try {
+      setupGpCalGoalDetailEnrichment();
+    } catch (err) {
+      console.error('[GoalPlanner] goal detail enrichment setup failed', err);
+    }
+  }
+
   // ── Inject once ──
   function inject() {
-    if (document.getElementById('gp-panel')) return;
+    if (document.getElementById('gp-panel')) {
+      ensureExtensionCoreServicesWired();
+      return;
+    }
 
     // Load Material Symbols Outlined font (once per page)
     if (!document.getElementById('gp-material-symbols')) {
