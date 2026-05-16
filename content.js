@@ -7087,7 +7087,11 @@
         gpGdFindEventInspectorShell(hit.goal.title) ||
         gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
         host;
-      if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) {
+      if (
+        !visibleHost ||
+        gpGdIsCalendarGridContainer(visibleHost) ||
+        !gpGdIsEventDetailPopupHost(visibleHost)
+      ) {
         if (pinnedRaw.length) scheduleGpGdDialogScan();
         return;
       }
