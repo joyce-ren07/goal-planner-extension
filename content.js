@@ -6678,10 +6678,10 @@
 
     const existingEarly = __gpGdBlockEl;
     if (
-      Date.now() < _gpGdHydrateQuietUntil &&
       existingEarly?.isConnected &&
-      gpGdIsGoalBlockVisible(existingEarly) &&
-      existingEarly?.dataset?.gpGoalId
+      existingEarly?.dataset?.gpGoalId &&
+      (gpGdIsGoalBlockVisible(existingEarly) || gpGdIsGoalBlockPainted(existingEarly)) &&
+      (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector())
     ) {
       return;
     }
