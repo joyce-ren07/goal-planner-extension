@@ -8485,7 +8485,7 @@
     chip.classList.add('ext-goal-chip');
     if (chip.querySelector('.ext-goal-root')) return true;
     chip._gpDecorLock = true;
-    const shell = document.createElement('motion');
+    const shell = document.createElement('div');
     shell.className = 'ext-goal-root ext-goal-root--prime';
     shell.setAttribute('aria-hidden', 'true');
     chip.appendChild(shell);
