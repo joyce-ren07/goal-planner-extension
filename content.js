@@ -6587,20 +6587,48 @@
     });
   }
 
+  /** Light in-place refresh when the popup is already mounted (avoids full hydrate flicker). */
+  async function gpGdLightRefreshMountedDetail() {
+    const ext = __gpGdBlockEl;
+    if (!(ext instanceof HTMLElement) || !ext.isConnected) return;
+    if (
+      ext.matches?.(':focus-within') &&
+      ext.querySelector('[data-gp-st-compose]:not([hidden])')
+    ) {
+      return;
+    }
+    const shell =
+      ext.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+      ext.parentElement;
+    if (!(shell instanceof HTMLElement) || !gpGdIsValidEventDetailInspectorShell(shell)) {
+      if (Date.now() >= _gpGdHydrateQuietUntil) teardownGpGdBlock();
+      return;
+    }
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.loadUnifiedState) return;
+    let hit = null;
+    try {
+      const unified = await Model.loadUnifiedState();
+      const eid = String(ext.dataset.gpSessionEventId || '').trim();
+      if (eid) hit = gpFindUnifiedSessionForDomEventKey(unified, eid);
+      if (!hit?.goal?.id) {
+        hit = gpGdHitFromPinnedChip(unified, gpGdConsumePinnedSessionHints());
+      }
+      if (hit?.goal?.id) hit = await gpGdEnrichHitForDetail(hit);
+    } catch (_) {
+      return;
+    }
+    if (hit?.goal) {
+      gpGdStabilizeMountedDetailBlock(ext, shell, hit);
+    }
+  }
+
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
     const ext = __gpGdBlockEl;
-    if (
-      ext &&
-      ext.isConnected &&
-      typeof ext.matches === 'function' &&
-      ext.matches(':focus-within') &&
-      ext.querySelector('[data-gp-st-compose]:not([hidden])')
-    ) {
-      _gpGdDetailRefreshTimer = setTimeout(() => {
-        gpGdAttemptUnifiedEchoHydrate();
-      }, 220);
+    if (ext?.isConnected) {
+      void gpGdLightRefreshMountedDetail();
       return;
     }
     void gpGdHydrateMountedDetailDecoration();
