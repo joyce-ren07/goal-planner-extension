@@ -784,8 +784,7 @@
   function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
     const previewUi = isGhostCreationPreviewUiActive();
     if (!sessions || !sessions.length) {
-      if (previewUi) clearGhostPreviewChipsOnly();
-      else removeGhostEvents();
+      if (!previewUi) removeGhostEvents();
       return false;
     }
 
