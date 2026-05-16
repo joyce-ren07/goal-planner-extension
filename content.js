@@ -913,9 +913,18 @@
     const base = ghostCreationPreviewTitlePlain();
     const shortTitle = base.length > 22 ? `${base.slice(0, 21)}…` : base;
     const finalLabel = layered.markNonPersisted ? `Preview · ${shortTitle}` : shortTitle;
-    paintGhostSessionsOnGrid(sessions, finalLabel, {
+    const painted = paintGhostSessionsOnGrid(sessions, finalLabel, {
       markNonPersisted: !!layered.markNonPersisted,
     });
+    if (
+      !painted &&
+      previewActive &&
+      !document.querySelector('#gp-ghost-preview-root .goal-ghost-event')
+    ) {
+      window.setTimeout(() => {
+        if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
+      }, 200);
+    }
   }
 
   /** Wire observers if a prior partial inject left `#gp-panel` in the DOM without sidebar/detail hooks. */
