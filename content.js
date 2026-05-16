@@ -5871,13 +5871,13 @@
       return;
     }
 
-    /** Prefer the visible card-sized shell over full-viewport overlay hosts. */
+    /** Prefer hosts whose detected card is popover-sized (not zero / full viewport). */
     natives.sort((a, b) => {
-      const wa = a.getBoundingClientRect().width;
-      const wb = b.getBoundingClientRect().width;
       const ca = gpGdFindEventDetailCardRoot(a).getBoundingClientRect().width;
       const cb = gpGdFindEventDetailCardRoot(b).getBoundingClientRect().width;
-      return (ca || wa) - (cb || wb);
+      const scoreA = ca >= 220 && ca <= 700 ? ca : a.getBoundingClientRect().width + 2000;
+      const scoreB = cb >= 220 && cb <= 700 ? cb : b.getBoundingClientRect().width + 2000;
+      return scoreA - scoreB;
     });
 
     const legacyGoals = await getGoals();
