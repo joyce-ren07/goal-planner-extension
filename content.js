@@ -5079,8 +5079,6 @@
         if (!mountHostCandidate) continue;
 
         gpGdRenderDetailBlock(hit, hints[hi], mountHostCandidate);
-        _gpGdLastHost = host;
-        _gpGdLastHints = hintJoined;
         return;
       }
     }
