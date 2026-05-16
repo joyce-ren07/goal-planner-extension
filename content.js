@@ -5629,7 +5629,8 @@
             (gpGdInspectorHasCloseControl(cur) || cur.closest('[role="dialog"], [role="alertdialog"]'))
           ) {
             const dlg = cur.closest('[role="dialog"], [role="alertdialog"]');
-            return dlg instanceof HTMLElement ? dlg : cur;
+            const pick = dlg instanceof HTMLElement ? dlg : cur;
+            if (gpGdIsValidNativeEventInspectorHost(pick)) return pick;
           }
           const p = gpGdComposableParentHTMLElement(cur);
           cur = p instanceof HTMLElement ? p : null;
