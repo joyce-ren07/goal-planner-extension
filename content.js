@@ -4782,7 +4782,10 @@
       for (let d = 0; d < 28 && cur && cur instanceof HTMLElement && cur !== stopAt; d++) {
         const sample = String(cur.innerText || '').slice(0, 1100);
         const r = cur.getBoundingClientRect();
-        const hMin = Math.min(Math.max(Math.round(window.innerHeight * 0.2), 160), Math.round(window.innerHeight * 0.92));
+        const hMin = Math.min(
+          Math.max(120, Math.round(window.innerHeight * 0.12)),
+          Math.round(window.innerHeight * 0.92)
+        );
         if (
           LABEL_RE.test(sample) &&
           r.width >= 200 &&
