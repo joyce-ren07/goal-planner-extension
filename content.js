@@ -5681,6 +5681,7 @@
 
   function gpGdScoreInspectorCandidate(el, goalTitle, ax, ay) {
     if (!gpGdIsElementVisuallyExposed(el)) return -1;
+    if (gpGdIsGCalLeftSidebarRegion(el)) return -1;
     const r = el.getBoundingClientRect();
     if (r.width < 240 || r.height < 130) return -1;
     let score = Math.min(r.width, 640) * Math.min(r.height, 720);
