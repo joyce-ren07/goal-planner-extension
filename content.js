@@ -5652,6 +5652,22 @@
     return false;
   }
 
+  function gpGdInspectorPassesClickProximity(el) {
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    if (ax == null || ay == null || !Number.isFinite(ax) || !Number.isFinite(ay)) {
+      return !(r.left < vw * 0.22 && r.right < vw * 0.38);
+    }
+    const containsClick =
+      ax >= r.left - 56 && ax <= r.right + 56 && ay >= r.top - 80 && ay <= r.bottom + 80;
+    const dist = Math.hypot((r.left + r.right) / 2 - ax, (r.top + r.bottom) / 2 - ay);
+    if (!containsClick && dist > 640) return false;
+    if (r.left < vw * 0.2 && !containsClick) return false;
+    return true;
+  }
+
   /** True for the floating event inspector / popover (not the left calendar list sidebar). */
   function gpGdIsEventDetailPopupHost(el) {
     if (!(el instanceof HTMLElement) || !el.isConnected) return false;
@@ -5659,29 +5675,32 @@
     if (gpGdIsCalendarGridContainer(el)) return false;
     if (!gpGdIsElementVisuallyExposed(el)) return false;
     const r = el.getBoundingClientRect();
-    const vw = window.innerWidth;
     if (r.width < 200 || r.height < 100) return false;
+    const isDialog =
+      el.matches('[role="dialog"], [role="alertdialog"]') || el.getAttribute('aria-modal') === 'true';
+    const hasClose = gpGdInspectorHasCloseControl(el);
+
+    if (gpGdIsGoalPlannerInspector(el) && (isDialog || hasClose)) {
+      return gpGdInspectorPassesClickProximity(el);
+    }
+
     const t = String(el.innerText || '');
     const hasEventCopy =
       /Goal Planner session for:/i.test(t) ||
       /\bminutes before\b/i.test(t) ||
       (/\d{1,2}:\d{2}/.test(t) && /\b(?:AM|PM)\b/i.test(t) && /\b(?:Organizer|Guests|notification)\b/i.test(t));
     if (!hasEventCopy) return false;
-    const isDialog =
-      el.matches('[role="dialog"], [role="alertdialog"]') || el.getAttribute('aria-modal') === 'true';
-    if (!isDialog && !gpGdInspectorHasCloseControl(el)) return false;
-    const ax = _gpGdAnchorX;
-    const ay = _gpGdAnchorY;
-    if (ax != null && ay != null && Number.isFinite(ax) && Number.isFinite(ay)) {
-      const containsClick =
-        ax >= r.left - 48 && ax <= r.right + 48 && ay >= r.top - 72 && ay <= r.bottom + 72;
-      const dist = Math.hypot((r.left + r.right) / 2 - ax, (r.top + r.bottom) / 2 - ay);
-      if (!containsClick && dist > 520) return false;
-      if (r.left < vw * 0.22 && !containsClick) return false;
-    } else if (r.left < vw * 0.22 && r.right < vw * 0.38) {
-      return false;
-    }
-    return true;
+    if (!isDialog && !hasClose) return false;
+    return gpGdInspectorPassesClickProximity(el);
+  }
+
+  /** Block lives in the visible event popup for this open gesture (not a stale/hidden clone). */
+  function gpGdBlockInCurrentEventPopup(wrap, shell, goalTitle) {
+    if (!(wrap instanceof HTMLElement) || !(shell instanceof HTMLElement)) return false;
+    if (!gpGdIsEventDetailPopupHost(shell)) return false;
+    if (!gpGdComposedSubtreeContains(shell, wrap)) return false;
+    if (!gpGdIsGoalBlockVisible(wrap)) return false;
+    return gpGdBlockInFrontInspector(wrap, goalTitle) || gpGdIsGoalBlockWellPlaced(wrap, shell, false);
   }
 
   function gpGdFilterEventDetailPopupHosts(hosts) {
