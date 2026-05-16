@@ -170,6 +170,32 @@
     return `${session?.isoStart ?? ''}|${session?.isoEnd ?? ''}`;
   }
 
+  /** Goal create flow Screen 3 only — used to avoid tearing down overlay on transient DOM/paint churn. */
+  function isGhostCreationPreviewUiActive() {
+    const panel = document.getElementById('gp-panel');
+    if (!panel?.classList.contains('open')) return false;
+    const suggScr = document.getElementById('gp-screen-suggestions');
+    if (!suggScr?.classList.contains('active')) return false;
+    return !state.editingGoalId;
+  }
+
+  /** Clear ghost chip nodes only; keeps #gp-ghost-preview-host mounted in the calendar scroll shell. */
+  function clearGhostPreviewChipsOnly() {
+    if (_gpGhostTipEl?.classList) {
+      try {
+        _gpGhostTipEl.classList.remove('gp-ghost-tip-active');
+      } catch (_) {
+        /* ignore */
+      }
+      _gpGhostTipEl = null;
+    }
+    document.querySelectorAll('body > .goal-ghost-event').forEach((el) => el.remove());
+    const root =
+      document.querySelector('#gp-ghost-preview-host #gp-ghost-preview-root') ||
+      document.getElementById('gp-ghost-preview-root');
+    if (root) root.replaceChildren();
+  }
+
   // ── Ghost events: remove preview DOM + tear down in-scroll ghost host ──
   function removeGhostEvents() {
     if (_gpGhostTipEl?.classList) {
