@@ -6692,6 +6692,11 @@
     const goalId = String(goal?.id ?? '');
     const token = String(tokenHint || '');
 
+    if (gpGdIsGoalPlannerExtensionSurface(dialogShell)) {
+      gpGdTrace('abort render — extension chrome host');
+      return null;
+    }
+
     const subtasks = gpGdSubtasksWithTitles(goal);
 
     const existing = __gpGdBlockEl;
