@@ -5209,6 +5209,22 @@
   }
 
   function gpGdRunDetailHydratePass() {
+    const now = Date.now();
+    const ext = __gpGdBlockEl;
+    if (
+      ext?.isConnected &&
+      now - _gpGdLastFullHydrateAt < 320 &&
+      (now < _gpGdHydrateQuietUntil || gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
+    ) {
+      const shell =
+        ext.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+        ext.parentElement;
+      if (shell instanceof HTMLElement) {
+        gpGdStabilizeMountedDetailBlock(ext, shell, null);
+      }
+      return;
+    }
+    _gpGdLastFullHydrateAt = now;
     void gpGdHydrateMountedDetailDecoration().catch((err) => {
       gpGdTrace('hydrate error', err);
     });
