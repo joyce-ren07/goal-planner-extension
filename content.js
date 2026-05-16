@@ -5155,7 +5155,7 @@
     gpGdTrace('pinned session hints', hints);
   }
 
-  function gpGdOnUserOpenedGoalSession(e) {
+  function gpGdOnUserOpenedGoalSession(e, phase) {
     if (!_gpCalInspectDetailObserversInstalled) setupGpCalGoalDetailEnrichment();
     const chip = gpGdResolveGoalChipFromEvent(e);
     if (!chip) return;
@@ -5163,10 +5163,20 @@
       _gpGdAnchorX = e.clientX;
       _gpGdAnchorY = e.clientY;
     }
+
+    if (phase === 'down') {
+      gpGdPinSessionHintsFromChip(chip);
+      gpGdPrefetchDetailData();
+      gpGdStartInspectorPinWatch();
+      return;
+    }
+
     gpGdPinSessionHintsFromChip(chip);
     _gpGdRemountCount = 0;
     _gpGdRemountGoalKey = '';
+    _gpGdHydrateQuietUntil = 0;
     scheduleGpGdInspectorOpenBurst();
+    gpGdRunDetailHydratePass();
   }
 
   function gpGdConsumePinnedSessionHints() {
