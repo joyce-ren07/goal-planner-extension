@@ -4743,13 +4743,50 @@
    * re-align and skip full hint scanning (prevents MO thrash + unrelated calendar-id MISS spam).
    * @returns {boolean} true when an existing mounted block was kept
    */
+  function gpGdStabilizeMountedDetailBlock(ext, dialogShell, hit) {
+    if (!(ext instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return;
+    _gpGdMutatingDetailUi = true;
+    try {
+      const card = gpGdResolveInspectorCardRoot(dialogShell, ext.dataset.gpGoalId || '');
+      if (card instanceof HTMLElement) {
+        const parent = ext.parentElement;
+        const cr = card.getBoundingClientRect();
+        const pr = parent?.getBoundingClientRect?.();
+        const needsReparent =
+          !parent ||
+          !gpGdComposedSubtreeContains(card, ext) ||
+          !!(pr && cr.width >= 200 && pr.width > cr.width * 1.12);
+        if (needsReparent) gpGdForceMountIntoCard(ext, card, null);
+        else gpGdApplyCardContainmentStyles(ext, card);
+        if (!gpGdGetDetailMarkCompleteBtn()) {
+          gpGdMountMarkCompleteFooter(
+            gpGdBuildMarkCompleteButton(!!hit?.session?.completed),
+            card
+          );
+        } else {
+          gpGdSyncMarkCompleteButton(!!hit?.session?.completed);
+        }
+        gpGdAlignMarkFooterToCard(dialogShell);
+      }
+      if (hit?.goal) gpGdRefreshDetailSubtasks(ext, hit);
+      gpGdEnsureDetailDelegates(ext, hit || gpGdDetailHitFromWrap(ext));
+      _gpGdHydrateQuietUntil = Date.now() + 15000;
+      _gpGdRemountCount = 0;
+      gpGdMarkDetailScanActive(15000);
+    } finally {
+      window.setTimeout(() => {
+        _gpGdMutatingDetailUi = false;
+      }, 100);
+    }
+  }
+
   function gpGdTryProtectMountedDetailBlock(host) {
     const ext = __gpGdBlockEl;
     if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
       return false;
     }
     if (!gpGdIsValidEventDetailInspectorShell(host)) {
-      teardownGpGdBlock();
+      if (Date.now() >= _gpGdHydrateQuietUntil) teardownGpGdBlock();
       return false;
     }
     const inHost =
@@ -4757,18 +4794,8 @@
       (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
     if (!inHost) return false;
 
-    const card = gpGdResolveInspectorCardRoot(host, ext.dataset.gpGoalId || '');
-    if (card instanceof HTMLElement) {
-      gpGdForceMountIntoCard(ext, card, null);
-      gpGdAlignInjectedBlockToCard(ext, host);
-      gpGdAlignMarkFooterToCard(host);
-    }
-    if (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) {
-      _gpGdHydrateQuietUntil = Date.now() + 15000;
-      gpGdMarkDetailScanActive(15000);
-      return true;
-    }
-    return false;
+    gpGdStabilizeMountedDetailBlock(ext, host, gpGdDetailHitFromWrap(ext));
+    return true;
   }
 
   /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
