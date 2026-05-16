@@ -6105,12 +6105,15 @@
   /** @param {SVGSVGElement | null} checkInner */
   function gpGdApplySubtaskRingVisual(ring, checkInner, completed) {
     if (!(ring instanceof HTMLButtonElement)) return;
+    ring.classList.toggle('gp-gd-st-ring--on', !!completed);
     if (completed) {
       ring.style.background = '#039be5';
+      ring.style.border = '2px solid #039be5';
       ring.style.borderColor = '#039be5';
       if (checkInner) checkInner.style.opacity = '1';
     } else {
       ring.style.background = 'transparent';
+      ring.style.border = '2px solid #5f6368';
       ring.style.borderColor = '#5f6368';
       if (checkInner) checkInner.style.opacity = '0';
     }
