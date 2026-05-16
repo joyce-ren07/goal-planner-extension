@@ -4848,6 +4848,20 @@
         (gpChipDoneKeyMatchesCalEventId(String(storedId), domHint) ||
           gpChipDoneMirrorStrictPair(String(storedId), domHint)));
 
+    if (_gpGdPinnedGoalId && _gpGdPinnedSlotIdx >= 0) {
+      const gi = state.goals.findIndex((g) => String(g.id) === String(_gpGdPinnedGoalId));
+      if (gi >= 0) {
+        const g = state.goals[gi];
+        const list = g.sessions || [];
+        if (_gpGdPinnedSlotIdx < list.length) {
+          const s = list[_gpGdPinnedSlotIdx];
+          if (s?.eventId && flex(s.eventId, domHint)) {
+            return { goal: g, session: s, gIdx: gi, sIdx: _gpGdPinnedSlotIdx };
+          }
+        }
+      }
+    }
+
     const tight = Model.findSessionByEventId(state, domHint);
     if (tight && tight.goal) return tight;
 
