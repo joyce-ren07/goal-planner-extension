@@ -8592,8 +8592,8 @@
       chip.closest('[data-eventid]')?.getAttribute('data-eventid')
     );
     if (slotIdx < 0) slotIdx = readChipSlotIndexFromDataset(chip, allowed.length);
-    if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow, legacyGoals);
     if (slotIdx < 0) slotIdx = resolveSlotIndexByAnchorTime(chip, goalRow);
+    if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow, legacyGoals);
     if (slotIdx >= 0 && allowed[slotIdx] != null) {
       const id = String(allowed[slotIdx]);
       chip.dataset.gpCalEventId = id;
