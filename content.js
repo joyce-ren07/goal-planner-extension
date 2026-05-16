@@ -51,6 +51,7 @@
   /** Scroll shell that successfully hosted a preview paint — avoids reparent/tear-down churn. */
   let _gpGhostLockedScrollCont = /** @type {HTMLElement | null} */ (null);
   let _gpGhostPreviewRecoveryMo = /** @type {MutationObserver | null} */ (null);
+  let _gpGhostPreviewRecoveryWatchEl = /** @type {HTMLElement | null} */ (null);
   let _gpGhostPreviewRecoveryDebounce = 0;
   let _gpGhostCueRaf = 0;
   /** Ghost under pointer for “Planned” tooltip cue (interaction only; no Goal state). */
