@@ -5104,7 +5104,7 @@
 
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
     if (dialogShell instanceof HTMLElement) {
-      for (const n of [...dialogShell.querySelectorAll('#gp-gcal-detail-goal-extension')]) {
+      for (const n of gpGdQuerySelectorAllDeep(dialogShell, '#gp-gcal-detail-goal-extension')) {
         try {
           n.remove();
         } catch (_) {
