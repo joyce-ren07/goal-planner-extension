@@ -5980,7 +5980,7 @@
         : gpGdPickGoalDetailMountParent(dialogHost, null);
     if (cardRoot instanceof HTMLElement) {
       mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost);
-      if (gpGdIsInvalidDetailMountTarget(mountParent)) mountParent = cardRoot;
+      if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) mountParent = cardRoot;
     }
 
     const insertBefore =
