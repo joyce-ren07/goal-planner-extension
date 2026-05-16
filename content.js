@@ -5512,6 +5512,7 @@
     _gpGdRemountCount = 0;
     _gpGdRemountGoalKey = '';
     if (duplicateGesture && gpGdDetailBlockReady()) return;
+    _gpGdPlacementLocked = false;
     scheduleGpGdInspectorOpenBurst();
     gpGdStartInspectorOpenWatch();
     scheduleGpGdDialogScan();
