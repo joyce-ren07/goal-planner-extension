@@ -3580,6 +3580,14 @@
     return [...keys];
   }
 
+  function scheduleGoalsSidebarReactiveWork(fn) {
+    window.clearTimeout(_gpSidebarReactiveTimer);
+    _gpSidebarReactiveTimer = window.setTimeout(() => {
+      _gpSidebarReactiveTimer = 0;
+      void fn();
+    }, 140);
+  }
+
   function setupGoalsSidebarReactiveBinding() {
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.subscribeGoalsState) return;
@@ -3587,40 +3595,37 @@
     globalThis.__gpGoalsSidebarReactiveBound = true;
     Model.subscribeGoalsState((evt) => {
       if (!evt?.state) return;
-      queueMicrotask(() => {
-        (async () => {
-          try {
-            const st = evt.state;
-            const meta = evt.meta || {};
-            if (meta.goalId) {
-              const g = st.goals?.find((x) => String(x.id) === String(meta.goalId));
-              if (g && GP_MY_GOALS_SIDEBAR_DIAG) {
-                const snap = goalUnifiedProgressSnapshot(g);
-                gpMyGoalsSidebarDiag('reactive unified → sidebar patch', {
-                  goalId: meta.goalId,
-                  completedSessions: snap.completedSessions,
-                  progressPct: snap.progressPct,
-                });
-              }
-            }
-            if (meta.reason === 'sessionCompletion') {
-              const legacyForEvt = await getGoals();
-              const slotPackEvt = await new Promise((r) =>
-                chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
-              );
-              await patchMyGoalsSidebarProgressRows(st, {
-                ...meta,
-                slotPackOverride: slotPackEvt,
+      scheduleGoalsSidebarReactiveWork(async () => {
+        try {
+          const st = evt.state;
+          const meta = evt.meta || {};
+          if (meta.goalId) {
+            const g = st.goals?.find((x) => String(x.id) === String(meta.goalId));
+            if (g && GP_MY_GOALS_SIDEBAR_DIAG) {
+              const snap = goalUnifiedProgressSnapshot(g);
+              gpMyGoalsSidebarDiag('reactive unified → sidebar patch', {
+                goalId: meta.goalId,
+                completedSessions: snap.completedSessions,
+                progressPct: snap.progressPct,
               });
-              return;
             }
-            const applyMeta = isSidebarStructuralMeta(meta) ? meta : { reason: 'goalsSync' };
-            await applyGoalsSidebarFromUnifiedState(st, null, applyMeta);
-            await patchMyGoalsSidebarProgressRows(st, meta);
-          } catch (_) {
-            /* sidebar optional */
           }
-        })();
+          if (meta.reason === 'sessionCompletion') {
+            const slotPackEvt = await new Promise((r) =>
+              chrome.storage.local.get(['gp_goal_slot_done'], (d) => r(d.gp_goal_slot_done || {}))
+            );
+            await patchMyGoalsSidebarProgressRows(st, {
+              ...meta,
+              slotPackOverride: slotPackEvt,
+            });
+            return;
+          }
+          const applyMeta = isSidebarStructuralMeta(meta) ? meta : { reason: 'goalsSync' };
+          await applyGoalsSidebarFromUnifiedState(st, null, applyMeta);
+          await patchMyGoalsSidebarProgressRows(st, meta);
+        } catch (_) {
+          /* sidebar optional */
+        }
       });
     });
   }
