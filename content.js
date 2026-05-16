@@ -6542,10 +6542,17 @@
     const subtasks = gpGdSubtasksWithTitles(goal);
 
     const existing = __gpGdBlockEl;
+    if (existing?.isConnected && gpGdIsGCalLeftSidebarRegion(existing)) {
+      teardownGpGdBlock();
+    }
     const frontInspector =
       gpGdFindOpenInspectorNearClick(goal?.title) ||
       gpGdFindFrontGoalInspector(goal?.title) ||
       (dialogShell instanceof HTMLElement ? dialogShell : null);
+    if (frontInspector instanceof HTMLElement && !gpGdIsEventDetailPopupHost(frontInspector)) {
+      const fixed = gpGdFindEventInspectorShell(goal?.title);
+      if (fixed instanceof HTMLElement) dialogShell = fixed;
+    }
     if (existing?.isConnected && existing.dataset.gpGoalId === goalId) {
       const shell =
         frontInspector instanceof HTMLElement ? frontInspector : dialogShell;
