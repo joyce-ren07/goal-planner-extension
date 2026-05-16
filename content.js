@@ -9107,7 +9107,7 @@
       let touched = false;
       for (const m of mutations) {
         if (m.type === 'childList') {
-          forEachGoalChipInNodeList(m.addedNodes, (chip) => {
+          forEachGoalChipCandidateInNodeList(m.addedNodes, (chip) => {
             touched = true;
             if (primeGoalChipInstant(chip)) primed = true;
           });
