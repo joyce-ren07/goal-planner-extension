@@ -5370,6 +5370,7 @@
   }
 
   let _gpGdScanTimer = 0;
+  let _gpGdScanPending = false;
   let _gpGdDetailRefreshTimer = 0;
 
   /** Last mounted extension node (detached automatically when inspector closes). */
