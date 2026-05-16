@@ -5644,12 +5644,15 @@
     const pr = wrap.parentElement?.getBoundingClientRect?.();
     if (!pr || cr.width < 200) return false;
 
-    const w = Math.round(cr.width - 32);
+    const inset = 16;
+    const parentW = pr.width > 0 ? pr.width : cr.width;
+    const w = Math.max(120, Math.min(Math.round(cr.width - inset * 2), Math.round(parentW - inset * 2)));
     wrap.style.width = w + 'px';
-    wrap.style.maxWidth = w + 'px';
+    wrap.style.maxWidth = '100%';
     wrap.style.boxSizing = 'border-box';
+    wrap.style.overflow = 'hidden';
 
-    const targetLeft = Math.round(cr.left + 16);
+    const targetLeft = Math.round(cr.left + inset);
     const marginLeft = Math.max(0, targetLeft - Math.round(pr.left));
     wrap.style.marginLeft = marginLeft + 'px';
     wrap.style.marginRight = 'auto';
