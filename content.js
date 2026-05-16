@@ -3247,7 +3247,8 @@
    * @param {{ reason?: string, goalId?: string }} [meta] Session toggles narrow to one card when safe
    */
   async function applyGoalsSidebarFromUnifiedState(state, legacyByIdCache, meta) {
-    mountLeftSidebarGoalsSection();
+    const rootBefore = document.getElementById('gp-gcal-sidebar-goals-root');
+    if (!rootBefore?.isConnected) mountLeftSidebarGoalsSection();
     const container =
       document.getElementById('gp-gcal-sidebar-goals-cards') ||
       document.querySelector('#gp-gcal-sidebar-goals-root .gcal-ext-goals-list');
