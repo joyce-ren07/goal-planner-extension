@@ -8297,13 +8297,19 @@
 
   // ── Re-inject only when GCal removes our overlay root (no storage-driven UI flapping here) ──
   function restoreChip(chip, goalData) {
+    if (!chip?.isConnected) return;
     if (chip.querySelector('.ext-goal-root')) return;
-    chrome.storage.local.get(['gp_chip_done'], d => {
-      if (chip.querySelector('.ext-goal-root')) return;
-      const doneMap = d.gp_chip_done || {};
-      const isDone = !!doneMap[goalData.chipKey];
-      injectGoalChipContent(chip, goalData, isDone);
-    });
+    chip.classList.add('ext-goal-chip');
+    const run = () => {
+      if (!chip.isConnected || chip.querySelector('.ext-goal-root')) return;
+      chrome.storage.local.get(['gp_chip_done'], (d) => {
+        if (!chip.isConnected || chip.querySelector('.ext-goal-root')) return;
+        const doneMap = d.gp_chip_done || {};
+        const isDone = !!doneMap[goalData.chipKey];
+        injectGoalChipContent(chip, goalData, isDone);
+      });
+    };
+    requestAnimationFrame(run);
   }
 
   // ── Forensic diagnostic: log chip DOM structure and pointer-event state ──
