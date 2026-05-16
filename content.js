@@ -5349,9 +5349,109 @@
     return null;
   }
 
-  function gpGdChipLooksLikeGoalSession(chip) {
+  /** Decorated Goal Planner chip only — not native GCal events (even if title contains 🎯). */
+  function gpGdChipIsDecoratedGoalSession(chip) {
     if (!(chip instanceof HTMLElement)) return false;
-    return chip.classList.contains('ext-goal-chip') || chip.textContent.includes('🎯');
+    if (!chip.matches('[data-eventchip]')) return false;
+    if (chip.dataset.gpGoalId) return true;
+    if (chip.querySelector('.ext-goal-root .ext-goal-badge')) return true;
+    if (chip.querySelector('.ext-goal-root:not(.ext-goal-root--prime)')) return true;
+    const ec = chip.closest('[data-eventid]');
+    return !!(ec instanceof HTMLElement && ec.classList.contains('gp-goal-event'));
+  }
+
+  function gpGdChipLooksLikeGoalSession(chip) {
+    return gpGdChipIsDecoratedGoalSession(chip);
+  }
+
+  function gpGdClearPinnedSessionHints() {
+    _gpGdPinnedHints = [];
+    _gpGdPinnedGoalId = '';
+    _gpGdPinnedSlotIdx = -1;
+    _gpGdPinnedAt = 0;
+  }
+
+  function gpGdHasRecentGoalChipOpenIntent() {
+    return !!(
+      _gpGdPinnedGoalId &&
+      _gpGdPinnedHints.length &&
+      Date.now() - _gpGdPinnedAt < 90000
+    );
+  }
+
+  function gpGdEventHintsOverlap(a, b) {
+    const listB = (b || []).map((x) => String(x)).filter(Boolean);
+    if (!listB.length) return false;
+    for (const raw of a || []) {
+      const s = raw == null || raw === '' ? '' : String(raw);
+      if (!s) continue;
+      for (const other of listB) {
+        if (s === other) return true;
+        if (gpChipDoneKeyMatchesCalEventId(s, other)) return true;
+        if (gpChipDoneMirrorStrictPair(s, other)) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Goal Planner sessions are created with a 🎯 prefix in the calendar summary. */
+  function gpGdInspectorShowsGoalPlannerSession(shell, goalTitle) {
+    if (!(shell instanceof HTMLElement)) return false;
+    const text = String(shell.innerText || '').slice(0, 2400);
+    if (text.includes('🎯')) return true;
+    const t = String(goalTitle || '').trim();
+    if (!t) return false;
+    return (
+      text.toLowerCase().includes(t.toLowerCase()) &&
+      (/\bGoal\b/i.test(text) || text.includes('My goals'))
+    );
+  }
+
+  /**
+   * Allow goal detail injection only for sessions that exist in gp_goals and were opened
+   * from a decorated goal chip (or an inspector that matches the pinned chip event).
+   */
+  function gpGdMayInjectGoalDetailForHit(hit, legacyGoals, hints, inspectorShell) {
+    if (!hit?.goal?.id || !hit?.session?.eventId) return false;
+    const gid = String(hit.goal.id);
+    const legacy = (Array.isArray(legacyGoals) ? legacyGoals : []).find(
+      (g) => String(g.id) === gid
+    );
+    if (!legacy) return false;
+    const ids = legacy.calEventIds || [];
+    const eid = String(hit.session.eventId);
+    const inPlan = ids.some(
+      (id) =>
+        id != null &&
+        id !== '' &&
+        (String(id) === eid || gpChipDoneKeyMatchesCalEventId(String(id), eid))
+    );
+    if (!inPlan) return false;
+
+    if (
+      inspectorShell instanceof HTMLElement &&
+      !gpGdInspectorShowsGoalPlannerSession(inspectorShell, hit.goal.title)
+    ) {
+      return false;
+    }
+
+    const hintList = Array.isArray(hints) ? hints.filter(Boolean) : [];
+
+    if (gpGdHasRecentGoalChipOpenIntent() && String(_gpGdPinnedGoalId) === gid) {
+      if (!(inspectorShell instanceof HTMLElement)) return true;
+      const hostHints = gpCollectEventIdHintsFromRoot(inspectorShell);
+      const pinHints = hintList.length ? hintList : _gpGdPinnedHints;
+      return gpGdEventHintsOverlap(pinHints, hostHints);
+    }
+
+    for (const h of hintList) {
+      const chip = gpFindChipForPlannerEventFlexible(h);
+      if (!chip || !gpGdChipIsDecoratedGoalSession(chip)) continue;
+      const chipGid = chip.dataset.gpGoalId ? String(chip.dataset.gpGoalId) : '';
+      if (!chipGid || chipGid === gid) return true;
+    }
+
+    return false;
   }
 
   function gpGdPinSessionHintsFromChip(chip) {
