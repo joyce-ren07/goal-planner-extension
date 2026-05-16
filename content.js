@@ -245,20 +245,22 @@
       columns.push({ date: new Date(year, month, day), left: rect.left, width: rect.width });
     });
 
-    // Fallback: data-datekey="20260420" OR compact GCal datekey; data-date="YYYYMMDD" on some builds
+    // Fallback: data-datekey compact int / YYYYMMDD — pick widest cell per calendar day (many slots share a key).
     if (!columns.length) {
-      document.querySelectorAll('[data-datekey], [data-date]').forEach(el => {
+      const best = new Map();
+      document.querySelectorAll('[data-datekey], [data-date]').forEach((el) => {
         if (el.closest('#gp-panel')) return;
         const dkRaw = el.getAttribute('data-datekey') || el.getAttribute('data-date');
         const dt = calendarDateFromGCalDateAttr(dkRaw);
         if (!dt) return;
         const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-
         const rect = el.getBoundingClientRect();
         if (rect.width < 10) return;
-        columns.push({ date: dt, left: rect.left, width: rect.width });
+        const prev = best.get(key);
+        if (!prev || rect.width > prev.width) best.set(key, { date: dt, left: rect.left, width: rect.width });
+      });
+      best.forEach((col) => {
+        columns.push(col);
       });
     }
     return columns;
