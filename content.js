@@ -5566,9 +5566,19 @@
       return;
     }
 
+    const barHintsCached = gpGdCollectLocationBarEventHints();
+
     /** First dialog that yields a Planner hit wins (multi-open edge). */
     for (const host of natives) {
-      const hints = gpCollectEventIdHintsFromRoot(host);
+      const hintsDom = gpCollectEventIdHintsFromRoot(host);
+      const hintDedup = new Set(hintsDom);
+      const hints = [...hintsDom];
+      for (const h of barHintsCached) {
+        if (hintDedup.has(h)) continue;
+        hintDedup.add(h);
+        hints.push(h);
+      }
+
       for (let hi = 0; hi < hints.length; hi++) {
         const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
 
