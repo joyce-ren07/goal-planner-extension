@@ -82,6 +82,14 @@
 
   // ── Ghost events: remove all from DOM and tear down scroll listener ──
   function removeGhostEvents() {
+    if (_gpGhostTipEl?.classList) {
+      try {
+        _gpGhostTipEl.classList.remove('gp-ghost-tip-active');
+      } catch (_) {
+        /* ignore */
+      }
+      _gpGhostTipEl = null;
+    }
     document.querySelectorAll('.goal-ghost-event').forEach((el) => el.remove());
     if (_ghostScrollEl && _ghostScrollHandler) {
       _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
