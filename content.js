@@ -6910,12 +6910,6 @@
         scheduleGpGdFromUnifiedEcho();
       });
 
-      if (!globalThis.__gpGdDelegatedGoalClickInstalled) {
-        globalThis.__gpGdDelegatedGoalClickInstalled = true;
-        document.addEventListener('click', gpGdOnDelegatedGoalCalendarClick, true);
-        gpGdTrace('delegated capture click listener installed');
-      }
-
       scheduleGpGdFromUnifiedEcho();
       return true;
     }
