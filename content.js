@@ -6603,6 +6603,7 @@
     if (!natives.length) {
       if (pinnedRaw.length) {
         gpGdTrace('no inspector host yet — will retry', pinnedRaw[0]);
+        gpGdDiag('popup: MISS — no native dialog hosts yet (pinned)', pinnedRaw[0]);
         return;
       }
       teardownGpGdBlock();
