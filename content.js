@@ -245,20 +245,20 @@
       columns.push({ date: new Date(year, month, day), left: rect.left, width: rect.width });
     });
 
-    // Fallback: data-datekey="20260420" attribute used by some GCal builds
+    // Fallback: data-datekey="20260420" OR compact GCal datekey; data-date="YYYYMMDD" on some builds
     if (!columns.length) {
-      document.querySelectorAll('[data-datekey]').forEach(el => {
+      document.querySelectorAll('[data-datekey], [data-date]').forEach(el => {
         if (el.closest('#gp-panel')) return;
-        const key = el.getAttribute('data-datekey');
-        if (!/^\d{8}$/.test(key)) return;
-        const y = parseInt(key.slice(0, 4)), mo = parseInt(key.slice(4, 6)) - 1, d = parseInt(key.slice(6, 8));
-        const dk = `${y}-${mo}-${d}`;
-        if (seen.has(dk)) return;
-        seen.add(dk);
-  
+        const dkRaw = el.getAttribute('data-datekey') || el.getAttribute('data-date');
+        const dt = calendarDateFromGCalDateAttr(dkRaw);
+        if (!dt) return;
+        const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+
         const rect = el.getBoundingClientRect();
         if (rect.width < 10) return;
-        columns.push({ date: new Date(y, mo, d), left: rect.left, width: rect.width });
+        columns.push({ date: dt, left: rect.left, width: rect.width });
       });
     }
     return columns;
