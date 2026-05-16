@@ -4667,7 +4667,36 @@
     return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   }
 
-  /** Event detail enrichment — observes only which native dialog hosts an event key; rendered data flows from unified GoalPlannerModel state (+ storage echoes). */
+  /**
+   * GOAL SESSION POPUP — interception chain (content.js)
+   * ─────────────────────────────────────────────────────
+   * ENTRY (single path after this refactor):
+   *   document capture click → gpGdOnDelegatedGoalCalendarClick
+   *     → gpGdClassifyCalendarGoalClick (event-id in gp_goals / unified first; 🎯 / ext-goal-chip fallback)
+   *     → gpGdPinFromClickContext (pins DOM event ids + goal id + click anchor)
+   *     → gpGdWaitForInspectorAndInject (poll native GCal inspector ≤3s, dim → hydrate → fade in)
+   *       → gpGdHydrateMountedDetailDecoration → gpGdRenderDetailBlock (existing UI; unchanged)
+   *
+   * REFRESH ONLY (popup already open):
+   *   chrome.storage.onChanged / GoalPlannerModel.subscribeGoalsState
+   *     → scheduleGpGdFromUnifiedEcho → gpGdAttemptUnifiedEchoHydrate
+   *   Per-dialog repair MutationObserver (GCal removed our aside)
+   *     → gpGdRunDetailHydratePass
+   *
+   * NOT part of popup open (separate):
+   *   GoalInteractionController — document capture click on .ext-check-circle only
+   *   processGoalEventDecoration — chip overlay on grid (not event inspector)
+   *
+   * REMOVED (competed with entry path — caused misses + glitching):
+   *   pointerdown + duplicate click handlers, focusin bumps, body MutationObserver scans,
+   *   scheduleGpGdInspectorOpenBurst, gpGdStartInspectorPinWatch
+   *
+   * RACE CONDITIONS ADDRESSED:
+   *   • Dynamic GCal blocks: capture delegation on document (not per-chip listeners)
+   *   • Click before inspector DOM: waitForInspector poll, never intercept at pointerdown
+   *   • ID mismatch DOM↔API: resolvePlannerEventIdForChip + legacyGoalIdForPlannerEventCandidates
+   *   • Undecorated blocks: match data-eventid against gp_goals[].calEventIds[] without requiring ext-goal-chip
+   */
 
   /** Lightweight pipeline trace — set false once popup injection is stable. */
   const GP_GOAL_DETAIL_TRACE = false;
