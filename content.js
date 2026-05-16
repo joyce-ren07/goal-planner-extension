@@ -6772,15 +6772,16 @@
 
   async function gpGdPersistSubtaskRingToggle(wrapHost, subId, nextCompleted) {
     const gid = wrapHost.dataset.gpGoalId;
-    if (!gid) return;
+    if (!gid) return null;
     const goals = await getGoals();
     const gRow = goals.find((g) => String(g.id) === String(gid));
-    if (!gRow) return;
+    if (!gRow) return null;
     const list = gpNormalizeSubtasksForPersist(gRow.subtasks).map((item) =>
       String(item.id) === String(subId) ? { ...item, completed: !!nextCompleted } : item
     );
-    await gpDetailPersistGoalSubtasksAndMirror(gid, list);
+    const row = await gpDetailPersistGoalSubtasksAndMirror(gid, list);
     scheduleGpGdFromUnifiedEcho();
+    return row;
   }
 
   async function gpGdAppendSubtaskInline(wrapHost, titleTrim) {
