@@ -5602,7 +5602,7 @@
       seenNodes.add(el);
       out.push(el);
     }
-    return gpGdFilterEventDetailPopupHosts(out);
+    return out.filter((h) => h instanceof HTMLElement && !gpGdIsGCalLeftSidebarRegion(h));
   }
 
   /** Strip Google-native “Take meeting notes” / “Start a new document” rows — Goal block replaces that affordance. */
