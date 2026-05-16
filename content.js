@@ -6948,6 +6948,7 @@
       return scoreA - scoreB;
     });
     natives = gpGdPruneNestedInspectorHosts(natives);
+    natives = natives.filter((h) => gpGdInspectorHostIsOnScreen(h));
 
     let host =
       gpGdFindEventInspectorShell('') || gpGdPickBestVisibleInspectorHost(natives, '');
