@@ -7774,9 +7774,15 @@
         scheduleGpGdFromUnifiedEcho();
       });
 
-      const obs = new MutationObserver(() => {
+      const obs = new MutationObserver((records) => {
         gpGdDiag('MO: document childList mutation');
         gpGdTeardownOrphanedDetailUi();
+        if (
+          records.length &&
+          records.every((rec) => gpGdMutationIsGhostPreviewOnly(rec))
+        ) {
+          return;
+        }
         if (!gpGdShouldRunDetailScan()) return;
         const ext = __gpGdBlockEl;
         if (
