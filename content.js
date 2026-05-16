@@ -8471,12 +8471,29 @@
     }
   }
 
+  function eventContainerLooksLikeGoal(eventContainer) {
+    if (!(eventContainer instanceof HTMLElement)) return false;
+    const blob = [
+      eventContainer.getAttribute('aria-label'),
+      eventContainer.getAttribute('data-tooltip'),
+      eventContainer.getAttribute('title'),
+    ]
+      .filter(Boolean)
+      .join('\n');
+    return blob.includes('🎯');
+  }
+
+  function markGoalEventContainer(chip) {
+    const ec = chip?.closest?.('[data-eventid]');
+    if (ec instanceof HTMLElement && eventContainerLooksLikeGoal(ec)) {
+      ec.classList.add('gp-goal-event');
+    }
+  }
+
   function isGoalCalendarChip(el) {
-    return (
-      el instanceof HTMLElement &&
-      el.matches?.('[data-eventchip]') &&
-      String(el.textContent || '').includes('🎯')
-    );
+    if (!(el instanceof HTMLElement) || !el.matches?.('[data-eventchip]')) return false;
+    if (String(el.textContent || '').includes('🎯')) return true;
+    return eventContainerLooksLikeGoal(el.closest('[data-eventid]'));
   }
 
   /** Synchronous: class + solid overlay shell so native GCal paint never shows between frames. */
