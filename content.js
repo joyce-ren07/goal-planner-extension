@@ -5624,6 +5624,23 @@
         __gpGdBlockEl.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
         __gpGdBlockEl.parentElement;
       if (
+        shell instanceof HTMLElement &&
+        gpGdIsValidEventDetailInspectorShell(shell) &&
+        !gpGdIsExtensionUiSurface(__gpGdBlockEl)
+      ) {
+        for (const el of document.querySelectorAll(
+          '#gp-gcal-detail-goal-extension, #gp-gcal-detail-mark-footer'
+        )) {
+          if (el === __gpGdBlockEl || el === __gpGdMarkFooterEl) continue;
+          try {
+            el.remove();
+          } catch (_) {
+            /* ignore */
+          }
+        }
+        return;
+      }
+      if (
         !(shell instanceof HTMLElement) ||
         !gpGdIsValidEventDetailInspectorShell(shell) ||
         gpGdIsExtensionUiSurface(__gpGdBlockEl)
