@@ -1205,8 +1205,10 @@
 }
 
 /* Keep GCal's native chip paint suppressed while our overlay owns the chip (avoids flash when GCal rewires DOM). */
-[data-eventchip].ext-goal-chip > :not(.ext-goal-root) {
+[data-eventchip].ext-goal-chip > :not(.ext-goal-root),
+[data-eventchip][data-gp-goal-pending] > :not(.ext-goal-root) {
   visibility: hidden !important;
+  opacity: 0 !important;
   pointer-events: none !important;
 }
 
