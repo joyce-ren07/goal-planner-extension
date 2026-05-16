@@ -6418,19 +6418,17 @@
       gpGdTrace('abort render — no event inspector shell near click');
       return null;
     }
-    const cardRoot =
-      gpGdFindNativeGcalPopupCard(shell) ||
-      gpGdFindVisibleEventCardForGoal(shell, goal?.title) ||
-      gpGdFindEventDetailCardRoot(shell);
-    if (!(cardRoot instanceof HTMLElement) || gpGdIsInvalidDetailMountTarget(cardRoot)) {
+    const cardRoot = gpGdResolveInspectorCardRoot(shell, goal?.title);
+    if (!(cardRoot instanceof HTMLElement) || gpGdIsWeekGridMountSurface(cardRoot)) {
       gpGdTrace('abort render — no narrow inspector card');
-      gpGdDiag('inject: abort — card root missing or too wide', {
+      gpGdDiag('inject: abort — card root missing or grid surface', {
         cardWidth: cardRoot?.getBoundingClientRect?.()?.width,
+        shellWidth: shell?.getBoundingClientRect?.()?.width,
       });
       return null;
     }
     const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell);
-    if (gpGdIsInvalidDetailMountTarget(mountParent)) {
+    if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) {
       gpGdTrace('abort render — mount parent invalid');
       return null;
     }
