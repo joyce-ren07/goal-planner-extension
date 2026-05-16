@@ -5076,10 +5076,6 @@
   let _gpGdPrefetch = { at: 0, unified: null, goals: null };
   /** @type {Promise<void> | null} */
   let _gpGdPrefetchPromise = null;
-  /** @type {MutationObserver | null} */
-  let _gpGdPinWatchMo = null;
-  let _gpGdPinWatchDebounce = 0;
-
   function gpGdMarkDetailScanActive(ms) {
     _gpGdDetailScanActiveUntil = Date.now() + (ms || 12000);
   }
