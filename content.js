@@ -4993,15 +4993,31 @@
       ? goal.subtasks.filter((st) => st && String(st.title || '').trim().length > 0)
       : [];
 
-    const subtasksRows = subtasks
-      .map(
-        (t) =>
-          `<label class="gp-gd-subtask"><input type="checkbox" data-gp-sub-id="${escapeHtmlGp(
-            String(t.id)
-          )}" ${t.done ? 'checked' : ''}/><span class="gp-gd-subtask-label${t.done ? ' gp-gd-subtask-label--done' : ''}">${escapeHtmlGp(
-            String(t.title || '')
-          )}</span></label>`
-      )
+    const subtasksListItems = subtasks
+      .map((t) => {
+        const idAttr = escapeHtmlGp(String(t.id));
+        const titleEsc = escapeHtmlGp(String(t.title || ''));
+        const co = gpSubtaskIsCompleted(t);
+        return `<li class="gp-gd-task-item" data-gp-sub-id="${idAttr}">
+          <div class="gp-gd-task-view">
+            <label class="gp-gd-task-row gp-gcal-task-match">
+              <input type="checkbox" class="gp-gd-task-cb" data-gp-sub-toggle="${idAttr}" ${
+          co ? 'checked' : ''
+        }/>
+              <span class="gp-gd-task-text${co ? ' gp-gd-task-text--completed' : ''}">${titleEsc}</span>
+            </label>
+          </div>
+          <div class="gp-gd-task-edit" hidden>
+            <div class="gp-gd-task-edit-inner">
+              <input type="checkbox" class="gp-gd-task-cb-edit" data-gp-sub-edit-cb="${idAttr}" aria-label="Completed" ${
+          co ? 'checked' : ''
+        }/>
+              <input type="text" class="gp-gd-task-title-input" data-gp-sub-edit-title="${idAttr}" value="${titleEsc}" spellcheck="true" maxlength="400" autocomplete="off" />
+              <button type="button" class="gp-gd-task-del" data-gp-sub-delete="${idAttr}" aria-label="Remove task">&nbsp;</button>
+            </div>
+          </div>
+        </li>`;
+      })
       .join('');
 
     wrap.innerHTML = `
