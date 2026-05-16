@@ -2484,17 +2484,30 @@
     if (_leftSidebarGoalsMountTimer) clearTimeout(_leftSidebarGoalsMountTimer);
     _leftSidebarGoalsMountTimer = setTimeout(() => {
       _leftSidebarGoalsMountTimer = null;
-      mountLeftSidebarGoalsSection();
+      const root = mountLeftSidebarGoalsSection();
       const cards = document.getElementById('gp-gcal-sidebar-goals-cards');
       const hasCards = !!cards?.querySelector?.('.gcal-ext-goal-card[data-goal-id]');
-      if (!hasCards) renderGoalsSidebar();
-    }, 400);
+      if (root?.isConnected && hasCards) return;
+      if (!hasCards) void renderGoalsSidebar();
+    }, 900);
   }
 
   function setupLeftSidebarGoalsMountObserver() {
     if (_leftSidebarGoalsMo) return;
-    _leftSidebarGoalsMo = new MutationObserver(() => scheduleLeftSidebarGoalsMount());
-    _leftSidebarGoalsMo.observe(document.body, { childList: true, subtree: true });
+
+    const attach = () => {
+      const scroll = findGCalLeftSidebarScrollEl();
+      if (!scroll) {
+        window.setTimeout(attach, 1200);
+        return;
+      }
+      if (_leftSidebarGoalsMountScroll === scroll && _leftSidebarGoalsMo) return;
+      _leftSidebarGoalsMo?.disconnect();
+      _leftSidebarGoalsMountScroll = scroll;
+      _leftSidebarGoalsMo = new MutationObserver(() => scheduleLeftSidebarGoalsMount());
+      _leftSidebarGoalsMo.observe(scroll, { childList: true, subtree: true });
+    };
+    attach();
   }
 
   function escapeHtmlGp(str) {
