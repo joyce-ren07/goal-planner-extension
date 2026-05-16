@@ -6139,12 +6139,13 @@
       const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
       if (!hit?.goal?.id || !hit.session?.eventId) continue;
 
+      const visibleHost = gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) || host;
       gpGdTrace('session hit', hints[hi], hit.goal.id);
-      gpGdRenderDetailBlock(hit, hints[hi], host);
+      gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
       return;
     }
     teardownGpGdBlock();
-    gpGdTrace('no unified session match', pinnedExpanded.slice(0, 3));
+    if (hints.length) gpGdTrace('no unified session match', hints.slice(0, 3));
   }
 
   /** Install observer + GoalPlannerUnifiedState listeners (subscriber + chrome.storage echo). Does not wire calendar-chip DOM mutation for goal field reads. */
