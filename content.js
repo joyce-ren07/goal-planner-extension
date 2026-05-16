@@ -5978,9 +5978,7 @@
       return;
     }
 
-    gpGdTrace('inspector hosts', natives.length);
-
-    /** Prefer hosts whose detected card is popover-sized (not zero / full viewport). */
+    /** Prefer inner card-sized shells — drop full-viewport overlay ancestors. */
     natives.sort((a, b) => {
       const ca = gpGdFindEventDetailCardRoot(a).getBoundingClientRect().width;
       const cb = gpGdFindEventDetailCardRoot(b).getBoundingClientRect().width;
@@ -5988,6 +5986,22 @@
       const scoreB = cb >= 220 && cb <= 700 ? cb : b.getBoundingClientRect().width + 2000;
       return scoreA - scoreB;
     });
+    natives = gpGdPruneNestedInspectorHosts(natives);
+
+    const host = natives[0];
+    if (!(host instanceof HTMLElement)) {
+      teardownGpGdBlock();
+      return;
+    }
+
+    const existingEarly = __gpGdBlockEl;
+    if (
+      Date.now() < _gpGdHydrateQuietUntil &&
+      gpGdIsGoalBlockWellPlaced(existingEarly, host) &&
+      existingEarly?.dataset?.gpGoalId
+    ) {
+      return;
+    }
 
     const legacyGoals = await getGoals();
     const pinnedExpanded = (() => {
