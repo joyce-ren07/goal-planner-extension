@@ -1566,6 +1566,22 @@
   outline: 1px dotted rgba(25, 103, 210, 0.4);
 }
 
+#gp-gcal-detail-mark-footer {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 16px 16px;
+  border: 0;
+  background: transparent;
+  clear: both;
+  position: relative;
+  left: 0;
+  right: auto;
+  overflow: hidden;
+}
+
 #gp-gcal-detail-mark-footer .gp-gd-mark-complete,
 #gp-gcal-detail-goal-extension .gp-gd-mark-complete {
   display: block;
