@@ -5488,6 +5488,125 @@
     return false;
   }
 
+  /** Goal Planner extension UI — never mount event-detail rows here. */
+  function gpGdIsExtensionUiSurface(el) {
+    if (!(el instanceof HTMLElement)) return true;
+    if (el.id === 'gp-panel' || el.id === 'gp-recurrence-overlay' || el.id === 'gp-delete-overlay') {
+      return true;
+    }
+    if (
+      el.closest(
+        '#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback, #gp-material-symbols'
+      )
+    ) {
+      return true;
+    }
+    if (el.closest('[data-extension="my-goals-list"]')) return true;
+    const panel = document.getElementById('gp-panel');
+    if (panel?.contains(el)) return true;
+    return false;
+  }
+
+  /** Left drawer “My goals” / booking column — not an event inspector popover. */
+  function gpGdIsLeftCalendarDrawerSurface(el) {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.closest('[data-extension="my-goals-list"]')) return true;
+    if (el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]')) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width > 380 || r.right > window.innerWidth * 0.34) return false;
+    const text = String(el.innerText || '').slice(0, 800);
+    const hasDrawerGoals =
+      /\bMy goals\b/i.test(text) &&
+      (/\bAdd another goal\b/i.test(text) || /\bGOAL PLANNER\b/i.test(text));
+    const hasEventTime = /\d{1,2}(?::\d{2})?\s*(?:AM|PM)/i.test(text);
+    return hasDrawerGoals && !hasEventTime;
+  }
+
+  /** True only for native GCal event detail popovers (center/side inspector). */
+  function gpGdIsValidEventDetailInspectorShell(host) {
+    if (!(host instanceof HTMLElement) || !host.isConnected) return false;
+    if (gpGdIsExtensionUiSurface(host)) return false;
+    if (gpGdIsLeftCalendarDrawerSurface(host)) return false;
+    if (gpGdIsCalendarGridContainer(host)) return false;
+    if (gpGdIsWeekGridMountSurface(host)) return false;
+
+    const r = host.getBoundingClientRect();
+    if (r.width < 200 || r.height < 100) return false;
+    if (r.width > gpGdMaxInspectorCardWidth() * 1.08) return false;
+
+    const text = String(host.innerText || '').slice(0, 2400);
+    if (/\bGOAL PLANNER\b/i.test(text) && /\bAdd another goal\b/i.test(text)) return false;
+
+    const inDialog =
+      host.matches('[role="dialog"], [role="alertdialog"]') ||
+      host.getAttribute('aria-modal') === 'true' ||
+      !!host.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]');
+    const hasEventTime =
+      /\d{1,2}(?::\d{2})?\s*(?:AM|PM)/i.test(text) ||
+      /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i.test(text);
+    const hasNativeMeta =
+      /\bGuests\b|\bOrganizer\b|\bCalendar\s*\(|\bminutes before\b|\bEdit event\b|\bVisibility\b/i.test(
+        text
+      );
+    const hasClose = gpGdInspectorHasCloseControl(host);
+
+    if (inDialog) return hasEventTime || hasNativeMeta;
+    return hasClose && (hasEventTime || hasNativeMeta);
+  }
+
+  function gpGdIsValidEventDetailCardRoot(cardRoot, shell) {
+    if (!(cardRoot instanceof HTMLElement) || !cardRoot.isConnected) return false;
+    if (gpGdIsExtensionUiSurface(cardRoot)) return false;
+    if (gpGdIsLeftCalendarDrawerSurface(cardRoot)) return false;
+    if (gpGdIsCalendarGridContainer(cardRoot)) return false;
+    if (gpGdIsWeekGridMountSurface(cardRoot)) return false;
+    const sh = shell instanceof HTMLElement ? shell : cardRoot;
+    if (!gpGdIsValidEventDetailInspectorShell(sh)) return false;
+    if (!gpGdComposedSubtreeContains(sh, cardRoot) && sh !== cardRoot) return false;
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200 || cr.width > gpGdMaxInspectorCardWidth() * 1.05) return false;
+    return true;
+  }
+
+  /** Remove detail UI that leaked into sidebar / grid / extension panels. */
+  function gpGdPurgeDetailInjectionFromForbiddenSurfaces() {
+    for (const el of document.querySelectorAll(
+      '#gp-gcal-detail-goal-extension, #gp-gcal-detail-mark-footer'
+    )) {
+      if (!(el instanceof HTMLElement)) continue;
+      const shell =
+        el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+        el.parentElement;
+      const host = shell instanceof HTMLElement ? shell : el.parentElement;
+      if (!(host instanceof HTMLElement) || !gpGdIsValidEventDetailInspectorShell(host)) {
+        try {
+          el.remove();
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+    if (__gpGdBlockEl?.isConnected) {
+      const shell =
+        __gpGdBlockEl.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+        __gpGdBlockEl.parentElement;
+      if (
+        !(shell instanceof HTMLElement) ||
+        !gpGdIsValidEventDetailInspectorShell(shell) ||
+        gpGdIsExtensionUiSurface(__gpGdBlockEl)
+      ) {
+        teardownGpGdBlock();
+      }
+    } else if (__gpGdMarkFooterEl?.isConnected) {
+      const shell =
+        __gpGdMarkFooterEl.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+        __gpGdMarkFooterEl.parentElement;
+      if (!(shell instanceof HTMLElement) || !gpGdIsValidEventDetailInspectorShell(shell)) {
+        teardownGpGdMarkFooter();
+      }
+    }
+  }
+
   function gpGdInspectorHasCloseControl(root) {
     if (!(root instanceof HTMLElement)) return false;
     for (const btn of gpGdQuerySelectorAllDeep(root, 'button')) {
