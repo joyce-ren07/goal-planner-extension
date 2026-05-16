@@ -6619,6 +6619,27 @@
     for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
     for (const h of barHintsCached) pushHint(h);
 
+    const pinnedHit = gpGdHitFromPinnedChip(unified, pinnedExpanded);
+    if (pinnedHit?.goal?.id && pinnedHit.session?.eventId) {
+      const hitPinned = await gpGdEnrichHitForDetail(pinnedHit);
+      const visibleHostPinned =
+        gpGdFindEventInspectorShell(hitPinned.goal.title) ||
+        gpGdPickBestVisibleInspectorHost(natives, hitPinned.goal.title) ||
+        host;
+      if (visibleHostPinned && !gpGdIsCalendarGridContainer(visibleHostPinned)) {
+        gpGdTrace('session hit (pinned chip)', hitPinned.goal.id);
+        const renderedPinned = gpGdRenderDetailBlock(
+          hitPinned,
+          String(hitPinned.session.eventId),
+          visibleHostPinned
+        );
+        if (renderedPinned) {
+          gpGdStopInspectorPinWatch();
+          return;
+        }
+      }
+    }
+
     for (let hi = 0; hi < hints.length; hi++) {
       let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
       if (!hit?.goal?.id || !hit.session?.eventId) continue;
