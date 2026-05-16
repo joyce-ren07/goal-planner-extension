@@ -1234,8 +1234,15 @@
   opacity: 1;
 }
 
+/* Instant shell before async storage read — same surface as final overlay (no native flash). */
+[data-eventchip].ext-goal-chip .ext-goal-root.ext-goal-root--prime {
+  opacity: 1;
+  pointer-events: none;
+}
+
 /* State: palette only — left accent color only (no other borders). */
-[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root {
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root,
+[data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root.ext-goal-root--prime {
   background: #ffe5e2;
   border-left-color: #e79992;
 }
