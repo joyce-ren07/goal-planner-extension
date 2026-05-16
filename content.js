@@ -5041,9 +5041,20 @@
         <div class="gp-gd-session-list-caption">Sessions (calendar-linked)</div>
         <ul class="gp-gd-session-list">${sessionRowsHtml || '<li class="gp-gd-session-row">No session rows synced yet.</li>'}</ul>
       </section>
-      <section class="gp-gd-subtasks" aria-label="Subtasks"><div class="gp-gd-subtasks-cap">Tasks</div>
-        <div class="gp-gd-subtasks-rows">${subtasksRows || `<span class="gp-gd-muted">No subtasks yet.</span>`}</div>
-        <button type="button" class="gp-gd-text-btn" data-gp-detail-act="add-sub">Add task</button></section>
+      <section class="gp-gd-subtasks" aria-label="Subtasks">
+        <div class="gp-gd-subtasks-head">
+          <span class="gp-gd-subtasks-cap">Subtasks</span>
+          <span class="gp-gd-subtasks-actions">
+            <button type="button" class="gp-gd-subtasks-act" data-gp-detail-act="subtasks-enter-edit">Edit</button>
+            <button type="button" class="gp-gd-subtasks-act" hidden data-gp-detail-act="subtasks-exit-edit">Done</button>
+          </span>
+        </div>
+        <ul class="gp-gd-tasklist" role="list">${subtasksListItems}</ul>
+        <p class="gp-gd-subtasks-empty"${subtasks.length ? ' hidden' : ''}>No tasks yet.</p>
+        <div class="gp-gd-subtasks-add-slot" hidden>
+          <input type="text" class="gp-gd-task-input-new" placeholder="New task" aria-label="New task title" maxlength="400" autocomplete="off" />
+        </div>
+      </section>
       <footer class="gp-gd-actions">
         <button type="button" class="gp-gd-major-btn gp-gd-major-btn-secondary" data-gp-detail-act="schedule-edit">Adjust schedule…</button>
       </footer>
