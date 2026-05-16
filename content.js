@@ -6581,12 +6581,7 @@
     const lblMyHead = document.createElement('div');
     lblMyHead.textContent = 'My goals';
     lblMyHead.style.cssText = 'font-size:14px;line-height:20px;color:#3c4043;font-weight:500;margin:0;';
-    const lblMyTitle = document.createElement('div');
-    lblMyTitle.setAttribute('data-gp-my-goals-title', '1');
-    lblMyTitle.textContent = String(goal.title || '').trim() || 'Goal session';
-    lblMyTitle.style.cssText = 'font-size:14px;line-height:20px;color:#5f6368;margin:2px 0 0;';
     lblMyWrap.appendChild(lblMyHead);
-    lblMyWrap.appendChild(lblMyTitle);
     rowMy.appendChild(icMy);
     rowMy.appendChild(lblMyWrap);
     wrap.appendChild(rowMy);
