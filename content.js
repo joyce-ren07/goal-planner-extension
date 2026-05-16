@@ -6616,7 +6616,12 @@
       finalizePlacement();
     }
 
-    if (!gpGdIsGoalBlockWellPlaced(wrap, shell, false)) {
+    const placed =
+      gpGdIsGoalBlockWellPlaced(wrap, shell, false) ||
+      (gpGdIsGoalBlockVisible(wrap) &&
+        gpGdComposedSubtreeContains(cardRoot, wrap) &&
+        wrap.getBoundingClientRect().width <= cardRoot.getBoundingClientRect().width * 1.2 + 24);
+    if (!placed) {
       gpGdTrace('abort render — goal block still outside inspector card');
       gpGdDiag('inject: abort — misaligned after force mount', {
         blockWidth: Math.round(wrap.getBoundingClientRect().width),
@@ -6625,6 +6630,7 @@
       teardownGpGdBlock();
       return null;
     }
+    gpGdApplyCardContainmentStyles(wrap, cardRoot);
 
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
