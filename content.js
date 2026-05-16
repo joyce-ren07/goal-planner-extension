@@ -5786,6 +5786,13 @@
     if (gpGdIsCalendarGridContainer(wrap.parentElement)) return false;
     const card = gpGdFindEventDetailCardRoot(dialogShell);
     if (!(card instanceof HTMLElement)) return false;
+    if (gpGdComposedSubtreeContains(card, wrap)) {
+      gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
+      const wr = wrap.getBoundingClientRect();
+      const cr = card.getBoundingClientRect();
+      const overlap = Math.min(wr.right, cr.right) - Math.max(wr.left, cr.left);
+      return overlap >= Math.min(wr.width, cr.width) * 0.42;
+    }
     const cr = card.getBoundingClientRect();
     const wr = wrap.getBoundingClientRect();
     const pr = wrap.parentElement?.getBoundingClientRect?.();
