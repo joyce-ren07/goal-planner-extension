@@ -6552,6 +6552,10 @@
 
     const subtasks = gpGdSubtasksWithTitles(goal);
 
+    /** @type {HTMLElement | null} */
+    let resolvedShell = dialogShell instanceof HTMLElement ? dialogShell : null;
+    if (resolvedShell && !gpGdIsEventDetailPopupHost(resolvedShell)) resolvedShell = null;
+
     const existing = __gpGdBlockEl;
     if (existing?.isConnected && gpGdIsGCalLeftSidebarRegion(existing)) {
       teardownGpGdBlock();
@@ -6559,14 +6563,15 @@
     const frontInspector =
       gpGdFindOpenInspectorNearClick(goal?.title) ||
       gpGdFindFrontGoalInspector(goal?.title) ||
-      (dialogShell instanceof HTMLElement ? dialogShell : null);
-    if (frontInspector instanceof HTMLElement && !gpGdIsEventDetailPopupHost(frontInspector)) {
+      resolvedShell;
+    if (frontInspector instanceof HTMLElement && gpGdIsEventDetailPopupHost(frontInspector)) {
+      resolvedShell = frontInspector;
+    } else {
       const fixed = gpGdFindEventInspectorShell(goal?.title);
-      if (fixed instanceof HTMLElement) dialogShell = fixed;
+      if (fixed instanceof HTMLElement) resolvedShell = fixed;
     }
     if (existing?.isConnected && existing.dataset.gpGoalId === goalId) {
-      const shell =
-        frontInspector instanceof HTMLElement ? frontInspector : dialogShell;
+      const shell = resolvedShell;
       if (shell instanceof HTMLElement) gpGdStabilizeBlockPlacement(existing, shell);
       gpGdRefreshDetailSubtasks(existing, hit);
       gpGdEnsureDetailDelegates(existing, hit);
