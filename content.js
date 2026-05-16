@@ -8507,6 +8507,7 @@
     shell.className = 'ext-goal-root ext-goal-root--prime';
     shell.setAttribute('aria-hidden', 'true');
     chip.appendChild(shell);
+    boundChipHeight(chip);
     requestAnimationFrame(() => {
       boundChipHeight(chip);
       chip._gpDecorLock = false;
@@ -8514,7 +8515,7 @@
     return true;
   }
 
-  function forEachGoalChipInNodeList(nodes, visit) {
+  function forEachGoalChipCandidateInNodeList(nodes, visit) {
     for (const node of nodes) {
       if (node.nodeType !== 1) continue;
       const el = /** @type {Element} */ (node);
