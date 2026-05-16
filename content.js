@@ -4732,9 +4732,37 @@
       si = sessions.findIndex((s) => hints.some((h) => gpChipDoneKeyMatchesCalEventId(String(s?.eventId), h)));
     }
     if (si < 0) si = 0;
-    const sess = sessions[si];
-    if (!sess?.eventId) return null;
+    const sess = sessions[si] || sessions[0];
+    if (!sess) return null;
     return { goal: g, session: sess, gIdx: gi, sIdx: si };
+  }
+
+  /**
+   * POPOVER MOUNT GUARD — when the detail block is already visible in the open inspector,
+   * re-align and skip full hint scanning (prevents MO thrash + unrelated calendar-id MISS spam).
+   * @returns {boolean} true when an existing mounted block was kept
+   */
+  function gpGdTryProtectMountedDetailBlock(host) {
+    const ext = __gpGdBlockEl;
+    if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
+      return false;
+    }
+    const inHost =
+      gpGdComposedSubtreeContains(host, ext) ||
+      (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
+    if (!inHost) return false;
+
+    const card = gpGdResolveInspectorCardRoot(host, ext.dataset.gpGoalId || '');
+    if (card instanceof HTMLElement) {
+      gpGdForceMountIntoCard(ext, card, null);
+      gpGdAlignInjectedBlockToCard(ext, host);
+    }
+    if (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) {
+      _gpGdHydrateQuietUntil = Date.now() + 15000;
+      gpGdMarkDetailScanActive(15000);
+      return true;
+    }
+    return false;
   }
 
   /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
