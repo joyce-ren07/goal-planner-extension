@@ -4632,15 +4632,6 @@
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
-  function formatDuration(mins) {
-    if (mins < 60) return `${mins} mins`;
-    const h = mins / 60;
-    if (h === Math.floor(h)) return `${h} ${h === 1 ? 'hr' : 'hrs'}`;
-    const hInt = Math.floor(h);
-    if (mins % 60 === 30) return `${hInt}.5 hrs`;
-    return `${hInt} hr ${mins % 60} min`;
-  }
-
   function positionFloating(el, ref) {
     const r = ref.getBoundingClientRect();
     el.style.top  = (r.bottom + 4) + 'px';
