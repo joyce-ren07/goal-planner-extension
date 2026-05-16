@@ -4732,14 +4732,16 @@
   function gpEnumerateNativeEventDetailHosts() {
     const seenNodes = new Set();
     const out = [];
+    const html = /** @type {HTMLElement | null} */ (document.documentElement);
+    if (!html) return out;
 
-    /** @type {Element[]} */
-    const stack = [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')];
+    /** @type {HTMLElement[]} */
+    const stack = gpGdQuerySelectorAllDeep(html, '[role="dialog"], [role="alertdialog"], [aria-modal="true"]');
     for (const raw of stack) {
-      let el = raw;
-      if (!(el instanceof Element)) continue;
+      const el = raw;
+      if (!(el instanceof HTMLElement)) continue;
       if (
-        !document.documentElement.contains(el) ||
+        !el.isConnected ||
         el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols') ||
         el.id === 'gp-panel' ||
         el.id === 'gp-recurrence-overlay'
@@ -4753,7 +4755,7 @@
       /** Prefer outermost ancestor among intersecting dialogs (dedupe overlays). */
       let skipAsInner = false;
       for (const u of stack) {
-        if (u === el || !u.contains(el)) continue;
+        if (u === el || !gpGdComposedSubtreeContains(u, el)) continue;
         const ru = u.getBoundingClientRect();
         if (
           ru.left <= r.left &&
@@ -4769,10 +4771,11 @@
     }
 
     /** Secondary: anchored popovers lacking role=dialog — still scoped to transient UI shells. */
-    for (const el of document.querySelectorAll('[role="presentation"]')) {
-      if (!el.closest('body')) continue;
+    for (const el of gpGdQuerySelectorAllDeep(html, '[role="presentation"]')) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (!document.body.contains(el) && !(el.offsetParent ?? el.offsetWidth)) continue;
       if (el.closest('#gp-panel, #gp-recurrence-overlay')) continue;
-      if (!el.contains(el.querySelector('[data-eventid]'))) continue;
+      if (!gpGdQuerySelectorAllDeep(el, '[data-eventid]').length) continue;
       const rr = el.getBoundingClientRect();
       if (rr.width < 200 || rr.height < 160) continue;
       if (!seenNodes.has(el)) {
