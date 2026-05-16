@@ -657,10 +657,16 @@
       if (!slot || !nextKeys.has(slot)) child.remove();
     });
 
+    const bySlot = new Map();
+    for (const child of overlayRoot.children) {
+      const s = child.dataset?.gpGhostSlot;
+      if (s) bySlot.set(s, child);
+    }
+
     const scrollSlots = [];
 
     layouts.forEach((L) => {
-      let ghost = [...overlayRoot.children].find((c) => c.dataset.gpGhostSlot === L.key) || null;
+      let ghost = bySlot.get(L.key);
       const created = !ghost;
       if (!ghost) {
         ghost = document.createElement('div');
