@@ -179,6 +179,27 @@
     return result;
   }
 
+  /** Parse GCal grid date attributes — YYYYMMDD strings or compact datekey ints (see StackOverflow / google datekey). */
+  function calendarDateFromGCalDateAttr(raw) {
+    const s = String(raw ?? '').trim();
+    if (!s) return null;
+    if (/^\d{8}$/.test(s)) {
+      const y = parseInt(s.slice(0, 4), 10);
+      const mo = parseInt(s.slice(4, 6), 10) - 1;
+      const d = parseInt(s.slice(6, 8), 10);
+      if (mo >= 0 && mo <= 11 && d >= 1 && d <= 31) return new Date(y, mo, d);
+      return null;
+    }
+    const n = parseInt(s, 10);
+    if (!Number.isFinite(n) || n < 0 || n > 0x7fffffff) return null;
+    const day = n & 0b11111;
+    const month1 = (n >> 5) & 0b1111;
+    const yearRel = n >> 9;
+    const y = 1970 + yearRel;
+    if (month1 < 1 || month1 > 12 || day < 1 || day > 31) return null;
+    return new Date(y, month1 - 1, day);
+  }
+
   // ── Ghost events: map day-of-week column headers to viewport x-positions ──
   function findDayColumnPositions() {
     const columns = [];
