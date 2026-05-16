@@ -5708,6 +5708,15 @@
   }
 
   function scheduleGpGdDialogScan() {
+    if (!gpGdShouldRunDetailScan()) return;
+    const ext = __gpGdBlockEl;
+    if (
+      ext?.isConnected &&
+      Date.now() < _gpGdHydrateQuietUntil &&
+      gpGdIsGoalBlockVisible(ext)
+    ) {
+      return;
+    }
     if (_gpGdScanTimer) {
       _gpGdScanPending = true;
       return;
