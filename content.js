@@ -768,8 +768,7 @@
     }
 
     if (!layouts.length) {
-      if (previewUi) clearGhostPreviewChipsOnly();
-      else removeGhostEvents();
+      if (!previewUi) removeGhostEvents();
       return false;
     }
 
