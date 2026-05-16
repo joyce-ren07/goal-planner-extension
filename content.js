@@ -4732,18 +4732,27 @@
     return `${formatDayDate(a)} • ${formatTime(a)} – ${formatTime(b)}`;
   }
 
+  /** Whether a goal subtask row is completed (supports legacy `done`). */
+  function gpSubtaskIsCompleted(st) {
+    return !!(st && (st.completed || st.done));
+  }
+
+  /** Normalize subtasks for gp_goals + unified mirror: `{ id, title, completed }` only. */
+  function gpNormalizeSubtasksForPersist(raw) {
+    return [...(Array.isArray(raw) ? raw : [])].map((x) => ({
+      id: String(x?.id ?? '').trim() || `sub_${generateId().slice(-10)}`,
+      title: typeof x.title === 'string' ? x.title.slice(0, 400) : String(x.title || '').slice(0, 400),
+      completed: !!(x.completed || x.done),
+    }));
+  }
+
   /** Subtasks array shape on gp_goals row + unified Goal. */
   async function gpDetailPersistGoalSubtasksAndMirror(goalId, list) {
     const goals = await getGoals();
     const ix = goals.findIndex((g) => String(g.id) === String(goalId));
     if (ix < 0) return null;
     const row = goals[ix];
-    const next = [...(Array.isArray(list) ? list : [])].map((x) => ({
-      id: String(x?.id ?? '').trim() || `sub_${generateId().slice(-10)}`,
-      title: typeof x.title === 'string' ? x.title.slice(0, 400) : String(x.title || '').slice(0, 400),
-      done: !!x.done,
-    }));
-    row.subtasks = next;
+    row.subtasks = gpNormalizeSubtasksForPersist(list);
     goals[ix] = row;
     await persistGpGoalsAndUnified(goals);
     return goals[ix];
