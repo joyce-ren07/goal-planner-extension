@@ -6304,7 +6304,7 @@
     wrap.dataset.gpGoalId = String(goal?.id ?? '');
     wrap.dataset.gpSessionEventId = String(sess?.eventId ?? '');
     wrap.style.cssText =
-      'display:block !important;position:relative;z-index:5;box-sizing:border-box;width:100%;max-width:100%;' +
+      'display:block !important;position:relative;z-index:5;box-sizing:border-box;width:auto;max-width:100%;' +
       'margin:0;padding:0 16px 12px;border:0;clear:both;overflow:hidden;opacity:1 !important;visibility:visible !important;' +
       'background:transparent;box-shadow:none;font-family:\"Google Sans\",Roboto,sans-serif;-webkit-font-smoothing:antialiased;';
 
