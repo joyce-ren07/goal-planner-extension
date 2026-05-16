@@ -5124,11 +5124,18 @@
     _gpGdPinWatchDebounce = 0;
   }
 
+  function gpGdHasOpenEventInspector() {
+    return gpEnumerateNativeEventDetailHosts().some((h) => gpGdIsElementVisuallyExposed(h));
+  }
+
   /** While a goal chip open is pending, hydrate as soon as GCal mounts the inspector DOM. */
   function gpGdStartInspectorPinWatch() {
     gpGdStopInspectorPinWatch();
-    const until = Date.now() + 4500;
+    let until = Date.now() + 12000;
     _gpGdPinWatchMo = new MutationObserver(() => {
+      if (gpGdHasOpenEventInspector() || __gpGdBlockEl?.isConnected) {
+        until = Math.max(until, Date.now() + 4000);
+      }
       if (Date.now() > until) {
         gpGdStopInspectorPinWatch();
         return;
