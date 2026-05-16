@@ -6749,9 +6749,9 @@
     gpGdEnsureDetailDelegates(wrap, hit);
     const ok = placed;
     if (ok) {
-      _gpGdHydrateQuietUntil = Date.now() + 12000;
+      _gpGdHydrateQuietUntil = Date.now() + 15000;
       _gpGdRemountCount = 0;
-      gpGdMarkDetailScanActive(12000);
+      gpGdMarkDetailScanActive(15000);
     }
     const r = wrap.getBoundingClientRect();
     gpGdTrace(
