@@ -6419,7 +6419,7 @@
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
-      gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      gpGdReparentBlockIntoScrollColumn(existing, dialogShell);
       if (gpGdIsGoalBlockVisible(existing) && gpGdBlockInFrontInspector(existing, goal?.title)) {
         gpGdRefreshDetailSubtasks(existing, hit);
         gpGdEnsureDetailDelegates(existing, hit);
