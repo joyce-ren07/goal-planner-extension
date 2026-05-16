@@ -5584,7 +5584,7 @@
     }
     for (const h of list) {
       const card = gpGdFindEventDetailCardRoot(h);
-      if (gpGdIsElementVisuallyExposed(card)) return h;
+      if (card instanceof HTMLElement && gpGdIsElementVisuallyExposed(card)) return h;
     }
     return list[0] || null;
   }
