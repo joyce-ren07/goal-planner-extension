@@ -6595,6 +6595,14 @@
       if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
         gpGdTrace('remount capped — keep last block', goalId);
         gpGdRefreshDetailSubtasks(existing, hit);
+        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
+        if (keepCard instanceof HTMLElement) {
+          if (!gpGdGetDetailMarkCompleteBtn()) {
+            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
+          } else {
+            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
+          }
+        }
         gpGdEnsureDetailDelegates(existing, hit);
         _gpGdHydrateQuietUntil = Date.now() + 12000;
         return existing;
