@@ -6527,13 +6527,7 @@
       emptyEl.hidden = subtasks.length > 0;
     }
 
-    const markBtn = wrap.querySelector('[data-gp-detail-act="mark-session-complete"]');
-    if (markBtn instanceof HTMLButtonElement) {
-      const sessDone = !!hit.session?.completed;
-      markBtn.disabled = sessDone;
-      markBtn.style.opacity = sessDone ? '0.55' : '1';
-      markBtn.style.cursor = sessDone ? 'default' : 'pointer';
-    }
+    gpGdSyncMarkCompleteButton(!!hit.session?.completed);
     return true;
   }
 
