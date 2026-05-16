@@ -4866,6 +4866,7 @@
     gpGdWalkComposedElements(htmlRoot, (el) => {
       if (!(el instanceof HTMLElement)) return;
       if (!el.isConnected) return;
+      if (gpGdIsCalendarGridContainer(el)) return;
       if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols')) return;
       if (el.id === 'gp-panel' || el.id === 'gp-recurrence-overlay') return;
 
