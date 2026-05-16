@@ -6160,14 +6160,23 @@
     const subtasks = gpGdSubtasksWithTitles(goal);
 
     const existing = __gpGdBlockEl;
+    const frontInspector = gpGdFindFrontGoalInspector(goal?.title);
     if (
+      existing?.isConnected &&
+      existing.dataset.gpGoalId === goalId &&
+      frontInspector instanceof HTMLElement &&
+      !gpGdComposedSubtreeContains(frontInspector, existing)
+    ) {
+      gpGdTrace('block in stale inspector clone — remounting', goalId);
+      teardownGpGdBlock();
+    } else if (
       existing?.isConnected &&
       existing.dataset.gpGoalId === goalId &&
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
       gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      if (gpGdIsGoalBlockVisible(existing)) {
+      if (gpGdIsGoalBlockVisible(existing) && gpGdBlockInFrontInspector(existing, goal?.title)) {
         gpGdRefreshDetailSubtasks(existing, hit);
         gpGdEnsureDetailDelegates(existing, hit);
         _gpGdHydrateQuietUntil = Date.now() + 4000;
