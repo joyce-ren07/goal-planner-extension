@@ -4792,13 +4792,13 @@
     for (let pass = 0; pass < 8; pass++) {
       /** @type {HTMLElement | null} */
       let victim = null;
-      for (const node of dialogHost.querySelectorAll('*')) {
+      gpGdWalkComposedElements(dialogHost, (node) => {
+        if (victim) return;
         const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
-        if (!t || t.length > 220) continue;
-        if (!/take meeting notes|start a new document/i.test(t)) continue;
+        if (!t || t.length > 220) return;
+        if (!/take meeting notes|start a new document/i.test(t)) return;
         victim = gpGdElevateToMetadataRow(dialogHost, node);
-        break;
-      }
+      });
       if (!(victim instanceof HTMLElement)) break;
       victim.remove();
     }
@@ -4810,7 +4810,7 @@
     for (let d = 0; d < 12 && cur && cur !== dialogHost; d++) {
       const st = window.getComputedStyle(cur);
       if ((st.display === 'flex' || st.display === 'grid') && cur.children.length >= 1) return cur;
-      cur = cur.parentElement;
+      cur = gpGdComposableParentHTMLElement(cur);
     }
     return node instanceof HTMLElement ? node : null;
   }
@@ -4820,27 +4820,30 @@
     /** @type {HTMLElement | null} */
     let best = null;
     let bestExtra = 0;
-    for (const el of dialogHost.querySelectorAll('*')) {
-      if (!(el instanceof HTMLElement)) continue;
+    gpGdWalkComposedElements(dialogHost, (el) => {
+      if (!(el instanceof HTMLElement)) return;
       const extra = el.scrollHeight - el.clientHeight;
-      if (extra <= 24 || el.clientHeight < 72) continue;
+      if (extra <= 24 || el.clientHeight < 72) return;
       if (extra > bestExtra) {
         bestExtra = extra;
         best = el;
       }
-    }
+    });
     return /** @type {HTMLElement} */ (best || dialogHost);
   }
 
   function gpGdFindFirstMetadataRowMatching(dialogHost, re) {
-    for (const node of dialogHost.querySelectorAll('*')) {
+    /** @type {HTMLElement | null} */
+    let found = null;
+    gpGdWalkComposedElements(dialogHost, (node) => {
+      if (found) return;
       const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!t || t.length > 220) continue;
-      if (!re.test(t)) continue;
+      if (!t || t.length > 220) return;
+      if (!re.test(t)) return;
       const row = gpGdElevateToMetadataRow(dialogHost, node);
-      return row instanceof HTMLElement ? row : null;
-    }
-    return null;
+      if (row instanceof HTMLElement) found = row;
+    });
+    return found;
   }
 
   /**
