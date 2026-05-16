@@ -5129,20 +5129,7 @@
   }
 
   function gpGdFindFrontGoalInspector(goalTitle) {
-    const scored = gpGdFindEventInspectorShell(goalTitle);
-    if (scored instanceof HTMLElement && gpGdIsElementVisuallyExposed(scored)) return scored;
-    const ax = _gpGdAnchorX;
-    const ay = _gpGdAnchorY;
-    if (ax != null && ay != null) {
-      for (const el of document.elementsFromPoint(ax, ay)) {
-        if (!(el instanceof Element)) continue;
-        const d = el.closest('[role="dialog"], [role="alertdialog"]');
-        if (d instanceof HTMLElement && gpGdIsGoalPlannerInspector(d) && gpGdIsElementVisuallyExposed(d)) {
-          return d;
-        }
-      }
-    }
-    return null;
+    return gpGdFindAnyVisibleEventInspector(goalTitle);
   }
 
   function gpGdBlockInFrontInspector(wrap, goalTitle) {
