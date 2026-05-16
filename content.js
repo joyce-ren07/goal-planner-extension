@@ -5661,12 +5661,14 @@
 
     const shell =
       dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body);
-    const cardRoot = gpGdFindEventDetailCardRoot(shell);
+    const cardRoot =
+      gpGdFindVisibleEventCardForGoal(shell, goal?.title) || gpGdFindEventDetailCardRoot(shell);
     const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(cardRoot);
 
     /** @type {HTMLElement} */
     const wrap = document.createElement('aside');
     wrap.id = 'gp-gcal-detail-goal-extension';
+    wrap.className = 'gp-gcal-detail-goal-extension';
     wrap.setAttribute('data-goals-injected', 'true');
     wrap.dataset.gpEventToken = String(tokenHint || '');
     wrap.dataset.gpGoalId = String(goal?.id ?? '');
