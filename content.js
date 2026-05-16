@@ -5682,6 +5682,7 @@
    */
   function gpGdFindNarrowestInspectorCard(host, goalTitle) {
     if (!(host instanceof HTMLElement)) return null;
+    if (!gpGdRequireEventDialogAncestor(host)) return null;
     const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
     const short = needle.slice(0, Math.min(needle.length, 40));
     const maxW = gpGdMaxInspectorCardWidth();
