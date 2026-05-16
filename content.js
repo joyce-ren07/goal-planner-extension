@@ -825,13 +825,23 @@
 
   // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
   function renderGhostEvents() {
+    const previewActive = isGhostCreationPreviewUiActive();
+    if (previewActive) ensureGhostPreviewRecoveryObserver();
+    else ensureGhostPreviewRecoveryObserver();
+
     const layered = deriveGhostSessionsForCreationPreviewLayer();
     if (layered === false) {
-      removeGhostEvents();
+      if (!previewActive) removeGhostEvents();
       return;
     }
     const sessions = layered?.sessions || [];
     if (!sessions.length) {
+      if (
+        previewActive &&
+        document.querySelector('#gp-ghost-preview-root .goal-ghost-event')
+      ) {
+        return;
+      }
       clearGhostPreviewChipsOnly();
       return;
     }
