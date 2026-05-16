@@ -5517,10 +5517,12 @@
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
       gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      gpGdTrace('render skipped (visible block already mounted)', goalId);
       return existing;
     }
 
     teardownGpGdBlock();
+    gpGdTrace('render start', token, goalId);
 
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
     if (dialogShell instanceof HTMLElement) {
