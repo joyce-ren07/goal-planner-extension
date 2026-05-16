@@ -5766,6 +5766,15 @@
       return;
     }
 
+    /** Prefer the visible card-sized shell over full-viewport overlay hosts. */
+    natives.sort((a, b) => {
+      const wa = a.getBoundingClientRect().width;
+      const wb = b.getBoundingClientRect().width;
+      const ca = gpGdFindEventDetailCardRoot(a).getBoundingClientRect().width;
+      const cb = gpGdFindEventDetailCardRoot(b).getBoundingClientRect().width;
+      return (ca || wa) - (cb || wb);
+    });
+
     const legacyGoals = await getGoals();
     const pinnedExpanded = (() => {
       const out = [...pinnedRaw];
