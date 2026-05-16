@@ -4721,10 +4721,40 @@
     if (!sessions.length) return null;
 
     const hints = Array.isArray(pinnedEventHints) ? pinnedEventHints : [];
+
+    if (
+      _gpGdPinnedSlotIdx >= 0 &&
+      _gpGdPinnedSlotIdx < sessions.length &&
+      String(_gpGdPinnedGoalId) === String(gid)
+    ) {
+      const sess = sessions[_gpGdPinnedSlotIdx];
+      if (sess) {
+        return { goal: g, session: sess, gIdx: gi, sIdx: _gpGdPinnedSlotIdx };
+      }
+    }
+
+    for (const h of hints) {
+      const chip = gpFindChipForPlannerEventFlexible(h);
+      if (chip) {
+        const startIso = gpResolveSessionStartIsoFromChip(chip);
+        if (startIso) {
+          const legacy = unified.goals.find((ug) => String(ug.id) === String(gid));
+          const calIds = legacy?.sessions?.map((s) => s.eventId) || [];
+          const pseudoRow = { calEventIds: calIds, sessionAnchors: [] };
+          return null;
+        }
+      }
+    }
+
     for (const h of hints) {
       const tight = globalThis.GoalPlannerModel?.findSessionByEventId?.(unified, h);
       if (tight?.goal && String(tight.goal.id) === String(gid) && tight.session) {
-        return { goal: g, session: tight.session, gIdx: gi, sIdx: tight.sIdx ?? 0 };
+        const sameIdCount = sessions.filter(
+          (s) => String(s?.eventId) === String(tight.session?.eventId)
+        ).length;
+        if (sameIdCount <= 1) {
+          return { goal: g, session: tight.session, gIdx: gi, sIdx: tight.sIdx ?? 0 };
+        }
       }
     }
 
