@@ -7021,7 +7021,8 @@
 
         globalThis.GoalCalendarSync?.flushPersistSessionGeometry?.(chip)?.catch?.(() => {});
 
-        console.log('GOAL RESIZE SETTLED — new time:', newTime, 'height:', containerHFinal);
+        if (GP_DEBUG)
+          console.log('GOAL RESIZE SETTLED — new time:', newTime, 'height:', containerHFinal);
       }, 400);
     });
 
