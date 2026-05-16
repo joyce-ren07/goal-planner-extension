@@ -8132,13 +8132,124 @@
     return { plannerEventId: domId || fallback || '', goalId: goal.id };
   }
 
+  function gpSessionScheduleSigFromIso(iso) {
+    if (iso == null || iso === '') return null;
+    const d = new Date(iso);
+    const t = d.getTime();
+    if (!Number.isFinite(t)) return null;
+    return { dow: d.getDay(), mins: d.getHours() * 60 + d.getMinutes() };
+  }
+
+  function gpScheduleSignatureDistance(a, b) {
+    if (!a || !b) return Infinity;
+    if (a.dow === b.dow) return Math.abs(a.mins - b.mins);
+    return 24 * 60 + Math.abs(a.mins - b.mins);
+  }
+
+  /** Match session slot by weekday + time-of-day (works across calendar weeks). */
+  function gpResolveSlotIndexByScheduleAnchors(goalRow, targetIso) {
+    const allowed = goalRow?.calEventIds || [];
+    const anchors = goalRow?.sessionAnchors || [];
+    if (!allowed.length || !anchors.length || targetIso == null || targetIso === '') return -1;
+    const targetSig = gpSessionScheduleSigFromIso(targetIso);
+    if (!targetSig) return -1;
+    let bestIdx = -1;
+    let bestScore = Infinity;
+    for (const a of anchors) {
+      if (!a?.isoStart || a.eventId == null || a.eventId === '') continue;
+      const idx = allowed.findIndex((id) => String(id) === String(a.eventId));
+      if (idx < 0) continue;
+      const sig = gpSessionScheduleSigFromIso(a.isoStart);
+      const score = gpScheduleSignatureDistance(targetSig, sig);
+      if (score < bestScore) {
+        bestScore = score;
+        bestIdx = idx;
+      }
+    }
+    if (bestIdx >= 0 && bestScore <= 120) return bestIdx;
+    return -1;
+  }
+
+  function gpResolveSlotIndexByAbsoluteAnchors(goalRow, targetMs) {
+    const allowed = goalRow?.calEventIds || [];
+    const anchors = goalRow?.sessionAnchors || [];
+    if (!allowed.length || !anchors.length || !Number.isFinite(targetMs)) return -1;
+    let bestIdx = -1;
+    let bestDelta = Infinity;
+    for (const a of anchors) {
+      if (!a?.isoStart || a.eventId == null || a.eventId === '') continue;
+      const ms = Date.parse(a.isoStart);
+      if (!Number.isFinite(ms)) continue;
+      const idx = allowed.findIndex((id) => String(id) === String(a.eventId));
+      if (idx < 0) continue;
+      const d = Math.abs(ms - targetMs);
+      if (d < bestDelta) {
+        bestDelta = d;
+        bestIdx = idx;
+      }
+    }
+    if (bestIdx >= 0 && bestDelta <= 12 * 60 * 60 * 1000) return bestIdx;
+    return -1;
+  }
+
+  function gpResolveSessionStartIsoFromChip(chip) {
+    if (!(chip instanceof HTMLElement)) return '';
+    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
+    if (geo?.startTime) return geo.startTime;
+    const aria = chip.closest('[data-eventid]')?.getAttribute('aria-label') || '';
+    const m = aria.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+    if (!m) return '';
+    const now = new Date();
+    let h = parseInt(m[1], 10) % 12;
+    if (/pm/i.test(m[3])) h += 12;
+    const min = m[2] ? parseInt(m[2], 10) : 0;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, min, 0, 0).toISOString();
+  }
+
+  function gpResolveSessionStartIsoFromInspector(shell) {
+    if (!(shell instanceof HTMLElement)) return '';
+    const text = String(shell.innerText || '').replace(/\s+/g, ' ');
+    const monthNames = {
+      january: 0,
+      february: 1,
+      march: 2,
+      april: 3,
+      may: 4,
+      june: 5,
+      july: 6,
+      august: 7,
+      september: 8,
+      october: 9,
+      november: 10,
+      december: 11,
+    };
+    let dateMatch = text.match(
+      /(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday),?\s+([A-Za-z]+)\s+(\d{1,2})(?:,?\s*(\d{4}))?/i
+    );
+    if (!dateMatch) dateMatch = text.match(/([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})/i);
+    const timeMatch = text.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i);
+    if (!dateMatch || !timeMatch) return '';
+    const month = monthNames[String(dateMatch[1]).toLowerCase()];
+    if (month == null) return '';
+    const day = parseInt(dateMatch[2], 10);
+    const year = dateMatch[3] ? parseInt(dateMatch[3], 10) : new Date().getFullYear();
+    let h = parseInt(timeMatch[1], 10) % 12;
+    if (/pm/i.test(timeMatch[3])) h += 12;
+    const min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    const d = new Date(year, month, day, h, min, 0, 0);
+    return Number.isFinite(d.getTime()) ? d.toISOString() : '';
+  }
+
   /** Match chip grid position → calendar API event id using saved suggestion timestamps (multi-session goals). */
   function pickPlannerEventIdFromAnchors(chip, goal) {
     const anchors = goal?.sessionAnchors;
     if (!anchors?.length) return '';
-    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
-    if (!geo?.startTime) return '';
-    const target = Date.parse(geo.startTime);
+    const startIso = gpResolveSessionStartIsoFromChip(chip);
+    if (!startIso) return '';
+    const allowed = goal.calEventIds || [];
+    const slotIdx = gpResolveSlotIndexByScheduleAnchors(goal, startIso);
+    if (slotIdx >= 0 && allowed[slotIdx]) return String(allowed[slotIdx]);
+    const target = Date.parse(startIso);
     if (!Number.isFinite(target)) return '';
     let best = '';
     let bestDelta = Infinity;
@@ -8152,7 +8263,6 @@
         best = a.eventId;
       }
     }
-    const allowed = goal.calEventIds || [];
     if (best && calEventIdsContain(allowed, best) && bestDelta <= 8 * 60 * 60 * 1000) return best;
     return '';
   }
