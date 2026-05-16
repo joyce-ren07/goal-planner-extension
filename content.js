@@ -266,6 +266,25 @@
     return columns;
   }
 
+  /**
+   * Ghost creation preview ONLY — strips day-column geometry from sidebar mini-cal / widgets
+   * whose cells share data-datekey/date with the main grid. Leaves findDayColumnPositions()
+   * unchanged for GoalCalendarSync / real session geometry.
+   */
+  function filterGhostPreviewDayColumns(scrollCont, columns) {
+    if (!columns?.length) return [];
+    if (!scrollCont?.getBoundingClientRect) return columns;
+    const grid = scrollCont.getBoundingClientRect();
+    if (!Number.isFinite(grid.left) || !Number.isFinite(grid.right) || grid.width < 80) return columns;
+    const gutter = Math.min(220, grid.width * 0.26);
+    const minCx = grid.left - gutter;
+    const maxCx = grid.right + 48;
+    return columns.filter((c) => {
+      const cx = c.left + c.width / 2;
+      return cx >= minCx && cx <= maxCx;
+    });
+  }
+
   if (typeof globalThis.GoalCalendarSync !== 'undefined') {
     globalThis.GoalCalendarSync.init({
       findCalendarScrollContainer,
