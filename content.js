@@ -80,7 +80,25 @@
     return _gridMetricsCache;
   }
 
-  // ── Ghost events: remove all from DOM and tear down scroll listener ──
+  /** Single stable stacking root for previews — children are diffed (no full teardown per input). */
+  function ensureGpGhostPreviewRoot() {
+    let root = document.getElementById('gp-ghost-preview-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'gp-ghost-preview-root';
+      root.setAttribute('aria-hidden', 'true');
+      root.style.cssText =
+        'position:fixed;inset:0;pointer-events:none;z-index:120;contain:layout style';
+      document.body.appendChild(root);
+    }
+    return root;
+  }
+
+  function ghostPreviewSlotKey(session) {
+    return `${session?.isoStart ?? ''}|${session?.isoEnd ?? ''}`;
+  }
+
+  // ── Ghost events: clear preview nodes inside stable root — tear down scroll listener ──
   function removeGhostEvents() {
     if (_gpGhostTipEl?.classList) {
       try {
@@ -90,7 +108,9 @@
       }
       _gpGhostTipEl = null;
     }
-    document.querySelectorAll('.goal-ghost-event').forEach((el) => el.remove());
+    const root = document.getElementById('gp-ghost-preview-root');
+    if (root) root.replaceChildren();
+    document.querySelectorAll('body > .goal-ghost-event').forEach((el) => el.remove());
     if (_ghostScrollEl && _ghostScrollHandler) {
       _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
       _ghostScrollEl = null;
