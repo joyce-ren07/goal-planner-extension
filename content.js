@@ -3608,19 +3608,22 @@
     const hints = [...new Set((domHints || []).filter((x) => x != null && x !== '').map((x) => String(x).trim()))];
     const legacy = Array.isArray(legacyGoals) ? legacyGoals : [];
 
+    /** Title from inspector text is stable across recurring instances (DOM event ids are not). */
+    const title = String(titleHint || '').trim();
+    let legacyRow = null;
+    if (title) {
+      const want = gpGdNormalizeTitleHint(title);
+      legacyRow = legacy.find((lg) => gpGdNormalizeTitleHint(lg.title) === want) || null;
+    }
+
     for (const h of hints) {
       const hit = gpFindUnifiedSessionForDomEventKey(unified, h);
       if (hit?.goal?.id && hit.session) return hit;
     }
 
-    let legacyRow = null;
-    const gid = legacyGoalIdForPlannerEventCandidates(legacy, ...hints);
-    if (gid) legacyRow = legacy.find((lg) => String(lg.id) === gid) || null;
-
-    const title = String(titleHint || '').trim();
-    if (!legacyRow && title) {
-      const want = gpGdNormalizeTitleHint(title);
-      legacyRow = legacy.find((lg) => gpGdNormalizeTitleHint(lg.title) === want) || null;
+    if (!legacyRow) {
+      const gid = legacyGoalIdForPlannerEventCandidates(legacy, ...hints);
+      if (gid) legacyRow = legacy.find((lg) => String(lg.id) === gid) || null;
     }
 
     if (!legacyRow) return null;
