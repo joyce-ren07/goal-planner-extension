@@ -113,7 +113,8 @@
   function syncGpGhostPreviewRootToScrollGrid(scrollCont) {
     let host = document.getElementById('gp-ghost-preview-host');
     if (host && host.parentElement !== scrollCont) {
-      /** Reparent when GCal swaps scroll shells (e.g. panel push) — do not tear down preview. */
+      /** Reparent when GCal swaps scroll shells (e.g. panel push) — never tear down during create preview. */
+      const previewUi = isGhostCreationPreviewUiActive();
       if (scrollCont instanceof HTMLElement && scrollCont.isConnected) {
         try {
           if (
@@ -130,10 +131,12 @@
           }
           scrollCont.appendChild(host);
         } catch (_) {
-          tearDownGpGhostPreviewHostLayers();
-          host = null;
+          if (!previewUi) {
+            tearDownGpGhostPreviewHostLayers();
+            host = null;
+          }
         }
-      } else {
+      } else if (!previewUi) {
         tearDownGpGhostPreviewHostLayers();
         host = null;
       }
