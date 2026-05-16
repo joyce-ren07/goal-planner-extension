@@ -203,14 +203,27 @@
 
   function releaseGhostPreviewScrollContainer() {
     _gpGhostScrollContPinned = null;
+    _gpGhostLockedScrollCont = null;
+  }
+
+  function lockGhostPreviewScrollContainer(scrollCont) {
+    if (isGhostCreationPreviewUiActive() && scrollCont instanceof HTMLElement) {
+      _gpGhostLockedScrollCont = scrollCont;
+      _gpGhostScrollContPinned = scrollCont;
+    }
   }
 
   function findCalendarScrollContainerForGhostPreview() {
-    const found = findCalendarScrollContainer();
     if (!isGhostCreationPreviewUiActive()) {
       releaseGhostPreviewScrollContainer();
-      return found;
+      return findCalendarScrollContainer();
     }
+    const host = document.getElementById('gp-ghost-preview-host');
+    const locked = _gpGhostLockedScrollCont;
+    if (locked?.isConnected) {
+      if (!host || host.parentElement === locked) return locked;
+    }
+    const found = findCalendarScrollContainer();
     if (found instanceof HTMLElement) {
       _gpGhostScrollContPinned = found;
       return found;
@@ -220,7 +233,7 @@
       const r = pinned.getBoundingClientRect();
       if (r.height >= 120 && findHourAbsolutePositions(pinned).length >= 2) return pinned;
     }
-    return null;
+    return locked?.isConnected ? locked : null;
   }
 
   /** Day columns for ghost paint — filtered to main grid, with fallbacks so preview still mounts. */
