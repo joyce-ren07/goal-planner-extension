@@ -90,8 +90,8 @@
       out.push({
         id: id,
         title: typeof o.title === 'string' ? o.title : String(o.title || ''),
-        /** @note boolean `completed` tolerated from older drafts */
-        done: !!(o.done || o.completed),
+        /** Canonical goal-level checklist flag (legacy keys: `done`, `completed`) */
+        completed: !!(o.completed || o.done),
       });
     }
     return out;
