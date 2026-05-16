@@ -4826,6 +4826,98 @@
     return discovered;
   }
 
+  /** Panels located by inspector copy (Guests / Calendar / etc.) — no `[data-eventid]` beacon required. */
+  function gpGdCollectAnnotatedInspectorPanels(htmlRoot) {
+    const LABEL_RE =
+      /\bGuests\b|\bAdd guests\b|\bGoing\?\b|\bGoing\b|\bCalendar\s*\(|\bVisibility\b|\bNotifications?\b|\bReminder\b|\bJoin with\b|\bMeeting link\b|\bVideo call\b|\bLocation\b|\bOrganizer\b|\bMeet\b|\bGoogle Meet\b/i;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    /** @type {HTMLElement[]} */
+    const candidates = [];
+
+    gpGdWalkComposedElements(htmlRoot, (el) => {
+      if (!(el instanceof HTMLElement)) return;
+      if (!el.isConnected) return;
+      if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols')) return;
+      if (el.id === 'gp-panel' || el.id === 'gp-recurrence-overlay') return;
+
+      const sample = String(el.innerText || '').replace(/\s+/g, ' ').trim();
+      if (!sample || sample.length < 12 || !LABEL_RE.test(sample)) return;
+
+      const r = el.getBoundingClientRect();
+      if (r.width < 180 || r.height < 100) return;
+      if (r.width > vw * 0.96 && r.height > vh * 0.92) return;
+
+      const rightFlyout = r.left > vw * 0.38 && r.width < vw * 0.62;
+      const modalish = r.width < vw * 0.78 && r.height > vh * 0.18 && r.top < vh * 0.85;
+      if (!rightFlyout && !modalish) return;
+
+      candidates.push(el);
+    });
+
+    candidates.sort((a, b) => {
+      const ra = a.getBoundingClientRect();
+      const rb = b.getBoundingClientRect();
+      return rb.width * rb.height - ra.width * ra.height;
+    });
+
+    const seen = new Set();
+    const out = [];
+    for (const el of candidates) {
+      let dominated = false;
+      for (const kept of out) {
+        if (kept === el || gpGdComposedSubtreeContains(kept, el)) {
+          dominated = true;
+          break;
+        }
+      }
+      if (dominated) continue;
+      if (seen.has(el)) continue;
+      seen.add(el);
+      out.push(el);
+      if (out.length >= 5) break;
+    }
+    return out;
+  }
+
+  /** Event-id hints from the goal chip the user just opened (DOM id often ≠ API id until flex match). */
+  let _gpGdPinnedHints = /** @type {string[]} */ ([]);
+  let _gpGdPinnedAt = 0;
+  let _gpGdOpenBurstGen = 0;
+
+  function gpGdPinSessionHintsFromChip(chip) {
+    if (!(chip instanceof HTMLElement)) return;
+    const seen = new Set();
+    /** @type {string[]} */
+    const hints = [];
+    const add = (raw) => {
+      const s = raw == null || raw === '' ? '' : String(raw).trim();
+      if (!s || seen.has(s)) return;
+      seen.add(s);
+      hints.push(s);
+    };
+    add(chip.closest('[data-eventid]')?.getAttribute('data-eventid'));
+    add(chip.dataset.gpCalEventId);
+    add(chip.dataset.gpChipKey);
+    _gpGdPinnedHints = hints;
+    _gpGdPinnedAt = Date.now();
+  }
+
+  function gpGdConsumePinnedSessionHints() {
+    if (Date.now() - _gpGdPinnedAt > 90000) return [];
+    return [..._gpGdPinnedHints];
+  }
+
+  function scheduleGpGdInspectorOpenBurst() {
+    const gen = ++_gpGdOpenBurstGen;
+    for (const ms of [0, 90, 220, 480, 1000]) {
+      window.setTimeout(() => {
+        if (gen !== _gpGdOpenBurstGen) return;
+        scheduleGpGdDialogScan();
+      }, ms);
+    }
+  }
+
   function gpEnumerateNativeEventDetailHosts() {
     const seenNodes = new Set();
     const out = [];
