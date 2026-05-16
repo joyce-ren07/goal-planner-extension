@@ -5677,7 +5677,7 @@
       if (!gpGdIsElementVisuallyExposed(el)) return;
       if (gpGdIsCalendarGridContainer(el)) return;
       const r = el.getBoundingClientRect();
-      if (r.width < 220 || r.width > 760 || r.height < 120) return;
+      if (r.width < 200 || r.width > 760 || r.height < 72) return;
       const text = String(el.innerText || '');
       if (!text.includes(short)) return;
       const area = r.width * r.height;
