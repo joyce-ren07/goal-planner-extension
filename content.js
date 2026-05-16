@@ -6344,12 +6344,20 @@
     const hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, title);
     if (!hit?.goal?.id || !hit.session) return false;
     const enriched = await gpGdEnrichHitForDetail(hit);
-    gpGdRefreshDetailSubtasks(ext, enriched);
-    gpGdEnsureDetailDelegates(ext, enriched);
     const shell =
       gpGdFindOpenInspectorNearClick(enriched.goal.title) ||
       gpGdFindEventInspectorShell(enriched.goal.title);
-    if (shell instanceof HTMLElement) gpGdStabilizeBlockPlacement(ext, shell);
+    if (
+      !(shell instanceof HTMLElement) ||
+      !gpGdBlockInCurrentEventPopup(ext, shell, enriched.goal.title)
+    ) {
+      _gpGdPlacementLocked = false;
+      void gpGdHydrateMountedDetailDecoration();
+      return false;
+    }
+    gpGdRefreshDetailSubtasks(ext, enriched);
+    gpGdEnsureDetailDelegates(ext, enriched);
+    gpGdStabilizeBlockPlacement(ext, shell);
     _gpGdHydrateQuietUntil = Date.now() + 5000;
     return true;
   }
