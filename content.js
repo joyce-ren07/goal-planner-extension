@@ -6754,6 +6754,7 @@
       }
 
       Model.subscribeGoalsState?.(() => {
+        gpGdInvalidateUnifiedCache();
         scheduleGpGdFromUnifiedEcho();
       });
 
