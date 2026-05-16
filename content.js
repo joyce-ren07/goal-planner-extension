@@ -5717,7 +5717,7 @@
     const vh = window.innerHeight;
     const maxW = Math.min(760, vw * 0.88);
     const INSPECTOR_TEXT_RE =
-      /\d{1,2}:\d{2}|\b(?:AM|PM|am|pm)\b|minutes before|Organizer|Guests|Please respond|Goal Planner|doesn't repeat|Weekly on|Edit event|🎯|\bGoal\b|My goals|Subtasks?/i;
+      /\d{1,2}:\d{2}|\b(?:AM|PM|am|pm)\b|minutes before|Organizer|Guests|Please respond|doesn't repeat|Weekly on|Edit event|🎯/i;
     /** @type {HTMLElement | null} */
     let best = null;
     let bestScore = 0;
