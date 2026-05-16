@@ -6238,6 +6238,7 @@
     wrap.setAttribute('data-goals-injected', 'true');
     wrap.dataset.gpEventToken = String(tokenHint || '');
     wrap.dataset.gpGoalId = String(goal?.id ?? '');
+    wrap.dataset.gpGoalTitle = String(goal?.title ?? '');
     wrap.dataset.gpSessionEventId = String(sess?.eventId ?? '');
     wrap.style.cssText =
       'display:block !important;position:relative;z-index:5;box-sizing:border-box;width:100%;max-width:100%;' +
