@@ -793,14 +793,7 @@
     }
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
-    let dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
-    if (!dayColumns.length) {
-      const grid = scrollCont.getBoundingClientRect();
-      dayColumns = findDayColumnPositions().filter((c) => {
-        const cx = c.left + c.width / 2;
-        return cx >= grid.left - 64 && cx <= grid.right + 64;
-      });
-    }
+    const dayColumns = ghostPreviewDayColumns(scrollCont);
     if (!dayColumns.length) {
       if (!previewUi) removeGhostEvents();
       return false;
