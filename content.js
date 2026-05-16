@@ -6049,6 +6049,14 @@
     const outsideCard = !parent || !gpGdComposedSubtreeContains(cardRoot, wrap);
     const parentTooWide = !!(pr && pr.width > cr.width * 1.12);
 
+    if (!outsideCard && !parentTooWide) {
+      gpGdApplyCardContainmentStyles(wrap, cardRoot);
+      return (
+        gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false) ||
+        (gpGdIsGoalBlockVisible(wrap) && gpGdComposedSubtreeContains(cardRoot, wrap))
+      );
+    }
+
     if (outsideCard || parentTooWide) {
       try {
         if (
