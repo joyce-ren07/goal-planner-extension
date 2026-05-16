@@ -2457,6 +2457,9 @@
 
   let _leftSidebarGoalsMountTimer = null;
   let _leftSidebarGoalsMo = null;
+  /** @type {HTMLElement | null} */
+  let _leftSidebarGoalsMountScroll = null;
+  let _gpSidebarReactiveTimer = 0;
 
   function scheduleLeftSidebarGoalsMountAttempts() {
     const run = () => {
