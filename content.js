@@ -4931,7 +4931,7 @@
           <div class="gp-gd-st-tail-after" role="presentation" tabindex="0" data-gp-detail-act="sub-tail" aria-label="Add a task"></div>
         </div>
       </div>
-      <button type="button" class="gp-gd-mark-complete${sessDone ? ' gp-gd-mark-complete--done' : ''}" data-gp-detail-act="mark-session-complete"${sessDone ? ' disabled' : ''}>${escapeHtmlGp(markLbl)}</button>
+      <button type="button" class="gp-gd-mark-complete${sessDone ? ' gp-gd-mark-complete--done' : ''}" data-gp-detail-act="mark-session-complete"${sessDone ? ' disabled' : ''}>Mark completed</button>
     `;
 
     mountHost.appendChild(wrap);
