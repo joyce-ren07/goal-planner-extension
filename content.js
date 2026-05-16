@@ -704,7 +704,9 @@
       ghost.style.top = '0';
       ghost.style.width = `${L.width}px`;
       ghost.style.height = `${L.height}px`;
-      ghost.style.transform = `translate3d(${L.left}px,${L.topPx}px,0)`;
+      const tx = L.contentLeft - scrollCont.scrollLeft;
+      const ty = L.absTop - scrollCont.scrollTop;
+      ghost.style.transform = `translate3d(${tx}px,${ty}px,0)`;
 
       if (created) {
         ghost.classList.add('gp-ghost-new-mount');
@@ -713,7 +715,7 @@
         });
       }
 
-      scrollSlots.push({ el: ghost, absTop: L.absTop, left: L.left });
+      scrollSlots.push({ el: ghost, absTop: L.absTop, contentLeft: L.contentLeft });
     });
 
     _ghostScrollEl = scrollCont;
@@ -722,10 +724,11 @@
       if (scrollRaf) return;
       scrollRaf = requestAnimationFrame(() => {
         scrollRaf = null;
-        const ct = scrollCont.getBoundingClientRect().top;
+        syncGpGhostPreviewRootToScrollGrid(scrollCont);
         const st = scrollCont.scrollTop;
+        const sl = scrollCont.scrollLeft;
         for (const g of scrollSlots) {
-          g.el.style.transform = `translate3d(${g.left}px,${ct + g.absTop - st}px,0)`;
+          g.el.style.transform = `translate3d(${g.contentLeft - sl}px,${g.absTop - st}px,0)`;
         }
       });
     };
