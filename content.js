@@ -6645,24 +6645,24 @@
     stCol.appendChild(compose);
     stCol.appendChild(tail);
 
-    rowSt.appendChild(icSt);
-    rowSt.appendChild(stCol);
-    wrap.appendChild(rowSt);
+    wrap.appendChild(stCol);
 
     /** Mark completed */
     const sessDone = !!sess.completed;
     const markBtn = document.createElement('button');
     markBtn.type = 'button';
+    markBtn.className = 'gp-gd-mark-complete';
     markBtn.setAttribute('data-gp-detail-act', 'mark-session-complete');
     markBtn.textContent = 'Mark completed';
     markBtn.disabled = !!sessDone;
     markBtn.style.cssText =
-      'display:block;width:100%;box-sizing:border-box;margin-top:10px;padding:11px 18px;' +
-      'border:none;border-radius:999px;background:#e8f0fe;color:#1967d2;' +
-      'font-family:inherit;font-size:14px;font-weight:600;line-height:20px;' +
-      'cursor:' + (sessDone ? 'default' : 'pointer') +
-      ';text-align:center;' +
-      (sessDone ? 'opacity:0.55;' : '');
+      'display:block !important;width:100% !important;box-sizing:border-box !important;' +
+      'margin-top:8px !important;padding:10px 0 !important;border:none !important;' +
+      'border-radius:24px !important;background:#e8f0fe !important;color:#1a73e8 !important;' +
+      'font-family:\"Google Sans\",Roboto,sans-serif !important;font-size:14px !important;' +
+      'font-weight:600 !important;line-height:20px !important;text-align:center !important;' +
+      'cursor:' + (sessDone ? 'default' : 'pointer') + ' !important;' +
+      (sessDone ? 'opacity:0.55 !important;' : '');
     wrap.appendChild(markBtn);
 
     const tryMount = (parent, beforeNode) => {
