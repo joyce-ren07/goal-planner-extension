@@ -7102,14 +7102,7 @@
       return null;
     }
 
-    const placed =
-      gpGdIsGoalBlockPainted(wrap) ||
-      (gpGdIsGoalBlockWellPlaced(wrap, shell, false) &&
-        gpGdInspectorHostIsOnScreen(shell)) ||
-      (gpGdIsGoalBlockVisible(wrap) &&
-        gpGdComposedSubtreeContains(cardRoot, wrap) &&
-        gpGdInspectorHostIsOnScreen(shell) &&
-        wrap.getBoundingClientRect().width <= cardRoot.getBoundingClientRect().width * 1.2 + 24);
+    const placed = gpGdIsGoalBlockMountedInCard(wrap, cardRoot, shell);
     if (!placed) {
       gpGdTrace('abort render — goal block still outside inspector card');
       gpGdDiag('inject: abort — misaligned after force mount', {
