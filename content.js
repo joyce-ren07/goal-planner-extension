@@ -7007,11 +7007,27 @@
   }
 
   /** Build goal-session enrichment as real DOM with inline styles (survives GCal stylesheet resets). */
-  function gpGdRenderDetailBlock(hit, tokenHint, dialogShell) {
+  function gpGdRenderDetailBlock(hit, tokenHint, dialogShell, legacyGoals) {
     const goal = hit.goal;
     const sess = hit.session;
     const goalId = String(goal?.id ?? '');
     const token = String(tokenHint || '');
+
+    const injectHints = [token, sess?.eventId, hit?.session?.eventId].filter(
+      (x) => x != null && x !== ''
+    );
+    if (
+      !gpGdMayInjectGoalDetailForHit(
+        hit,
+        legacyGoals,
+        injectHints,
+        dialogShell instanceof HTMLElement ? dialogShell : null
+      )
+    ) {
+      gpGdTrace('abort render — not a Goal Planner session');
+      gpGdDiag('inject: abort — native or unknown calendar event');
+      return null;
+    }
 
     const subtasks = gpGdSubtasksWithTitles(goal);
 
