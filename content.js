@@ -4193,10 +4193,12 @@
     updateConfirmChips(schedLabel, endsLabel);
 
     // Show the screen immediately with skeleton cards (one per selected day)
+    state.suggestions = [];
     showScreen('suggestions');
     resetPrefTimeInput();
     const sessionCount = Math.max(1, r.days.length);
     renderSkeletons(sessionCount);
+    scheduleGhostPreviewRefreshDebounced();
 
     // Fetch freebusy data and generate calendar-aware suggestions (in-memory preview only)
     try {
