@@ -5995,14 +5995,18 @@
   let _gpCalInspectDetailObserversInstalled = false;
 
   function setupGpCalGoalDetailEnrichment() {
-    if (globalThis.__gpCalGoalInspectorEnrichment) return;
+    if (_gpCalInspectDetailObserversInstalled) return;
 
     /** @returns {boolean} installed now */
     function installDetailObservers() {
       const Model = globalThis.GoalPlannerModel;
-      if (!Model?.loadUnifiedState) return false;
+      if (!Model?.loadUnifiedState) {
+        gpGdTrace('GoalPlannerModel not ready');
+        return false;
+      }
       if (_gpCalInspectDetailObserversInstalled) return true;
       _gpCalInspectDetailObserversInstalled = true;
+      gpGdTrace('detail observers installed');
 
       if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
         chrome.storage.onChanged.addListener((changes, area) => {
