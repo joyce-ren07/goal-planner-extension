@@ -6412,7 +6412,6 @@
     );
     gpGdDiag('inject: done', { goalId, placed: ok });
 
-    if (popup instanceof HTMLElement) popup.style.opacity = '1';
     return wrap;
   }
 
