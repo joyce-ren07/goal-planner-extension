@@ -107,8 +107,30 @@
   function syncGpGhostPreviewRootToScrollGrid(scrollCont) {
     let host = document.getElementById('gp-ghost-preview-host');
     if (host && host.parentElement !== scrollCont) {
-      tearDownGpGhostPreviewHostLayers();
-      host = null;
+      /** Reparent when GCal swaps scroll shells (e.g. panel push) — do not tear down preview. */
+      if (scrollCont instanceof HTMLElement && scrollCont.isConnected) {
+        try {
+          if (
+            _gpGhostScrollPositionFixEl &&
+            _gpGhostScrollPositionFixEl !== scrollCont &&
+            _gpGhostScrollPositionFixEl.isConnected
+          ) {
+            _gpGhostScrollPositionFixEl.style.removeProperty('position');
+          }
+          const cs = getComputedStyle(scrollCont);
+          if (cs.position === 'static') {
+            scrollCont.style.position = 'relative';
+            _gpGhostScrollPositionFixEl = scrollCont;
+          }
+          scrollCont.appendChild(host);
+        } catch (_) {
+          tearDownGpGhostPreviewHostLayers();
+          host = null;
+        }
+      } else {
+        tearDownGpGhostPreviewHostLayers();
+        host = null;
+      }
     }
 
     let root = document.getElementById('gp-ghost-preview-root');
