@@ -5025,13 +5025,77 @@
     return node instanceof HTMLElement ? node : null;
   }
 
-  /** Prefer the scrollable metadata column inside the inspector (not the dialog chrome). */
+  /**
+   * Visible white event card inside a wide overlay (popover / side inspector).
+   * Mounting on the full overlay width pushes goal rows into the gutter beside the card.
+   */
+  function gpGdFindEventDetailCardRoot(dialogHost) {
+    if (!(dialogHost instanceof HTMLElement)) return dialogHost;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const maxW = Math.min(720, vw * 0.82);
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestScore = 0;
+
+    gpGdWalkComposedElements(dialogHost, (el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 280 || r.width > maxW) return;
+      if (r.height < 140 || r.height > vh * 0.96) return;
+
+      const text = String(el.innerText || '').slice(0, 1400);
+      if (
+        !/\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)|minutes before|Organizer|Guests|Please respond|Goal Planner/i.test(
+          text
+        )
+      )
+        return;
+
+      const st = window.getComputedStyle(el);
+      const br = parseFloat(st.borderRadius) || 0;
+      let score = r.height * Math.min(r.width, 520);
+      if (br >= 4) score *= 1.35;
+      if (st.boxShadow && st.boxShadow !== 'none') score *= 1.15;
+      if (/\bminutes before\b/i.test(text)) score *= 1.2;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = el;
+      }
+    });
+
+    return /** @type {HTMLElement} */ (best || dialogHost);
+  }
+
+  /** Walk up from a row parent until width matches the card (not the full overlay flex row). */
+  function gpGdConstrainMountParentToCard(mountParent, cardRoot) {
+    if (!(mountParent instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return mountParent;
+    const cardW = cardRoot.getBoundingClientRect().width;
+    /** @type {HTMLElement} */
+    let best = mountParent;
+    let cur = mountParent;
+    for (let d = 0; d < 14 && cur && gpGdComposedSubtreeContains(cardRoot, cur); d++) {
+      const r = cur.getBoundingClientRect();
+      if (r.width >= 260 && r.width <= Math.max(cardW * 1.08, 680)) best = cur;
+      const p = gpGdComposableParentHTMLElement(cur);
+      cur = p instanceof HTMLElement ? p : null;
+    }
+    const br = best.getBoundingClientRect();
+    if (br.width > cardW * 1.2) return gpGdPickGoalDetailMountParent(cardRoot);
+    return best;
+  }
+
+  /** Prefer the scrollable metadata column inside the inspector card (not the dialog chrome). */
   function gpGdPickGoalDetailMountParent(dialogHost) {
+    const scope =
+      dialogHost instanceof HTMLElement ? gpGdFindEventDetailCardRoot(dialogHost) : dialogHost;
     /** @type {HTMLElement | null} */
     let best = null;
     let bestExtra = 0;
-    gpGdWalkComposedElements(dialogHost, (el) => {
+    gpGdWalkComposedElements(scope, (el) => {
       if (!(el instanceof HTMLElement)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width > 760) return;
       const extra = el.scrollHeight - el.clientHeight;
       if (extra <= 24 || el.clientHeight < 72) return;
       if (extra > bestExtra) {
@@ -5039,7 +5103,7 @@
         best = el;
       }
     });
-    return /** @type {HTMLElement} */ (best || dialogHost);
+    return /** @type {HTMLElement} */ (best || scope);
   }
 
   function gpGdFindFirstMetadataRowMatching(dialogHost, re) {
