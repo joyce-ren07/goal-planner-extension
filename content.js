@@ -6034,7 +6034,10 @@
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdWireDetailDelegates(wrap, hit);
     const ok = gpGdIsGoalBlockWellPlaced(wrap, shell);
-    if (ok) _gpGdHydrateQuietUntil = Date.now() + 1800;
+    if (ok) {
+      _gpGdHydrateQuietUntil = Date.now() + 1800;
+      _gpGdRemountCount = 0;
+    }
     const r = wrap.getBoundingClientRect();
     gpGdTrace(
       'render done',
