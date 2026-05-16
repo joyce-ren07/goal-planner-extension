@@ -6881,13 +6881,8 @@
 
       const obs = new MutationObserver(() => {
         if (!gpGdShouldRunDetailScan()) return;
-        if (gpGdDetailBlockReady()) {
-          if (Date.now() < _gpGdHydrateQuietUntil) return;
-        } else if (gpGdIsGoalPlannerInspectorStillOpen()) {
-          gpGdRefreshPinnedSessionLease();
-        } else {
-          return;
-        }
+        if (gpGdDetailBlockReady() && Date.now() < _gpGdHydrateQuietUntil) return;
+        gpGdRefreshPinnedSessionLease();
         window.clearTimeout(_gpGdDomObsDebounce);
         const debounceMs = gpGdDetailBlockReady() ? 200 : 56;
         _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), debounceMs);
