@@ -7516,7 +7516,9 @@
     }
 
     if (!natives.length && html instanceof HTMLElement && pinnedRaw.length) {
-      natives = gpGdCollectAnnotatedInspectorPanels(html);
+      natives = gpGdCollectAnnotatedInspectorPanels(html).filter((h) =>
+        gpGdIsValidNativeEventInspectorHost(h)
+      );
     }
 
     /** No native inspector chrome — wait for async GCal open if user just clicked a goal chip. */
