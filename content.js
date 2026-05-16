@@ -5844,17 +5844,17 @@
     }
 
     gpGdApplyCardContainmentStyles(wrap, cardRoot);
-    return gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false);
+    return (
+      gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false) ||
+      (gpGdIsGoalBlockVisible(wrap) && gpGdComposedSubtreeContains(cardRoot, wrap))
+    );
   }
 
   /** Re-parent into the inspector card when the block escaped a wide calendar/grid ancestor. */
   function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
     if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
-    const card =
-      gpGdFindNativeGcalPopupCard(dialogShell) ||
-      gpGdFindEventDetailCardRoot(dialogShell) ||
-      gpGdFindVisibleEventCardForGoal(dialogShell, wrap.dataset.gpGoalId || '');
-    if (!(card instanceof HTMLElement) || gpGdIsInvalidDetailMountTarget(card)) return false;
+    const card = gpGdResolveInspectorCardRoot(dialogShell, wrap.dataset.gpGoalId || '');
+    if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
     return gpGdForceMountIntoCard(wrap, card, null);
   }
 
