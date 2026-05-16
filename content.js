@@ -5219,6 +5219,54 @@
     gpGdTrace('pinned session hints', hints);
   }
 
+  function gpGdPinHintsFromInspectorShell(shell, e) {
+    if (!(shell instanceof HTMLElement)) return;
+    const seen = new Set();
+    /** @type {string[]} */
+    const hints = [];
+    const add = (raw) => {
+      const s = raw == null || raw === '' ? '' : String(raw).trim();
+      if (!s || seen.has(s)) return;
+      seen.add(s);
+      hints.push(s);
+    };
+    for (const h of _gpGdPinnedHints) add(h);
+    for (const h of gpCollectEventIdHintsFromRoot(shell)) add(h);
+    for (const h of gpGdCollectLocationBarEventHints()) add(h);
+    if (hints.length) _gpGdPinnedHints = hints;
+    _gpGdPinnedAt = Date.now();
+    _gpGdPinnedTitleHint = gpGdExtractGoalTitleFromInspector(shell) || _gpGdPinnedTitleHint;
+    gpGdMarkDetailScanActive(18000);
+    const r = shell.getBoundingClientRect();
+    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      _gpGdAnchorX = e.clientX;
+      _gpGdAnchorY = e.clientY;
+    } else {
+      _gpGdAnchorX = r.left + r.width / 2;
+      _gpGdAnchorY = r.top + r.height / 2;
+    }
+    gpGdTrace('pinned from inspector', _gpGdPinnedHints, _gpGdPinnedTitleHint);
+  }
+
+  /** User clicked inside an open goal event popup (not necessarily on the grid chip). */
+  function gpGdOnInspectorInteraction(e) {
+    if (!_gpCalInspectDetailObserversInstalled) setupGpCalGoalDetailEnrichment();
+    const shell = gpGdFindGoalInspectorFromEvent(e);
+    if (!shell) return false;
+    gpGdPinHintsFromInspectorShell(shell, e);
+    _gpGdRemountCount = 0;
+    _gpGdRemountGoalKey = '';
+    const title = gpGdExtractGoalTitleFromInspector(shell);
+    if (gpGdDetailBlockReady(title)) {
+      scheduleGpGdDialogScan();
+      return true;
+    }
+    scheduleGpGdInspectorOpenBurst();
+    gpGdStartInspectorOpenWatch();
+    scheduleGpGdDialogScan();
+    return true;
+  }
+
   function gpGdOnUserOpenedGoalSession(e) {
     if (!_gpCalInspectDetailObserversInstalled) setupGpCalGoalDetailEnrichment();
     const chip = gpGdResolveGoalChipFromEvent(e);
