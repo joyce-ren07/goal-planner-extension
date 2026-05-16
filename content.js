@@ -5386,12 +5386,31 @@
     }
   }
 
+  function gpGdMaxInspectorCardWidth() {
+    return Math.min(760, Math.max(320, window.innerWidth * 0.82));
+  }
+
+  /** Reject week-grid surfaces and viewport-wide wrappers — detail UI must mount in a narrow inspector card only. */
+  function gpGdIsInvalidDetailMountTarget(el) {
+    if (!(el instanceof HTMLElement) || !el.isConnected) return true;
+    if (gpGdIsCalendarGridContainer(el)) return true;
+    const r = el.getBoundingClientRect();
+    if (r.width > gpGdMaxInspectorCardWidth()) return true;
+    if (r.height < 72) return true;
+    if (el.querySelectorAll('[data-eventchip]').length >= 8 && r.width > 400) return true;
+    return false;
+  }
+
   function gpGdIsCalendarGridContainer(el) {
     if (!(el instanceof HTMLElement)) return false;
     if (el.closest('[role="dialog"], [role="alertdialog"]')) return false;
     const main = el.closest('[role="main"]');
     if (!main) return false;
-    return main.querySelectorAll('[data-eventid]').length >= 4;
+    const eventCount = main.querySelectorAll('[data-eventid]').length;
+    if (eventCount >= 4) return true;
+    const r = el.getBoundingClientRect();
+    if (r.width > window.innerWidth * 0.55 && eventCount >= 2) return true;
+    return false;
   }
 
   function gpGdInspectorHasCloseControl(root) {
