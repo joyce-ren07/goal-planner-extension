@@ -5835,13 +5835,18 @@
       if (before) break;
     }
 
-    /** Always mount inside the popup card — not before.parentElement (often the wide overlay). */
-    const mountParent =
-      cardRoot instanceof HTMLElement ? cardRoot : gpGdPickGoalDetailMountParent(dialogHost, cardRoot);
+    let mountParent =
+      cardRoot instanceof HTMLElement
+        ? gpGdPickGoalDetailMountParent(dialogHost, cardRoot)
+        : gpGdPickGoalDetailMountParent(dialogHost, null);
+    if (cardRoot instanceof HTMLElement) {
+      mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost);
+      if (gpGdIsInvalidDetailMountTarget(mountParent)) mountParent = cardRoot;
+    }
 
     const insertBefore =
       before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before) ? before : null;
-    return { mountParent, insertBefore };
+    return { mountParent, insertBefore, cardRoot: cardRoot instanceof HTMLElement ? cardRoot : null };
   }
 
   function gpGdParseSvg(markup) {
