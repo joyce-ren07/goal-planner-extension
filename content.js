@@ -5750,15 +5750,38 @@
   function gpGdIsGoalBlockWellPlaced(wrap, dialogShell, requirePainted) {
     if (!gpGdIsGoalBlockVisible(wrap) || !(dialogShell instanceof HTMLElement)) return false;
     if (requirePainted !== false && !gpGdIsGoalBlockPainted(wrap)) return false;
-    const card = gpGdFindEventDetailCardRoot(dialogShell);
+
+    let card = null;
+    let cur = wrap.parentElement;
+    for (let d = 0; d < 24 && cur; d++) {
+      if (!(cur instanceof HTMLElement)) break;
+      const r = cur.getBoundingClientRect();
+      if (r.width >= 200 && r.width <= gpGdMaxInspectorCardWidth() && r.height >= 72) {
+        card = cur;
+        break;
+      }
+      const p = gpGdComposableParentHTMLElement(cur);
+      cur = p instanceof HTMLElement ? p : null;
+    }
+    if (!(card instanceof HTMLElement)) {
+      card = gpGdResolveInspectorCardRoot(dialogShell, '') || gpGdFindEventDetailCardRoot(dialogShell);
+    }
     if (!(card instanceof HTMLElement)) return false;
+
     const wr = wrap.getBoundingClientRect();
     const cr = card.getBoundingClientRect();
     if (cr.width < 200) return false;
+
+    if (gpGdComposedSubtreeContains(card, wrap)) {
+      if (wr.width <= cr.width * 1.12 + 20 && wr.left >= cr.left - 16 && wr.right <= cr.right + 32) {
+        return true;
+      }
+    }
+
     if (wr.left > cr.right + 12) return false;
     if (wr.right > cr.right + 56) return false;
     const overlap = Math.min(wr.right, cr.right) - Math.max(wr.left, cr.left);
-    return overlap >= Math.min(wr.width, cr.width) * 0.42;
+    return overlap >= Math.min(wr.width, cr.width) * 0.35;
   }
 
   /** Keep the inner inspector shell — drop ancestors that swallow the whole viewport. */
