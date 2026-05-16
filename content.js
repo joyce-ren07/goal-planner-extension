@@ -6079,6 +6079,8 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
+          if (gpGdIsGoalBlockVisible(ext) && gpGdIsGoalBlockWellPlaced(ext, dialogShell, false)) return;
+          gpGdReparentBlockIntoScrollColumn(ext, dialogShell);
           if (gpGdIsGoalBlockVisible(ext)) return;
         }
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
