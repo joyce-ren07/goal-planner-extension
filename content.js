@@ -4500,14 +4500,26 @@
   }
 
   // ── Auth ──
-  function getAuthToken() {
+  function getAuthToken(interactive = true) {
     return new Promise((res, rej) => {
-      chrome.runtime.sendMessage({ type: 'GET_AUTH_TOKEN' }, response => {
+      chrome.runtime.sendMessage({ type: 'GET_AUTH_TOKEN', interactive: !!interactive }, (response) => {
         if (chrome.runtime.lastError) return rej(chrome.runtime.lastError);
         if (response?.error) return rej(new Error(response.error));
+        if (!response?.token) return rej(new Error('No OAuth token returned'));
         res(response.token);
       });
     });
+  }
+
+  function clearAuthTokenCache() {
+    return new Promise((res) => {
+      chrome.runtime.sendMessage({ type: 'CLEAR_AUTH_TOKEN' }, () => res());
+    });
+  }
+
+  async function getAuthTokenFresh() {
+    await clearAuthTokenCache();
+    return getAuthToken(true);
   }
 
   // ── Storage ──
