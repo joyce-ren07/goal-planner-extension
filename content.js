@@ -4941,103 +4941,120 @@
     return wrap;
   }
 
+  async function gpGdPersistSubtaskRingToggle(wrapHost, subId, nextCompleted) {
+    const gid = wrapHost.dataset.gpGoalId;
+    if (!gid) return;
+    const goals = await getGoals();
+    const gRow = goals.find((g) => String(g.id) === String(gid));
+    if (!gRow) return;
+    const list = gpNormalizeSubtasksForPersist(gRow.subtasks).map((item) =>
+      String(item.id) === String(subId) ? { ...item, completed: !!nextCompleted } : item
+    );
+    await gpDetailPersistGoalSubtasksAndMirror(gid, list);
+    scheduleGpGdFromUnifiedEcho();
+  }
+
+  async function gpGdAppendSubtaskInline(wrapHost, titleTrim) {
+    const gid = wrapHost.dataset.gpGoalId;
+    if (!gid) return;
+    const goals = await getGoals();
+    const gRow = goals.find((g) => String(g.id) === String(gid));
+    if (!gRow) return;
+    const list = [...gpNormalizeSubtasksForPersist(gRow.subtasks)];
+    list.push({
+      id: `sub_${generateId().slice(-10)}`,
+      title: titleTrim,
+      completed: false,
+    });
+    await gpDetailPersistGoalSubtasksAndMirror(gid, list);
+    gpGdShowTaskCompose(wrapHost, false);
+    scheduleGpGdFromUnifiedEcho();
+  }
+
+  /** Mark current session completed (same path as decorated chip checkbox), then dismiss native detail UI. */
+  async function gpGdMarkSessionDoneAndDismiss(wrapHost, hit) {
+    const btn = wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]');
+    if (!(btn instanceof HTMLButtonElement)) return;
+    if (btn.disabled) {
+      gpGdCloseNativeEventPopover(wrapHost);
+      return;
+    }
+    const raw = wrapHost.dataset.gpSessionEventId ?? hit.session?.eventId ?? '';
+    const chip = gpFindChipForPlannerEventFlexible(String(raw));
+    if (!chip) {
+      alert('Could not locate this session on the grid — toggle completion directly on the calendar chip.');
+      return;
+    }
+    const domKey =
+      chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || String(raw);
+    GoalInteractionController.toggleCompletion(domKey, chip);
+    scheduleGpGdFromUnifiedEcho();
+    gpGdCloseNativeEventPopover(wrapHost);
+  }
+
   /**
    * @param {GpUnifiedGoalHit} hit
    * @param {HTMLElement} wrapHost
    */
   function gpGdWireDetailDelegates(wrapHost, hit) {
-    wrapHost.querySelector('[data-gp-detail-act="title-edit"]')?.addEventListener('click', () => {
-      const nextPlain = prompt('Goal title', String(hit.goal.title || '').replace(/^\s*🎯\s*/u, '').trim());
-      if (nextPlain == null) return;
-      const trimmed = nextPlain.trim();
-      if (!trimmed) return;
-      void gpGdApplyRenameGoal(hit.goal?.id, trimmed);
+    wrapHost.querySelector('[data-gp-detail-act="sub-add"]')?.addEventListener('click', () => {
+      gpGdShowTaskCompose(wrapHost, true);
     });
 
-    wrapHost.querySelector('[data-gp-detail-act="schedule-edit"]')?.addEventListener('click', async () => {
-      const gid = hit.goal?.id;
-      if (!gid) return;
-      teardownGpGdBlock();
-      await openEditGoal(gid);
-      openPanel();
+    const tailHit = wrapHost.querySelector('[data-gp-detail-act="sub-tail"]');
+    tailHit?.addEventListener('click', () => {
+      gpGdShowTaskCompose(wrapHost, true);
+    });
+    tailHit?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      gpGdShowTaskCompose(wrapHost, true);
     });
 
-    wrapHost.querySelector('[data-gp-detail-act="subtasks-enter-edit"]')?.addEventListener('click', () => {
-      gpGdApplySubtasksEditMode(wrapHost, true);
-    });
-
-    wrapHost.querySelector('[data-gp-detail-act="subtasks-exit-edit"]')?.addEventListener('click', async () => {
-      const gid = wrapHost.dataset.gpGoalId;
-      const sec = wrapHost.querySelector('.gp-gd-subtasks');
-      if (!gid || !(sec instanceof HTMLElement)) return;
-      const nextList = gpGdCollectSubtasksEditDom(sec);
-      await gpDetailPersistGoalSubtasksAndMirror(gid, nextList);
-      gpGdApplySubtasksEditMode(wrapHost, false);
-      scheduleGpGdFromUnifiedEcho();
-    });
-
-    wrapHost.addEventListener('change', async (ev) => {
-      const tg = ev.target;
-      if (!(tg instanceof HTMLInputElement)) return;
-      if (!tg.matches('.gp-gd-task-cb[data-gp-sub-toggle]')) return;
-      if (wrapHost.querySelector('.gp-gd-subtasks.gp-gd-subtasks--editing')) return;
-      const gid = wrapHost.dataset.gpGoalId;
-      const sid = tg.getAttribute('data-gp-sub-toggle');
-      if (!gid || !sid) return;
-      const row = tg.closest('.gp-gd-task-row');
-      const span = row?.querySelector('.gp-gd-task-text');
-      if (span instanceof HTMLElement) {
-        if (tg.checked) span.classList.add('gp-gd-task-text--completed');
-        else span.classList.remove('gp-gd-task-text--completed');
+    const newInp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('.gp-gd-st-new-inp'));
+    newInp?.addEventListener('keydown', async (e) => {
+      const inp = /** @type {HTMLInputElement | null} */ (e.target instanceof HTMLInputElement ? e.target : null);
+      if (!inp || e.key !== 'Enter') return;
+      e.preventDefault();
+      const tv = inp.value.trim();
+      if (!tv) {
+        gpGdShowTaskCompose(wrapHost, false);
+        return;
       }
-      const goals = await getGoals();
-      const gRow = goals.find((g) => String(g.id) === String(gid));
-      if (!gRow) return;
-      const list = gpNormalizeSubtasksForPersist(gRow.subtasks).map((item) =>
-        String(item.id) === String(sid) ? { ...item, completed: !!tg.checked } : item
-      );
-      await gpDetailPersistGoalSubtasksAndMirror(gid, list);
-      scheduleGpGdFromUnifiedEcho();
+      await gpGdAppendSubtaskInline(wrapHost, tv);
     });
+
+    newInp?.addEventListener('blur', () => {
+      window.setTimeout(() => {
+        if (!wrapHost.isConnected) return;
+        const inp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('.gp-gd-st-new-inp'));
+        if (!(inp instanceof HTMLInputElement)) return;
+        if (!inp.value.trim()) gpGdShowTaskCompose(wrapHost, false);
+      }, 160);
+    });
+
+    wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]')?.addEventListener(
+      'click',
+      () => void gpGdMarkSessionDoneAndDismiss(wrapHost, hit)
+    );
 
     wrapHost.addEventListener(
       'click',
-      /** @type {(e: Event) => Promise<void>} */ async function gpGdDelegationClick(ev) {
-        const del =
-          /** @type {HTMLElement | null} */ (ev.target instanceof Element ? ev.target.closest('[data-gp-sub-delete]') : null);
-        if (del) {
-          ev.preventDefault();
-          const sec = wrapHost.querySelector('.gp-gd-subtasks');
-          del.closest('.gp-gd-task-item')?.remove();
-          if (!(sec instanceof HTMLElement)) return;
-          const listUl = sec.querySelector('.gp-gd-tasklist');
-          const emptyHint = sec.querySelector('.gp-gd-subtasks-empty');
-          const hasTasks = !!(listUl && listUl.querySelector('.gp-gd-task-item'));
-          if (emptyHint) {
-            if (hasTasks) emptyHint.setAttribute('hidden', '');
-            else emptyHint.removeAttribute('hidden');
-          }
-          return;
-        }
-
-        const btn =
-          /** @type {HTMLElement} */ (ev.target && ev.target instanceof Element ? ev.target : null)?.closest?.(
-          '[data-gp-detail-toggle-session]'
-        );
-        if (!btn || !(btn instanceof HTMLButtonElement)) return;
-        const raw = btn.dataset.sessionEvent;
-        if (!raw) return;
-        const chip = gpFindChipForPlannerEventFlexible(raw);
-        if (!chip) {
-          alert('Could not locate this session on the grid — toggle completion directly on the calendar chip.');
-          return;
-        }
-        const domKey =
-          chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || String(raw);
-        GoalInteractionController.toggleCompletion(domKey, chip);
-        scheduleGpGdFromUnifiedEcho();
-      },
-      false
+      /** @type {(ev: MouseEvent) => Promise<void>} */ async function gpGdNativeStyleGoalDetailClick(ev) {
+        const ring =
+          /** @type {HTMLElement | null} */
+          ev.target instanceof Element ? ev.target.closest('[data-gp-sub-ring]') : null;
+        if (!(ring instanceof HTMLButtonElement)) return;
+        const sidRaw = ring.getAttribute('data-gp-sub-ring');
+        if (!sidRaw) return;
+        const turningOn = !(ring.getAttribute('aria-checked') === 'true');
+        ring.classList.toggle('gp-gd-st-ring--on', turningOn);
+        ring.setAttribute('aria-checked', turningOn ? 'true' : 'false');
+        const row = ring.closest('.gp-gd-st-item');
+        const lab = row?.querySelector('.gp-gd-st-txt');
+        if (lab instanceof HTMLElement) lab.classList.toggle('gp-gd-st-txt--done', turningOn);
+        await gpGdPersistSubtaskRingToggle(wrapHost, sidRaw, turningOn);
+      }
     );
   }
 
