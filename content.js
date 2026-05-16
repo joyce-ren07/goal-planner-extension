@@ -6593,9 +6593,11 @@
 
   function gpGdEnsureDetailDelegates(wrapHost, hit) {
     if (!(wrapHost instanceof HTMLElement)) return;
-    if (wrapHost.dataset.gpDetailWired === '1') return;
-    wrapHost.dataset.gpDetailWired = '1';
-    gpGdWireDetailDelegates(wrapHost, hit);
+    if (wrapHost.dataset.gpDetailWired !== '1') {
+      wrapHost.dataset.gpDetailWired = '1';
+      gpGdWireDetailDelegates(wrapHost, hit);
+    }
+    gpGdWireMarkCompleteButton(wrapHost, hit);
   }
 
   /** @param {HTMLElement} wrapHost Detail extension root (inline-styled DOM; data-* hooks only). */
