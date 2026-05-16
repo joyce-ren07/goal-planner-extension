@@ -6357,8 +6357,10 @@
   /** @param {HTMLElement} ul */
   function gpGdPaintSubtaskList(ul, subtasks) {
     if (!(ul instanceof HTMLElement)) return;
+    const sorted = [...subtasks];
+    sorted.sort((a, b) => Number(a.completed) - Number(b.completed));
     ul.innerHTML = '';
-    for (const st of subtasks) {
+    for (const st of sorted) {
       const co = gpSubtaskIsCompleted(st);
       const li = document.createElement('li');
       li.setAttribute('data-gp-st-item', '1');
@@ -6372,15 +6374,10 @@
       ring.type = 'button';
       ring.setAttribute('data-gp-sub-ring', String(st.id));
       ring.setAttribute('role', 'checkbox');
-      ring.className = 'gp-gd-st-ring' + (co ? ' gp-gd-st-ring--on' : '');
       ring.setAttribute(
         'aria-label',
         `${co ? 'Unmark' : 'Mark'} subtask "${String(st.title || '').slice(0, 80)}".`
       );
-      ring.style.cssText =
-        'flex-shrink:0;width:18px;height:18px;margin:2px 0 0;padding:0;box-sizing:border-box;' +
-        'border-radius:50%;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
-        'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;';
       ring.addEventListener('mouseenter', () => {
         if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'rgba(95,99,104,0.1)';
       });
@@ -6388,17 +6385,30 @@
         if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'transparent';
       });
 
-      let checkSvg = gpGdParseSvg(
-        '<svg class="gp-gd-st-check" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">' +
-          '<path fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ' +
-          'stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>'
-      );
-      if (checkSvg)
-        /** @type {SVGSVGElement} */ (checkSvg).style.cssText =
-          'display:block;width:12px;height:12px;opacity:0;pointer-events:none;';
-
-      if (checkSvg) ring.appendChild(checkSvg);
-      gpGdApplySubtaskRingVisual(ring, checkSvg instanceof SVGSVGElement ? checkSvg : null, co);
+      if (co) {
+        ring.className = 'gp-gd-st-ring gp-gd-st-ring--on';
+        ring.style.cssText =
+          'flex-shrink:0;width:18px;height:18px;margin:2px 0 0;padding:0;box-sizing:border-box;' +
+          'border-radius:50%;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
+          'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;';
+        let checkSvg = gpGdParseSvg(
+          '<svg class="gp-gd-st-check" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">' +
+            '<path fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ' +
+            'stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>'
+        );
+        if (checkSvg)
+          /** @type {SVGSVGElement} */ (checkSvg).style.cssText =
+            'display:block;width:12px;height:12px;opacity:0;pointer-events:none;';
+        if (checkSvg) ring.appendChild(checkSvg);
+        gpGdApplySubtaskRingVisual(ring, checkSvg instanceof SVGSVGElement ? checkSvg : null, true);
+      } else {
+        ring.className = 'gp-gd-st-ring';
+        ring.setAttribute('aria-checked', 'false');
+        ring.style.cssText =
+          'flex-shrink:0;margin:2px 0 0;padding:0;box-sizing:border-box;cursor:pointer;' +
+          'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;' +
+          'width:18px;height:18px;border-radius:50%;border:2px solid #5f6368;background:transparent;';
+      }
 
       const lbl = document.createElement('span');
       lbl.setAttribute('data-gp-st-label', '1');
