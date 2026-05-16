@@ -6429,19 +6429,24 @@
       });
 
       const obs = new MutationObserver(() => {
-        scheduleGpGdDialogScan();
+        if (!gpGdShouldRunDetailScan()) return;
+        const ext = __gpGdBlockEl;
+        if (ext?.isConnected && Date.now() < _gpGdHydrateQuietUntil && gpGdIsGoalBlockVisible(ext)) {
+          return;
+        }
+        window.clearTimeout(_gpGdDomObsDebounce);
+        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), 200);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
         childList: true,
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'aria-modal', 'role', 'open', 'hidden'],
       });
 
       let _gdUiBump = 0;
       const bumpDialogScanDebounced = () => {
+        gpGdMarkDetailScanActive(12000);
         window.clearTimeout(_gdUiBump);
-        _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 55);
+        _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 120);
       };
       const onGoalOpenGesture = (e) => {
         bumpDialogScanDebounced();
