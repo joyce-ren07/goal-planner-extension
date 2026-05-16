@@ -6880,6 +6880,12 @@
   let _gpCalInspectDetailObserversInstalled = false;
 
   function setupGpCalGoalDetailEnrichment() {
+    if (!globalThis.__gpGdDelegatedGoalClickInstalled) {
+      globalThis.__gpGdDelegatedGoalClickInstalled = true;
+      document.addEventListener('click', gpGdOnDelegatedGoalCalendarClick, true);
+      gpGdTrace('delegated capture click listener installed');
+    }
+
     if (_gpCalInspectDetailObserversInstalled) return;
 
     /** @returns {boolean} installed now */
