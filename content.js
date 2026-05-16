@@ -6886,6 +6886,7 @@
         const checkSvg = /** @type {SVGSVGElement | null} */ (ring.querySelector('svg'));
         gpGdApplySubtaskRingVisual(ring, checkSvg, turningOn);
         if (lab instanceof HTMLElement) {
+          lab.classList.toggle('gp-gd-st-txt--done', turningOn);
           lab.style.color = turningOn ? '#9aa0a6' : '#3c4043';
           lab.style.textDecoration = turningOn ? 'line-through' : 'none';
         }
