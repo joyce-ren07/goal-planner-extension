@@ -5205,6 +5205,7 @@
 
     gpGdWalkComposedElements(dialogHost, (el) => {
       if (!gpGdIsElementVisuallyExposed(el)) return;
+      if (gpGdIsCalendarGridContainer(el)) return;
       const r = el.getBoundingClientRect();
       if (r.width < 220 || r.width > maxW) return;
       if (r.height < 120 || r.height > vh * 0.96) return;
