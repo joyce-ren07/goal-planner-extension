@@ -6976,8 +6976,7 @@
         gpGdRefreshDetailSubtasks(wrapHost, {
           goal: { id: gRow.id, title: gRow.title, subtasks: gpGdSubtasksWithTitles(gRow) },
           session: {
-            completed: !!wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]')
-              ?.disabled,
+            completed: !!gpGdGetDetailMarkCompleteBtn()?.disabled,
           },
         });
       }
