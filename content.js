@@ -1436,6 +1436,12 @@
       clearGoalCreationPreview();
       scheduleGhostPreviewRefreshDebounced();
     } else if (name === 'suggestions') {
+      if (!state.editingGoalId) {
+        _gpGdPinnedHints = [];
+        _gpGdPinnedAt = 0;
+        _gpGdPinnedGoalId = '';
+        _gpGdPinnedSlotIdx = -1;
+      }
       scheduleGhostPreviewRefreshDebounced();
     }
   }
