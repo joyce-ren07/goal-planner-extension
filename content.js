@@ -6134,8 +6134,6 @@
 
   /** Build goal-session enrichment as real DOM with inline styles (survives GCal stylesheet resets). */
   function gpGdRenderDetailBlock(hit, tokenHint, dialogShell) {
-    const popup = dialogShell;
-    if (popup instanceof HTMLElement) popup.style.opacity = '0';
     const goal = hit.goal;
     const sess = hit.session;
     const goalId = String(goal?.id ?? '');
