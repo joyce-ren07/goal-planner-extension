@@ -6587,7 +6587,7 @@
     wrap.appendChild(rowMy);
 
     /** Subtasks checklist — no section header or icon column (native GCal task style). */
-    const stCol = document.createElement('motion');
+    const stCol = document.createElement('div');
     stCol.style.cssText =
       S_TEXT_COL_SIDE + 'padding-left:36px;box-sizing:border-box;width:100%;';
 
