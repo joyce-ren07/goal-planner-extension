@@ -7742,15 +7742,14 @@
     if (keep?.isConnected) {
       for (const h of natives) {
         if (!gpGdComposedSubtreeContains(h, keep)) continue;
-        gpGdAlignInjectedBlockToCard(keep, h);
-        if (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep)) {
-          _gpGdHydrateQuietUntil = Date.now() + 12000;
-          gpGdMarkDetailScanActive(12000);
+        if (gpGdIsValidEventDetailInspectorShell(h)) {
+          gpGdStabilizeMountedDetailBlock(keep, h, null);
+          gpGdMarkDetailScanActive(15000);
           return;
         }
       }
       if (
-        gpGdIsGoalBlockVisible(keep) &&
+        (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep)) &&
         (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length || gpGdHasOpenEventInspector())
       ) {
         return;
