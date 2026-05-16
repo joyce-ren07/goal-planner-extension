@@ -6584,10 +6584,12 @@
     const shell =
       gpGdFindOpenInspectorNearClick(goal?.title) ||
       gpGdFindEventInspectorShell(goal?.title) ||
-      (dialogShell instanceof HTMLElement ? dialogShell : null) ||
+      (dialogShell instanceof HTMLElement && gpGdIsEventDetailPopupHost(dialogShell)
+        ? dialogShell
+        : null) ||
       /** @type {HTMLElement} */ (document.body);
-    if (!shell || gpGdIsCalendarGridContainer(shell)) {
-      gpGdTrace('abort render — no event inspector shell near click');
+    if (!shell || gpGdIsCalendarGridContainer(shell) || !gpGdIsEventDetailPopupHost(shell)) {
+      gpGdTrace('abort render — no event detail popup near click');
       return null;
     }
     const cardRoot =
