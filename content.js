@@ -6748,6 +6748,7 @@
       if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
         chrome.storage.onChanged.addListener((changes, area) => {
           if (area !== 'local' || (!changes.goalPlannerUnifiedState && !changes.gp_goals)) return;
+          gpGdInvalidateUnifiedCache();
           scheduleGpGdFromUnifiedEcho();
         });
       }
