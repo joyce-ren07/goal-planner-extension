@@ -6480,10 +6480,17 @@
       }
     }
 
-    const shell =
+    let shell =
       gpGdFindEventInspectorShell(goal?.title) ||
       (dialogShell instanceof HTMLElement ? dialogShell : null) ||
       /** @type {HTMLElement} */ (document.body);
+    if (shell instanceof HTMLElement && !gpGdInspectorHostIsOnScreen(shell)) {
+      const alt = gpGdPickBestVisibleInspectorHost(
+        gpEnumerateNativeEventDetailHosts().filter((h) => gpGdInspectorHostIsOnScreen(h)),
+        goal?.title
+      );
+      if (alt instanceof HTMLElement) shell = alt;
+    }
     if (!shell || gpGdIsCalendarGridContainer(shell)) {
       gpGdTrace('abort render — no event inspector shell near click');
       return null;
