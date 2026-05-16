@@ -46,13 +46,6 @@
   // ── Ghost event state ──
   /** Scroll container we inlined `position:relative` on solely so the ghost host can anchor inside it — reverted when host is torn down. */
   let _gpGhostScrollPositionFixEl = null;
-  /** Stable grid scroll parent while create-flow preview is active (GCal reflow swaps shells). */
-  let _gpGhostScrollContPinned = /** @type {HTMLElement | null} */ (null);
-  /** Scroll shell that successfully hosted a preview paint — avoids reparent/tear-down churn. */
-  let _gpGhostLockedScrollCont = /** @type {HTMLElement | null} */ (null);
-  let _gpGhostPreviewRecoveryMo = /** @type {MutationObserver | null} */ (null);
-  let _gpGhostPreviewRecoveryWatchEl = /** @type {HTMLElement | null} */ (null);
-  let _gpGhostPreviewRecoveryDebounce = 0;
   let _gpGhostCueRaf = 0;
   /** Ghost under pointer for “Planned” tooltip cue (interaction only; no Goal state). */
   let _gpGhostTipEl = null;
@@ -114,33 +107,8 @@
   function syncGpGhostPreviewRootToScrollGrid(scrollCont) {
     let host = document.getElementById('gp-ghost-preview-host');
     if (host && host.parentElement !== scrollCont) {
-      /** Reparent when GCal swaps scroll shells (e.g. panel push) — never tear down during create preview. */
-      const previewUi = isGhostCreationPreviewUiActive();
-      if (scrollCont instanceof HTMLElement && scrollCont.isConnected) {
-        try {
-          if (
-            _gpGhostScrollPositionFixEl &&
-            _gpGhostScrollPositionFixEl !== scrollCont &&
-            _gpGhostScrollPositionFixEl.isConnected
-          ) {
-            _gpGhostScrollPositionFixEl.style.removeProperty('position');
-          }
-          const cs = getComputedStyle(scrollCont);
-          if (cs.position === 'static') {
-            scrollCont.style.position = 'relative';
-            _gpGhostScrollPositionFixEl = scrollCont;
-          }
-          scrollCont.appendChild(host);
-        } catch (_) {
-          if (!previewUi) {
-            tearDownGpGhostPreviewHostLayers();
-            host = null;
-          }
-        }
-      } else if (!previewUi) {
-        tearDownGpGhostPreviewHostLayers();
-        host = null;
-      }
+      tearDownGpGhostPreviewHostLayers();
+      host = null;
     }
 
     let root = document.getElementById('gp-ghost-preview-root');
@@ -202,99 +170,6 @@
     return `${session?.isoStart ?? ''}|${session?.isoEnd ?? ''}`;
   }
 
-  function releaseGhostPreviewScrollContainer() {
-    _gpGhostScrollContPinned = null;
-    _gpGhostLockedScrollCont = null;
-  }
-
-  function lockGhostPreviewScrollContainer(scrollCont) {
-    if (isGhostCreationPreviewUiActive() && scrollCont instanceof HTMLElement) {
-      _gpGhostLockedScrollCont = scrollCont;
-      _gpGhostScrollContPinned = scrollCont;
-    }
-  }
-
-  function findCalendarScrollContainerForGhostPreview() {
-    if (!isGhostCreationPreviewUiActive()) {
-      releaseGhostPreviewScrollContainer();
-      return findCalendarScrollContainer();
-    }
-    const host = document.getElementById('gp-ghost-preview-host');
-    const locked = _gpGhostLockedScrollCont;
-    if (locked?.isConnected) {
-      if (!host || host.parentElement === locked) return locked;
-    }
-    const found = findCalendarScrollContainer();
-    if (found instanceof HTMLElement) {
-      _gpGhostScrollContPinned = found;
-      return found;
-    }
-    const pinned = _gpGhostScrollContPinned;
-    if (pinned?.isConnected) {
-      const r = pinned.getBoundingClientRect();
-      if (r.height >= 120 && findHourAbsolutePositions(pinned).length >= 2) return pinned;
-    }
-    return locked?.isConnected ? locked : null;
-  }
-
-  /** Day columns for ghost paint — filtered to main grid, with fallbacks so preview still mounts. */
-  function ghostPreviewDayColumns(scrollCont) {
-    const all = findDayColumnPositions();
-    if (!scrollCont) return all;
-    let cols = filterGhostPreviewDayColumns(scrollCont, all);
-    if (cols.length) return cols;
-    const grid = scrollCont.getBoundingClientRect();
-    cols = all.filter((c) => {
-      const cx = c.left + c.width / 2;
-      return cx >= grid.left - 64 && cx <= grid.right + 64;
-    });
-    if (cols.length) return cols;
-    return isGhostCreationPreviewUiActive() ? all : cols;
-  }
-
-  function ensureGhostPreviewRecoveryObserver() {
-    if (!isGhostCreationPreviewUiActive()) {
-      if (_gpGhostPreviewRecoveryMo) {
-        _gpGhostPreviewRecoveryMo.disconnect();
-        _gpGhostPreviewRecoveryMo = null;
-      }
-      _gpGhostPreviewRecoveryWatchEl = null;
-      window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
-      return;
-    }
-    const watchEl =
-      _gpGhostLockedScrollCont?.isConnected
-        ? _gpGhostLockedScrollCont
-        : findCalendarScrollContainerForGhostPreview();
-    if (!(watchEl instanceof HTMLElement)) return;
-    if (_gpGhostPreviewRecoveryMo && _gpGhostPreviewRecoveryWatchEl === watchEl) return;
-    if (_gpGhostPreviewRecoveryMo) {
-      _gpGhostPreviewRecoveryMo.disconnect();
-      _gpGhostPreviewRecoveryMo = null;
-    }
-    _gpGhostPreviewRecoveryWatchEl = watchEl;
-    _gpGhostPreviewRecoveryMo = new MutationObserver(() => {
-      if (!isGhostCreationPreviewUiActive()) {
-        ensureGhostPreviewRecoveryObserver();
-        return;
-      }
-      const host = document.getElementById('gp-ghost-preview-host');
-      if (host?.isConnected && host.querySelector('.goal-ghost-event')) return;
-      window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
-      _gpGhostPreviewRecoveryDebounce = window.setTimeout(() => {
-        if (!isGhostCreationPreviewUiActive()) return;
-        const h = document.getElementById('gp-ghost-preview-host');
-        if (h?.isConnected && h.querySelector('.goal-ghost-event')) return;
-        scheduleGhostPreviewRefreshDebounced();
-      }, 150);
-    });
-    try {
-      _gpGhostPreviewRecoveryMo.observe(watchEl, { childList: true, subtree: true });
-    } catch (_) {
-      _gpGhostPreviewRecoveryMo = null;
-    }
-  }
-
   /** Goal create flow Screen 3 only — used to avoid tearing down overlay on transient DOM/paint churn. */
   function isGhostCreationPreviewUiActive() {
     const panel = document.getElementById('gp-panel');
@@ -333,8 +208,6 @@
     }
     document.querySelectorAll('body > .goal-ghost-event').forEach((el) => el.remove());
     tearDownGpGhostPreviewHostLayers();
-    releaseGhostPreviewScrollContainer();
-    ensureGhostPreviewRecoveryObserver();
   }
 
   /** In-memory preview only: never written to chrome.storage until confirmAddToCalendar succeeds. */
@@ -342,8 +215,6 @@
     state.suggestions = [];
     _originalSuggestions = [];
     removeGhostEvents();
-    releaseGhostPreviewScrollContainer();
-    ensureGhostPreviewRecoveryObserver();
     resetPrefTimeInput();
   }
 
@@ -620,8 +491,8 @@
     const days = Array.isArray(r.days) ? r.days : [];
     const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-    const scrollGhost = findCalendarScrollContainerForGhostPreview();
-    const cols = ghostPreviewDayColumns(scrollGhost);
+    const scrollGhost = findCalendarScrollContainer();
+    const cols = filterGhostPreviewDayColumns(scrollGhost, findDayColumnPositions());
     if (!cols.length) return [];
 
     const [hour, minRaw] = (r.time || '09:00').split(':').map(Number);
@@ -790,11 +661,12 @@
   function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
     const previewUi = isGhostCreationPreviewUiActive();
     if (!sessions || !sessions.length) {
-      if (!previewUi) removeGhostEvents();
+      if (previewUi) clearGhostPreviewChipsOnly();
+      else removeGhostEvents();
       return false;
     }
 
-    const scrollCont = findCalendarScrollContainerForGhostPreview();
+    const scrollCont = findCalendarScrollContainer();
     if (!scrollCont) {
       if (!previewUi) removeGhostEvents();
       return false;
@@ -816,7 +688,7 @@
     }
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
-    const dayColumns = ghostPreviewDayColumns(scrollCont);
+    const dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
     if (!dayColumns.length) {
       if (!previewUi) removeGhostEvents();
       return false;
@@ -857,7 +729,8 @@
     }
 
     if (!layouts.length) {
-      if (!previewUi) removeGhostEvents();
+      if (previewUi) clearGhostPreviewChipsOnly();
+      else removeGhostEvents();
       return false;
     }
 
@@ -909,42 +782,27 @@
       }
     });
 
-    lockGhostPreviewScrollContainer(scrollCont);
-    ensureGhostPreviewRecoveryObserver();
     return true;
   }
 
   // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
   function renderGhostEvents() {
-    const previewActive = isGhostCreationPreviewUiActive();
-    if (!previewActive) {
-      releaseGhostPreviewScrollContainer();
-      ensureGhostPreviewRecoveryObserver();
-      if (deriveGhostSessionsForCreationPreviewLayer() === false) {
-        removeGhostEvents();
-      }
+    const layered = deriveGhostSessionsForCreationPreviewLayer();
+    if (layered === false) {
+      removeGhostEvents();
       return;
     }
-
-    const layered = deriveGhostSessionsForCreationPreviewLayer();
-    if (layered === false) return;
-
     const sessions = layered?.sessions || [];
-    if (!sessions.length) return;
-
+    if (!sessions.length) {
+      clearGhostPreviewChipsOnly();
+      return;
+    }
     const base = ghostCreationPreviewTitlePlain();
     const shortTitle = base.length > 22 ? `${base.slice(0, 21)}…` : base;
     const finalLabel = layered.markNonPersisted ? `Preview · ${shortTitle}` : shortTitle;
-    if (
-      !paintGhostSessionsOnGrid(sessions, finalLabel, {
-        markNonPersisted: !!layered.markNonPersisted,
-      }) &&
-      !document.querySelector('#gp-ghost-preview-host .goal-ghost-event')
-    ) {
-      window.setTimeout(() => {
-        if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
-      }, 200);
-    }
+    paintGhostSessionsOnGrid(sessions, finalLabel, {
+      markNonPersisted: !!layered.markNonPersisted,
+    });
   }
 
   /** Wire observers if a prior partial inject left `#gp-panel` in the DOM without sidebar/detail hooks. */
@@ -1019,7 +877,8 @@
 
     // Re-render ghost events on window resize (column widths change)
     window.addEventListener('resize', () => {
-      if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
+      const p = document.getElementById('gp-panel');
+      if (p?.classList.contains('open')) scheduleGhostPreviewRefreshDebounced();
     });
   }
 
@@ -1092,7 +951,6 @@
         calendarPushDebounce = null;
         if (cachedCalendarMainEl && !document.contains(cachedCalendarMainEl)) cachedCalendarMainEl = null;
         reapply();
-        if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
       }, 120);
     };
     const mo = new MutationObserver(scheduleReapply);
@@ -1508,12 +1366,6 @@
   function openPanel() {
     closeGCalNativeSidebar();
     cachedCalendarMainEl = null; // re-probe in case GCal re-rendered since last open
-    if (!state.editingGoalId) {
-      _gpGdPinnedHints = [];
-      _gpGdPinnedAt = 0;
-      _gpGdPinnedGoalId = '';
-      _gpGdPinnedSlotIdx = -1;
-    }
 
     // Snap panel position to live GCal layout before the CSS transition fires
     const panel = document.getElementById('gp-panel');
@@ -1533,7 +1385,7 @@
     document.getElementById('gp-sidebar-btn').classList.add('active');
     setCalendarPushed(true);
     requestAnimationFrame(() => setCalendarPushed(true));
-    if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
+    scheduleGhostPreviewRefreshDebounced();
   }
   function closePanel() {
     document.getElementById('gp-panel').classList.remove('open');
@@ -1556,12 +1408,6 @@
       clearGoalCreationPreview();
       scheduleGhostPreviewRefreshDebounced();
     } else if (name === 'suggestions') {
-      if (!state.editingGoalId) {
-        _gpGdPinnedHints = [];
-        _gpGdPinnedAt = 0;
-        _gpGdPinnedGoalId = '';
-        _gpGdPinnedSlotIdx = -1;
-      }
       scheduleGhostPreviewRefreshDebounced();
     }
   }
@@ -4193,12 +4039,10 @@
     updateConfirmChips(schedLabel, endsLabel);
 
     // Show the screen immediately with skeleton cards (one per selected day)
-    state.suggestions = [];
     showScreen('suggestions');
     resetPrefTimeInput();
     const sessionCount = Math.max(1, r.days.length);
     renderSkeletons(sessionCount);
-    scheduleGhostPreviewRefreshDebounced();
 
     // Fetch freebusy data and generate calendar-aware suggestions (in-memory preview only)
     try {
@@ -4900,20 +4744,17 @@
    * @returns {boolean} true when an existing mounted block was kept
    */
   function gpGdTryProtectMountedDetailBlock(host) {
-    gpGdTeardownOrphanedDetailUi();
     const ext = __gpGdBlockEl;
     if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
       return false;
     }
-    if (!gpGdIsDetailUiInEventDialog(ext)) return false;
-    if (!gpGdIsQualifyingEventInspectorHost(host)) return false;
     const inHost =
       gpGdComposedSubtreeContains(host, ext) ||
       (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
     if (!inHost) return false;
 
     const card = gpGdResolveInspectorCardRoot(host, ext.dataset.gpGoalId || '');
-    if (card instanceof HTMLElement && gpGdRequireEventDialogAncestor(card)) {
+    if (card instanceof HTMLElement) {
       gpGdForceMountIntoCard(ext, card, null);
       gpGdAlignInjectedBlockToCard(ext, host);
       gpGdAlignMarkFooterToCard(host);
@@ -5321,45 +5162,8 @@
     _gpGdPinWatchDebounce = 0;
   }
 
-  /** Event popup shell only — excludes calendar grid / sidebar surfaces mistaken for inspectors. */
-  function gpGdRequireEventDialogAncestor(el) {
-    if (!(el instanceof HTMLElement) || !el.isConnected) return null;
-    const d = el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]');
-    if (!(d instanceof HTMLElement)) return null;
-    if (d.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols')) {
-      return null;
-    }
-    if (!gpGdIsElementVisuallyExposed(d)) return null;
-    if (gpGdIsCalendarGridContainer(d)) return null;
-    return d;
-  }
-
-  function gpGdIsQualifyingEventInspectorHost(host) {
-    if (!(host instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(host)) return false;
-    if (!gpGdRequireEventDialogAncestor(host)) return false;
-    if (gpGdIsWeekGridMountSurface(host)) return false;
-    const r = host.getBoundingClientRect();
-    if (r.width < 200 || r.height < 100) return false;
-    if (r.width > gpGdMaxInspectorCardWidth() * 1.05) return false;
-    return gpGdInspectorHasCloseControl(host) || host.matches('[role="dialog"], [role="alertdialog"]');
-  }
-
-  function gpGdIsDetailUiInEventDialog(el) {
-    return !!(el instanceof HTMLElement && el.isConnected && gpGdRequireEventDialogAncestor(el));
-  }
-
-  function gpGdTeardownOrphanedDetailUi() {
-    if (__gpGdBlockEl?.isConnected && !gpGdIsDetailUiInEventDialog(__gpGdBlockEl)) {
-      teardownGpGdBlock();
-      return;
-    }
-    if (__gpGdMarkFooterEl?.isConnected && !gpGdIsDetailUiInEventDialog(__gpGdMarkFooterEl)) {
-      teardownGpGdMarkFooter();
-    }
-  }
-
   function gpGdHasOpenEventInspector() {
-    return gpEnumerateNativeEventDetailHosts().some((h) => gpGdIsQualifyingEventInspectorHost(h));
+    return gpEnumerateNativeEventDetailHosts().some((h) => gpGdIsElementVisuallyExposed(h));
   }
 
   /** While a goal chip open is pending, hydrate as soon as GCal mounts the inspector DOM. */
@@ -5405,30 +5209,7 @@
     });
   }
 
-  /** True when a mutation record only touches goal-creation ghost preview layers. */
-  function gpGdMutationIsGhostPreviewOnly(record) {
-    const touchesGhost = (node) => {
-      if (!(node instanceof Element)) return false;
-      return (
-        node.id === 'gp-ghost-preview-host' ||
-        node.id === 'gp-ghost-preview-root' ||
-        node.classList?.contains('goal-ghost-event') ||
-        !!node.closest?.('#gp-ghost-preview-host')
-      );
-    };
-    if (record.target instanceof Element && touchesGhost(record.target)) return true;
-    for (const n of record.addedNodes) {
-      if (touchesGhost(n)) return true;
-    }
-    for (const n of record.removedNodes) {
-      if (touchesGhost(n)) return true;
-    }
-    return false;
-  }
-
   function gpGdShouldRunDetailScan() {
-    /** Goal-creation calendar preview must not compete with event-popup injection scans. */
-    if (isGhostCreationPreviewUiActive()) return false;
     if (__gpGdBlockEl?.isConnected) return true;
     if (Date.now() < _gpGdDetailScanActiveUntil) return true;
     if (Date.now() - _gpGdPinnedAt < 12000 && _gpGdPinnedHints.length) return true;
@@ -5591,14 +5372,12 @@
       out.push(el);
     }
 
-    /** Secondary: anchored popovers lacking role=dialog — must look like an event inspector, not the grid. */
+    /** Secondary: anchored popovers lacking role=dialog — still scoped to transient UI shells. */
     for (const el of gpGdQuerySelectorAllDeep(html, '[role="presentation"]')) {
       if (!(el instanceof HTMLElement)) continue;
       if (!el.isConnected) continue;
       if (el.closest('#gp-panel, #gp-recurrence-overlay')) continue;
       if (gpGdIsCalendarGridContainer(el)) continue;
-      if (gpGdIsWeekGridMountSurface(el)) continue;
-      if (!gpGdInspectorHasCloseControl(el)) continue;
       if (!gpGdQuerySelectorAllDeep(el, '[data-eventid]').length) continue;
       const rr = el.getBoundingClientRect();
       if (rr.width < 200 || rr.height < 160) continue;
@@ -5627,7 +5406,7 @@
       seenNodes.add(el);
       out.push(el);
     }
-    return out.filter((h) => gpGdIsQualifyingEventInspectorHost(h));
+    return out;
   }
 
   /** Strip native metadata rows replaced or superseded by the Goal Planner detail block. */
@@ -5864,7 +5643,6 @@
    */
   function gpGdFindNarrowestInspectorCard(host, goalTitle) {
     if (!(host instanceof HTMLElement)) return null;
-    if (!gpGdRequireEventDialogAncestor(host)) return null;
     const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
     const short = needle.slice(0, Math.min(needle.length, 40));
     const maxW = gpGdMaxInspectorCardWidth();
@@ -5922,7 +5700,6 @@
   /** Prefer the on-screen card that actually shows this goal title (avoids hidden GCal clones). */
   function gpGdFindVisibleEventCardForGoal(dialogHost, goalTitle) {
     if (!(dialogHost instanceof HTMLElement)) return null;
-    if (!gpGdRequireEventDialogAncestor(dialogHost)) return null;
     const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
     if (needle.length < 2) return null;
     const short = needle.slice(0, Math.min(needle.length, 32));
@@ -5931,7 +5708,6 @@
     let bestArea = 0;
     gpGdWalkComposedElements(dialogHost, (el) => {
       if (!gpGdIsElementVisuallyExposed(el)) return;
-      if (!gpGdRequireEventDialogAncestor(el)) return;
       if (gpGdIsCalendarGridContainer(el)) return;
       const r = el.getBoundingClientRect();
       if (r.width < 200 || r.width > 760 || r.height < 72) return;
@@ -6094,15 +5870,6 @@
   function gpGdForceMountIntoCard(wrap, cardRoot, insertBefore) {
     if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
     if (gpGdIsWeekGridMountSurface(cardRoot)) return false;
-    const dialogRoot = gpGdRequireEventDialogAncestor(cardRoot);
-    if (!dialogRoot) {
-      try {
-        wrap.remove();
-      } catch (_) {
-        /* ignore */
-      }
-      return false;
-    }
     const cr = cardRoot.getBoundingClientRect();
     if (cr.width < 200) return false;
 
@@ -6110,9 +5877,8 @@
     const pr = parent?.getBoundingClientRect?.();
     const outsideCard = !parent || !gpGdComposedSubtreeContains(cardRoot, wrap);
     const parentTooWide = !!(pr && pr.width > cr.width * 1.12);
-    const outsideDialog = !gpGdRequireEventDialogAncestor(wrap);
 
-    if (outsideCard || parentTooWide || outsideDialog) {
+    if (outsideCard || parentTooWide) {
       try {
         if (
           insertBefore instanceof HTMLElement &&
@@ -6127,21 +5893,10 @@
       }
     }
 
-    if (!gpGdRequireEventDialogAncestor(wrap)) {
-      try {
-        wrap.remove();
-      } catch (_) {
-        /* ignore */
-      }
-      return false;
-    }
-
     gpGdApplyCardContainmentStyles(wrap, cardRoot);
     return (
-      gpGdIsGoalBlockWellPlaced(wrap, dialogRoot, false) ||
-      (gpGdIsGoalBlockVisible(wrap) &&
-        gpGdComposedSubtreeContains(cardRoot, wrap) &&
-        gpGdIsDetailUiInEventDialog(wrap))
+      gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false) ||
+      (gpGdIsGoalBlockVisible(wrap) && gpGdComposedSubtreeContains(cardRoot, wrap))
     );
   }
 
@@ -6455,12 +6210,9 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          gpGdTeardownOrphanedDetailUi();
-          if (__gpGdBlockEl?.isConnected) {
-            gpGdAlignInjectedBlockToCard(ext, dialogShell);
-            gpGdAlignMarkFooterToCard(dialogShell);
-          }
-          if (gpGdIsGoalBlockVisible(ext) && gpGdIsDetailUiInEventDialog(ext)) {
+          gpGdAlignInjectedBlockToCard(ext, dialogShell);
+          gpGdAlignMarkFooterToCard(dialogShell);
+          if (gpGdIsGoalBlockVisible(ext)) {
             _gpGdHydrateQuietUntil = Date.now() + 6000;
             return;
           }
@@ -6587,7 +6339,6 @@
   /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
   function gpGdMountMarkCompleteFooter(markBtn, cardRoot) {
     if (!(markBtn instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return null;
-    if (!gpGdRequireEventDialogAncestor(cardRoot)) return null;
     teardownGpGdMarkFooter();
     gpGdUnhideNativeMarkCompleted(cardRoot);
 
@@ -6658,7 +6409,6 @@
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
-    if (isGhostCreationPreviewUiActive()) return;
     const ext = __gpGdBlockEl;
     if (
       ext &&
@@ -6953,16 +6703,12 @@
       );
       if (alt instanceof HTMLElement) shell = alt;
     }
-    if (!shell || gpGdIsCalendarGridContainer(shell) || !gpGdIsQualifyingEventInspectorHost(shell)) {
+    if (!shell || gpGdIsCalendarGridContainer(shell)) {
       gpGdTrace('abort render — no event inspector shell near click');
       return null;
     }
     const cardRoot = gpGdResolveInspectorCardRoot(shell, goal?.title);
-    if (
-      !(cardRoot instanceof HTMLElement) ||
-      gpGdIsWeekGridMountSurface(cardRoot) ||
-      !gpGdRequireEventDialogAncestor(cardRoot)
-    ) {
+    if (!(cardRoot instanceof HTMLElement) || gpGdIsWeekGridMountSurface(cardRoot)) {
       gpGdTrace('abort render — no narrow inspector card');
       gpGdDiag('inject: abort — card root missing or grid surface', {
         cardWidth: cardRoot?.getBoundingClientRect?.()?.width,
@@ -7670,8 +7416,6 @@
   }
 
   async function gpGdHydrateMountedDetailDecoration() {
-    gpGdTeardownOrphanedDetailUi();
-
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.loadUnifiedState) {
       teardownGpGdBlock();
@@ -7861,7 +7605,6 @@
         }
       }
       if (
-        gpGdIsDetailUiInEventDialog(keep) &&
         gpGdIsGoalBlockVisible(keep) &&
         (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length || gpGdHasOpenEventInspector())
       ) {
@@ -7869,7 +7612,6 @@
       }
     }
     if (!pinnedRaw.length && !gpGdHasOpenEventInspector()) teardownGpGdBlock();
-    gpGdTeardownOrphanedDetailUi();
     const salvaged =
       keep?.isConnected &&
       (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep));
@@ -7909,20 +7651,12 @@
         scheduleGpGdFromUnifiedEcho();
       });
 
-      const obs = new MutationObserver((records) => {
+      const obs = new MutationObserver(() => {
         gpGdDiag('MO: document childList mutation');
-        gpGdTeardownOrphanedDetailUi();
-        if (
-          records.length &&
-          records.every((rec) => gpGdMutationIsGhostPreviewOnly(rec))
-        ) {
-          return;
-        }
         if (!gpGdShouldRunDetailScan()) return;
         const ext = __gpGdBlockEl;
         if (
           ext?.isConnected &&
-          gpGdIsDetailUiInEventDialog(ext) &&
           (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
           (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
         ) {
@@ -9933,7 +9667,8 @@
       setTimeout(scheduleLeftSidebarGoalsMount, 800);
       // Re-render ghost events after GCal week/month navigation
       setTimeout(() => {
-        if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
+        const p = document.getElementById('gp-panel');
+        if (p?.classList.contains('open')) scheduleGhostPreviewRefreshDebounced();
       }, 1200);
       // Re-apply goal session decorations after navigation (GCal re-renders all chips)
       setTimeout(() => {
