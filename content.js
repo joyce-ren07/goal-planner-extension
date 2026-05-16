@@ -4748,6 +4748,10 @@
     if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
       return false;
     }
+    if (!gpGdIsValidEventDetailInspectorShell(host)) {
+      teardownGpGdBlock();
+      return false;
+    }
     const inHost =
       gpGdComposedSubtreeContains(host, ext) ||
       (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
