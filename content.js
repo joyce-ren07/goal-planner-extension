@@ -867,17 +867,8 @@
 
     wireEvents();
     setupCalendarCreateMenuGoalItem();
-    setupMyGoalsSidebarStorageSync();
-    setupGoalsSidebarReactiveBinding();
-    setupGpCalGoalDetailEnrichment();
-    setupLeftSidebarGoalsMountObserver();
     renderHomeScreen();
-    scheduleLeftSidebarGoalsMountAttempts();
-    setupCalendarPushObserver();
-    setupNativeSidebarObserver();
-    setupGoalEventObserver();
-    // Initial decoration pass — catches any goal events already in the DOM
-    scheduleGoalEventDecoration();
+    ensureExtensionCoreServicesWired();
 
     setTimeout(() => {
       maybeBackfillSessionAnchorsIntoStorage();
