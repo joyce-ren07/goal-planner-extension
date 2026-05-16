@@ -7093,10 +7093,9 @@
 
       const obs = new MutationObserver(() => {
         if (!gpGdShouldRunDetailScan()) return;
-        if (gpGdDetailBlockReady() && Date.now() < _gpGdHydrateQuietUntil) return;
+        if (gpGdDetailBlockReady()) return;
         window.clearTimeout(_gpGdDomObsDebounce);
-        const debounceMs = gpGdDetailBlockReady() ? 200 : 48;
-        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), debounceMs);
+        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), 120);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
