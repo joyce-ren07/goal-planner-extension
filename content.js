@@ -4751,8 +4751,6 @@
 
   let _gpGdScanTimer = 0;
   let _gpGdDetailRefreshTimer = 0;
-  let _gpGdLastHost = /** @type {Element | null} */ (null);
-  let _gpGdLastHints = '';
 
   /** Last mounted extension node (detached automatically when inspector closes). */
   let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
