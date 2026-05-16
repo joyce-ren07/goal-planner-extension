@@ -3990,7 +3990,6 @@
     const r = state.recurrence;
     const sessionCount = Math.max(1, (r.days && r.days.length) || 1);
     renderSkeletons(sessionCount);
-    removeGhostEvents();
 
     try {
       state.suggestions = await computePreviewSuggestions(r);
