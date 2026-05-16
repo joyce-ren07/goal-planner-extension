@@ -6260,6 +6260,13 @@
     });
     await gpDetailPersistGoalSubtasksAndMirror(gid, list);
     gpGdShowTaskCompose(wrapHost, false);
+    const fresh = gpGdSubtasksWithTitles({ subtasks: list });
+    if (wrapHost.isConnected) {
+      gpGdRefreshDetailSubtasks(wrapHost, {
+        goal: { id: gid, title: gRow.title, subtasks: fresh },
+        session: { completed: wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]')?.disabled },
+      });
+    }
     scheduleGpGdFromUnifiedEcho();
   }
 
