@@ -6362,6 +6362,9 @@
     gpGdForceMountIntoCard(footer, cardRoot, null);
     gpGdApplyCardContainmentStyles(footer, cardRoot);
     __gpGdMarkFooterEl = footer;
+    if (__gpGdBlockEl instanceof HTMLElement) {
+      gpGdWireMarkCompleteButton(__gpGdBlockEl, null);
+    }
     return footer;
   }
 
