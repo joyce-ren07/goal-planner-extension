@@ -5058,23 +5058,6 @@
     );
   }
 
-  async function gpGdApplyRenameGoal(goalId, plainTitle) {
-    try {
-      const token = await getAuthToken();
-      const goals = await getGoals();
-      const ix = goals.findIndex((g) => String(g.id) === String(goalId));
-      if (ix < 0) return;
-      const row = goals[ix];
-      row.title = plainTitle.trim();
-      const ids = [...(Array.isArray(row.calEventIds) ? row.calEventIds : []).filter(Boolean)];
-      await persistGpGoalsAndUnified(goals);
-      await patchCalendarGoalSummariesForIds(ids, plainTitle.trim(), token);
-      scheduleGpGdFromUnifiedEcho();
-    } catch (e) {
-      console.warn('GoalPlanner: rename popup flow failed', e);
-    }
-  }
-
   /** Core mount pass — derives event key from inspector shell only to index unified Goal rows. All fields render from GoalPlannerUnifiedState snapshots. */
 
   async function gpGdHydrateMountedDetailDecoration() {
