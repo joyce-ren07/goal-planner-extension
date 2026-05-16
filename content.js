@@ -6756,24 +6756,6 @@
 
     wrap.appendChild(stCol);
 
-    /** Mark completed */
-    const sessDone = !!sess.completed;
-    const markBtn = document.createElement('button');
-    markBtn.type = 'button';
-    markBtn.className = 'gp-gd-mark-complete';
-    markBtn.setAttribute('data-gp-detail-act', 'mark-session-complete');
-    markBtn.textContent = 'Mark completed';
-    markBtn.disabled = !!sessDone;
-    markBtn.style.cssText =
-      'display:block !important;width:100% !important;box-sizing:border-box !important;' +
-      'margin-top:8px !important;padding:10px 0 !important;border:none !important;' +
-      'border-radius:24px !important;background:#e8f0fe !important;color:#1a73e8 !important;' +
-      'font-family:\"Google Sans\",Roboto,sans-serif !important;font-size:14px !important;' +
-      'font-weight:600 !important;line-height:20px !important;text-align:center !important;' +
-      'cursor:' + (sessDone ? 'default' : 'pointer') + ' !important;' +
-      (sessDone ? 'opacity:0.55 !important;' : '');
-    wrap.appendChild(markBtn);
-
     const tryMount = (parent, beforeNode) => {
       if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
       if (!gpGdIsElementVisuallyExposed(parent)) return false;
