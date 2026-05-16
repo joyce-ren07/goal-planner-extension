@@ -5319,6 +5319,7 @@
     if (duplicateGesture && gpGdDetailBlockReady()) return;
     scheduleGpGdInspectorOpenBurst();
     gpGdStartInspectorOpenWatch();
+    scheduleGpGdDialogScan();
   }
 
   function gpGdConsumePinnedSessionHints() {
