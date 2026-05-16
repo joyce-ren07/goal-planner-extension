@@ -9118,7 +9118,10 @@
         if (p?.classList.contains('open')) scheduleGhostPreviewRefreshDebounced();
       }, 1200);
       // Re-apply goal session decorations after navigation (GCal re-renders all chips)
-      setTimeout(scheduleGoalEventDecoration, 1400);
+      setTimeout(() => {
+        document.querySelectorAll('[data-eventchip]').forEach((c) => primeGoalChipInstant(c));
+        scheduleGoalEventDecorationNow();
+      }, 1400);
     }
   }).observe(document.body, { childList: true, subtree: true });
 
