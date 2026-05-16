@@ -8542,7 +8542,7 @@
             '<span class="ext-goal-badge">Goal</span>' +
             '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
             '<span class="ext-goal-time">' + initialTime + '</span>' +
-          '</motion>';
+          '</div>';
         boundChipHeight(chip);
         requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
       } finally {
