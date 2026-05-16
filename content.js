@@ -5584,9 +5584,10 @@
       }
     }
 
-    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(
-      dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body)
-    );
+    const shell =
+      dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body);
+    const cardRoot = gpGdFindEventDetailCardRoot(shell);
+    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(cardRoot);
 
     /** @type {HTMLElement} */
     const wrap = document.createElement('aside');
