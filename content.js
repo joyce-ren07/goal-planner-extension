@@ -7135,7 +7135,24 @@
     }
 
     const raw = String(wrapHost.dataset.gpSessionEventId ?? hit?.session?.eventId ?? '').trim();
-    const chip = raw ? gpFindChipForPlannerEventFlexible(raw) : null;
+    let chip = raw ? gpFindChipForPlannerEventFlexible(raw) : null;
+    if (!chip && raw) {
+      for (const h of gpGdConsumePinnedSessionHints()) {
+        if (h && h !== raw) {
+          chip = gpFindChipForPlannerEventFlexible(h);
+          if (chip) break;
+        }
+      }
+    }
+    if (!chip) {
+      const gid = String(wrapHost.dataset.gpGoalId ?? hit?.goal?.id ?? '');
+      const goals = await getGoals();
+      const row = goals.find((g) => String(g.id) === gid);
+      for (const id of row?.calEventIds || []) {
+        chip = gpFindChipForPlannerEventFlexible(String(id));
+        if (chip) break;
+      }
+    }
 
     if (chip && !chip.classList.contains('ext-goal-completed')) {
       const domKey =
