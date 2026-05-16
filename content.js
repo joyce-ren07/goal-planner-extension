@@ -5979,6 +5979,8 @@
       const remountKey = goalId + '|' + token;
       if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
         gpGdTrace('remount capped — keep last block', goalId);
+        gpGdRefreshDetailSubtasks(existing, hit);
+        gpGdEnsureDetailDelegates(existing, hit);
         return existing;
       }
       _gpGdRemountGoalKey = remountKey;
