@@ -1060,6 +1060,7 @@
         calendarPushDebounce = null;
         if (cachedCalendarMainEl && !document.contains(cachedCalendarMainEl)) cachedCalendarMainEl = null;
         reapply();
+        if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
       }, 120);
     };
     const mo = new MutationObserver(scheduleReapply);
