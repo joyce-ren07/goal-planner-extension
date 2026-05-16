@@ -6598,12 +6598,10 @@
 
       const obs = new MutationObserver(() => {
         if (!gpGdShouldRunDetailScan()) return;
-        const ext = __gpGdBlockEl;
-        if (ext?.isConnected && Date.now() < _gpGdHydrateQuietUntil && gpGdIsGoalBlockVisible(ext)) {
-          return;
-        }
+        if (gpGdDetailBlockReady() && Date.now() < _gpGdHydrateQuietUntil) return;
         window.clearTimeout(_gpGdDomObsDebounce);
-        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), 200);
+        const debounceMs = gpGdDetailBlockReady() ? 200 : 48;
+        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), debounceMs);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
