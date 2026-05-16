@@ -6835,7 +6835,11 @@
         gpGdDiag('MO: document childList mutation');
         if (!gpGdShouldRunDetailScan()) return;
         const ext = __gpGdBlockEl;
-        if (ext?.isConnected && Date.now() < _gpGdHydrateQuietUntil && gpGdIsGoalBlockVisible(ext)) {
+        if (
+          ext?.isConnected &&
+          (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
+          (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
+        ) {
           return;
         }
         window.clearTimeout(_gpGdDomObsDebounce);
