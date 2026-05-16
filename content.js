@@ -6881,7 +6881,7 @@
     if (wrapHost.isConnected) {
       gpGdRefreshDetailSubtasks(wrapHost, {
         goal: { id: gid, title: gRow.title, subtasks: fresh },
-        session: { completed: wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]')?.disabled },
+        session: { completed: gpGdGetDetailMarkCompleteBtn()?.disabled },
       });
     }
     scheduleGpGdFromUnifiedEcho();
