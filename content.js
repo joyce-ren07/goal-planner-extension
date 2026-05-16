@@ -8110,14 +8110,36 @@
   //   fall through the overlay to GCal's native elements below.
   //
   function injectGoalChipContent(chip, goalData, isDone) {
-    // Idempotent: remove only our decoration root; never clear native chip children.
+    // Idempotent: patch in place when overlay exists; never clear native chip children.
     // Suppress the per-chip MutationObserver during intentional reinjection so
     // removing/re-adding .ext-goal-root does not schedule restoreChip (which
     // would race storage and clear completion — see GoalInteractionController).
+    const existingRoot = chip.querySelector('.ext-goal-root');
+    if (existingRoot) {
+      chip.classList.add('ext-goal-chip');
+      chip.classList.remove('ext-goal-done');
+      chip.classList.toggle('ext-goal-completed', isDone);
+      if (goalData.id != null && goalData.id !== '') chip.dataset.gpGoalId = String(goalData.id);
+      if (goalData.slotIdx != null && goalData.slotIdx !== '' && Number.isFinite(Number(goalData.slotIdx))) {
+        chip.dataset.gpSlotIdx = String(goalData.slotIdx);
+      }
+      {
+        const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
+        chip.dataset.gpChipKey = liveEid || goalData.chipKey;
+      }
+      if (isDone) chip.dataset.goalCompleted = 'true';
+      else delete chip.dataset.goalCompleted;
+      const titleEl = existingRoot.querySelector('.ext-goal-title');
+      if (titleEl && goalData.title) titleEl.textContent = goalData.title;
+      const checkEl = existingRoot.querySelector('.goal-checkbox, .ext-check-circle');
+      if (checkEl) checkEl.innerHTML = isDone ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
+      boundChipHeight(chip);
+      requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
+      return;
+    }
+
     chip._gpDecorLock = true;
     try {
-      chip.querySelector('.ext-goal-root')?.remove();
-
       chip.classList.add('ext-goal-chip');
       chip.classList.remove('ext-goal-done');
       chip.classList.toggle('ext-goal-completed', isDone);
