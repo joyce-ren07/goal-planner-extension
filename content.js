@@ -5669,14 +5669,41 @@
       (sessDone ? 'opacity:0.55;' : '');
     wrap.appendChild(markBtn);
 
-    if (
-      insertBefore &&
-      mountParent.isConnected &&
-      gpGdComposedSubtreeContains(mountParent, insertBefore)
-    ) {
-      mountParent.insertBefore(wrap, insertBefore);
-    } else {
-      mountParent.appendChild(wrap);
+    const cardRoot = gpGdFindEventDetailCardRoot(
+      dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body)
+    );
+
+    const tryMount = (parent, beforeNode) => {
+      if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
+      try {
+        if (
+          beforeNode instanceof HTMLElement &&
+          gpGdComposedSubtreeContains(parent, beforeNode)
+        ) {
+          parent.insertBefore(wrap, beforeNode);
+        } else {
+          parent.appendChild(wrap);
+        }
+        return true;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    if (!tryMount(mountParent, insertBefore) && cardRoot instanceof HTMLElement) {
+      tryMount(cardRoot, null);
+    }
+
+    gpGdAlignInjectedBlockToCard(wrap, dialogShell instanceof HTMLElement ? dialogShell : null);
+
+    if (!gpGdIsGoalBlockVisible(wrap) && cardRoot instanceof HTMLElement) {
+      try {
+        wrap.remove();
+      } catch (_) {
+        /* ignore */
+      }
+      tryMount(cardRoot, null);
+      gpGdAlignInjectedBlockToCard(wrap, dialogShell instanceof HTMLElement ? dialogShell : null);
     }
 
     __gpGdBlockEl = wrap;
