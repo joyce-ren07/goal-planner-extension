@@ -4998,18 +4998,14 @@
         if (!btn || !(btn instanceof HTMLButtonElement)) return;
         const raw = btn.dataset.sessionEvent;
         if (!raw) return;
-        const lg = hit.goal;
-        const plannerIds = [
-          ...(Array.isArray(lg.calEventIds) ? lg.calEventIds.map(String).filter(Boolean) : []),
-        ];
-        if (!plannerIds.length) plannerIds.push(String(raw));
-        const chip = gpFindRepresentativeGoalChip(plannerIds);
-        const domKeyRaw = chip?.closest('[data-eventid]')?.getAttribute('data-eventid') || raw || '';
+        const chip = gpFindChipForPlannerEventFlexible(raw);
         if (!chip) {
-          alert('Goal session checkbox is syncing — reopen from the calendar grid if this persists.');
+          alert('Could not locate this session on the grid — toggle completion directly on the calendar chip.');
           return;
         }
-        GoalInteractionController.toggleCompletion(domKeyRaw, chip);
+        const domKey =
+          chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || String(raw);
+        GoalInteractionController.toggleCompletion(domKey, chip);
         scheduleGpGdFromUnifiedEcho();
       },
       false
