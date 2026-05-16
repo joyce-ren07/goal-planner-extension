@@ -3551,14 +3551,115 @@
     const goals = Array.isArray(legacyGoals) ? legacyGoals : [];
     for (const lg of goals) {
       const ids = lg.calEventIds || [];
-      for (const ce of ids) {
-        const ces = String(ce);
+      const domIds = lg.calEventDomIds || [];
+      for (let i = 0; i < ids.length; i++) {
+        const ces = ids[i] == null || ids[i] === '' ? '' : String(ids[i]);
+        const dom = domIds[i] == null || domIds[i] === '' ? '' : String(domIds[i]);
         for (const c of cand) {
-          if (ces === c || gpChipDoneMirrorStrictPair(ces, c)) return String(lg.id);
+          if (
+            (ces && (ces === c || gpChipDoneKeyMatchesCalEventId(ces, c) || gpChipDoneMirrorStrictPair(ces, c))) ||
+            (dom && (dom === c || gpChipDoneKeyMatchesCalEventId(dom, c) || gpChipDoneMirrorStrictPair(dom, c)))
+          ) {
+            return String(lg.id);
+          }
         }
       }
     }
     return '';
+  }
+
+  function gpGdFindUnifiedGoalByLegacy(legacyRow, unified) {
+    if (!legacyRow || !unified?.goals) return null;
+    let g = unified.goals.find((ug) => String(ug.id) === String(legacyRow.id));
+    if (g) return g;
+    const want = gpGdNormalizeTitleHint(legacyRow.title);
+    if (!want) return null;
+    return unified.goals.find((ug) => gpGdNormalizeTitleHint(ug.title) === want) || null;
+  }
+
+  function gpGdSessionSlotForDomHint(legacyRow, domHint) {
+    if (!legacyRow || domHint == null || domHint === '') return -1;
+    const h = String(domHint).trim();
+    const calIds = legacyRow.calEventIds || [];
+    const domIds = legacyRow.calEventDomIds || [];
+    for (let i = 0; i < calIds.length; i++) {
+      const ce = calIds[i];
+      if (ce != null && ce !== '') {
+        if (gpChipDoneKeyMatchesCalEventId(String(ce), h) || gpChipDoneMirrorStrictPair(String(ce), h)) {
+          return i;
+        }
+      }
+      const dom = domIds[i];
+      if (dom != null && dom !== '') {
+        const ds = String(dom);
+        if (gpChipDoneKeyMatchesCalEventId(ds, h) || gpChipDoneMirrorStrictPair(ds, h) || ds === h) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Resolve goal + session for any instance of a goal (recurring DOM ids, calEventDomIds, title).
+   * Goal-level subtasks are identical across sessions — only session completion may differ per instance.
+   */
+  function gpGdResolveInspectorGoalHit(unified, legacyGoals, domHints, titleHint) {
+    const hints = [...new Set((domHints || []).filter((x) => x != null && x !== '').map((x) => String(x).trim()))];
+    const legacy = Array.isArray(legacyGoals) ? legacyGoals : [];
+
+    for (const h of hints) {
+      const hit = gpFindUnifiedSessionForDomEventKey(unified, h);
+      if (hit?.goal?.id && hit.session) return hit;
+    }
+
+    let legacyRow = null;
+    const gid = legacyGoalIdForPlannerEventCandidates(legacy, ...hints);
+    if (gid) legacyRow = legacy.find((lg) => String(lg.id) === gid) || null;
+
+    const title = String(titleHint || '').trim();
+    if (!legacyRow && title) {
+      const want = gpGdNormalizeTitleHint(title);
+      legacyRow = legacy.find((lg) => gpGdNormalizeTitleHint(lg.title) === want) || null;
+    }
+
+    if (!legacyRow) return null;
+
+    const unifiedGoal = gpGdFindUnifiedGoalByLegacy(legacyRow, unified);
+    if (!unifiedGoal) return null;
+
+    const sessions = unifiedGoal.sessions || [];
+    const gIdx = unified.goals.findIndex((ug) => String(ug.id) === String(unifiedGoal.id));
+    if (gIdx < 0) return null;
+
+    for (const h of hints) {
+      const slot = gpGdSessionSlotForDomHint(legacyRow, h);
+      if (slot >= 0 && sessions[slot]) {
+        return { goal: unifiedGoal, session: sessions[slot], gIdx, sIdx: slot };
+      }
+      for (let si = 0; si < sessions.length; si++) {
+        const s = sessions[si];
+        if (!s?.eventId) continue;
+        if (
+          gpChipDoneKeyMatchesCalEventId(String(s.eventId), h) ||
+          gpChipDoneMirrorStrictPair(String(s.eventId), h)
+        ) {
+          return { goal: unifiedGoal, session: s, gIdx, sIdx: si };
+        }
+      }
+    }
+
+    if (sessions.length === 1) {
+      return { goal: unifiedGoal, session: sessions[0], gIdx, sIdx: 0 };
+    }
+
+    if (sessions.length > 0) {
+      const slot = hints.length ? gpGdSessionSlotForDomHint(legacyRow, hints[0]) : -1;
+      const sIdx = slot >= 0 && sessions[slot] ? slot : 0;
+      return { goal: unifiedGoal, session: sessions[sIdx], gIdx, sIdx };
+    }
+
+    return null;
   }
 
   /** Keys to set/remove together on toggle so My Goals (calEventIds) and chips (often DOM ids) share completion state. */
