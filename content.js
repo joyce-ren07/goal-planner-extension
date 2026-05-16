@@ -4069,6 +4069,14 @@
     const isEditing = !!state.editingGoalId;
     btn.textContent = 'Saving…'; btn.disabled = true;
     try {
+      /**
+       * Preview layer is cosmetic only — real Goal sessions come from existing
+       * `state.recurrence` + `state.suggestions` POSTed below (`buildRecurrenceRrulesForSession`).
+       * Strip ghost DOM immediately (and suppress pending debounced repaint) so GCal-rendered
+       * instances are not stacked with preview chips during saves.
+       */
+      cancelDebouncedGhostPreviewAndRemoveLayers();
+
       const token = await getAuthToken();
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
