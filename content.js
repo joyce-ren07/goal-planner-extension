@@ -9151,7 +9151,12 @@
       if (!touched && !mutationTouchesGoalChips(mutations)) return;
       if (primed) scheduleGoalEventDecorationNow();
       else scheduleGoalEventDecoration();
-    }).observe(document.body, { childList: true, subtree: true });
+    }).observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-label', 'data-tooltip', 'title'],
+    });
   }
 
   // ── Boot ──
