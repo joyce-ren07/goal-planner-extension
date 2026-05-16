@@ -7914,18 +7914,33 @@
     const pinnedHintSet = new Set(pinnedExpanded);
 
     const pinnedHit = gpGdHitFromPinnedChip(unified, pinnedExpanded);
-    if (pinnedHit?.goal?.id && pinnedHit.session?.eventId) {
+    if (
+      gpGdHasRecentGoalChipOpenIntent() &&
+      pinnedHit?.goal?.id &&
+      pinnedHit.session?.eventId
+    ) {
       const hitPinned = await gpGdEnrichHitForDetail(pinnedHit);
       const visibleHostPinned =
         gpGdFindEventInspectorShell(hitPinned.goal.title) ||
         gpGdPickBestVisibleInspectorHost(natives, hitPinned.goal.title) ||
         host;
       if (visibleHostPinned && !gpGdIsCalendarGridContainer(visibleHostPinned)) {
+        if (
+          !gpGdMayInjectGoalDetailForHit(
+            hitPinned,
+            legacyGoals,
+            pinnedExpanded,
+            visibleHostPinned
+          )
+        ) {
+          gpGdDiag('inject: SKIP pinned — inspector is not a goal session');
+        } else {
         gpGdTrace('session hit (pinned chip)', hitPinned.goal.id);
         const renderedPinned = gpGdRenderDetailBlock(
           hitPinned,
           String(hitPinned.session.eventId),
-          visibleHostPinned
+          visibleHostPinned,
+          legacyGoals
         );
         if (renderedPinned) {
           gpGdStopInspectorPinWatch();
