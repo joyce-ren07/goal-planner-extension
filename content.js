@@ -5050,30 +5050,28 @@
     if (!(dialogHost instanceof HTMLElement)) return dialogHost;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const maxW = Math.min(720, vw * 0.82);
+    const maxW = Math.min(760, vw * 0.88);
+    const INSPECTOR_TEXT_RE =
+      /\d{1,2}:\d{2}|\b(?:AM|PM|am|pm)\b|minutes before|Organizer|Guests|Please respond|Goal Planner|doesn't repeat|Weekly on|Edit event/i;
     /** @type {HTMLElement | null} */
     let best = null;
     let bestScore = 0;
 
     gpGdWalkComposedElements(dialogHost, (el) => {
       const r = el.getBoundingClientRect();
-      if (r.width < 280 || r.width > maxW) return;
-      if (r.height < 140 || r.height > vh * 0.96) return;
+      if (r.width < 220 || r.width > maxW) return;
+      if (r.height < 120 || r.height > vh * 0.96) return;
 
       const text = String(el.innerText || '').slice(0, 1400);
-      if (
-        !/\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)|minutes before|Organizer|Guests|Please respond|Goal Planner/i.test(
-          text
-        )
-      )
-        return;
+      if (!INSPECTOR_TEXT_RE.test(text)) return;
 
       const st = window.getComputedStyle(el);
       const br = parseFloat(st.borderRadius) || 0;
-      let score = r.height * Math.min(r.width, 520);
+      let score = r.height * Math.min(r.width, 560);
       if (br >= 4) score *= 1.35;
       if (st.boxShadow && st.boxShadow !== 'none') score *= 1.15;
       if (/\bminutes before\b/i.test(text)) score *= 1.2;
+      if (r.width >= 260 && r.width <= 560) score *= 1.25;
 
       if (score > bestScore) {
         bestScore = score;
@@ -5081,7 +5079,40 @@
       }
     });
 
-    return /** @type {HTMLElement} */ (best || dialogHost);
+    if (best) return best;
+
+    for (const el of gpGdQuerySelectorAllDeep(dialogHost, '[role="dialog"], [role="alertdialog"]')) {
+      const r = el.getBoundingClientRect();
+      if (r.width >= 240 && r.width <= maxW && r.height >= 120) return el;
+    }
+
+    return dialogHost;
+  }
+
+  function gpGdIsGoalBlockVisible(el) {
+    if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width < 48 || r.height < 16) return false;
+    const st = window.getComputedStyle(el);
+    if (st.display === 'none' || st.visibility === 'hidden') return false;
+    return r.bottom > 4 && r.right > 4;
+  }
+
+  /** When mount parent is a wide flex row, shift goal block into the white card column. */
+  function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return;
+    const card = gpGdFindEventDetailCardRoot(dialogShell);
+    if (!(card instanceof HTMLElement)) return;
+    const cr = card.getBoundingClientRect();
+    const pr = wrap.parentElement?.getBoundingClientRect?.();
+    if (!pr || cr.width < 200) return;
+    if (pr.width <= cr.width * 1.1) return;
+
+    const w = Math.round(cr.width);
+    wrap.style.width = w + 'px';
+    wrap.style.maxWidth = w + 'px';
+    wrap.style.marginLeft = Math.max(0, Math.round(cr.left - pr.left)) + 'px';
+    wrap.style.marginRight = 'auto';
   }
 
   /** Walk up from a row parent until width matches the card (not the full overlay flex row). */
