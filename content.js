@@ -8516,12 +8516,26 @@
   }
 
   function forEachGoalChipCandidateInNodeList(nodes, visit) {
+    const seen = new Set();
+    const go = (chip) => {
+      if (!(chip instanceof HTMLElement) || seen.has(chip)) return;
+      seen.add(chip);
+      visit(chip);
+    };
     for (const node of nodes) {
       if (node.nodeType !== 1) continue;
       const el = /** @type {Element} */ (node);
-      if (isGoalCalendarChip(el)) visit(/** @type {HTMLElement} */ (el));
+      if (el.matches?.('[data-eventid]') && eventContainerLooksLikeGoal(el)) {
+        el.querySelectorAll('[data-eventchip]').forEach((c) => go(c));
+      }
+      if (isGoalCalendarChip(el)) go(/** @type {HTMLElement} */ (el));
       el.querySelectorAll?.('[data-eventchip]').forEach((c) => {
-        if (isGoalCalendarChip(c)) visit(/** @type {HTMLElement} */ (c));
+        if (isGoalCalendarChip(c)) go(/** @type {HTMLElement} */ (c));
+      });
+      el.querySelectorAll?.('[data-eventid]').forEach((ec) => {
+        if (eventContainerLooksLikeGoal(ec)) {
+          ec.querySelectorAll('[data-eventchip]').forEach((c) => go(c));
+        }
       });
     }
   }
