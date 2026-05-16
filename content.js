@@ -5409,12 +5409,14 @@
       out.push(el);
     }
 
-    /** Secondary: anchored popovers lacking role=dialog — still scoped to transient UI shells. */
+    /** Secondary: anchored popovers lacking role=dialog — must look like an event inspector, not the grid. */
     for (const el of gpGdQuerySelectorAllDeep(html, '[role="presentation"]')) {
       if (!(el instanceof HTMLElement)) continue;
       if (!el.isConnected) continue;
       if (el.closest('#gp-panel, #gp-recurrence-overlay')) continue;
       if (gpGdIsCalendarGridContainer(el)) continue;
+      if (gpGdIsWeekGridMountSurface(el)) continue;
+      if (!gpGdInspectorHasCloseControl(el)) continue;
       if (!gpGdQuerySelectorAllDeep(el, '[data-eventid]').length) continue;
       const rr = el.getBoundingClientRect();
       if (rr.width < 200 || rr.height < 160) continue;
