@@ -4592,6 +4592,12 @@
 
   /** Event detail enrichment — observes only which native dialog hosts an event key; rendered data flows from unified GoalPlannerModel state (+ storage echoes). */
 
+  /** Lightweight pipeline trace — set false once popup injection is stable. */
+  const GP_GOAL_DETAIL_TRACE = true;
+  function gpGdTrace(...args) {
+    if (GP_GOAL_DETAIL_TRACE) console.log('[gp-goal-detail]', ...args);
+  }
+
   /** @typedef {{ goal: object, session: object, gIdx: number, sIdx: number } | null} GpUnifiedGoalHit */
 
   /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
