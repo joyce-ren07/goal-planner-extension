@@ -4831,112 +4831,60 @@
     return null;
   }
 
-  function gpResolveUnifiedTotalsForDetail(goalRow) {
-    const Model = globalThis.GoalPlannerModel;
-    const sessList = goalRow.sessions || [];
-    let total =
-      typeof goalRow.totalSessions === 'number' && goalRow.totalSessions > 0
-        ? goalRow.totalSessions
-        : sessList.length;
-    if ((!total || total < 1) && Model?.resolveGoalTotalSessions) {
-      const legacyGuess = {
-        id: goalRow.id,
-        recurrence: goalRow.recurrence,
-        endDate: goalRow.endDate,
-        sessionAnchors: [],
-        calEventIds: [],
-        created: goalRow.created,
-        startDate: goalRow.startDate,
-      };
-      const tLegacy = Model.resolveGoalTotalSessions(legacyGuess);
-      if (typeof tLegacy === 'number' && tLegacy > 0) total = tLegacy;
+  function gpGdCloseNativeEventPopover(anchorEl) {
+    if (!(anchorEl instanceof HTMLElement)) return;
+    try {
+      const shell =
+        anchorEl.closest('[role="dialog"]') ||
+        anchorEl.closest('[aria-modal="true"]') ||
+        anchorEl.closest('[role="presentation"]');
+      if (!(shell instanceof HTMLElement)) return;
+      const btn =
+        shell.querySelector('button[aria-label="Close"]') ||
+        Array.from(shell.querySelectorAll('button')).find((b) =>
+          /close/i.test(b.getAttribute('aria-label') || '')
+        );
+      if (btn instanceof HTMLElement) {
+        btn.click();
+        return;
+      }
+      shell.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          code: 'Escape',
+          /** @deprecated */
+          keyCode: 27,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    } catch (_) {
+      /* ignore */
     }
-    total = Math.max(Number(total) || 0, sessList.length || 0);
-    const done = sessList.filter((s) => s.completed).length;
-    let pct = typeof goalRow.progressPct === 'number' ? goalRow.progressPct : 0;
-    if (total > 0) pct = Math.round((done / total) * 100);
-    return { total, done, pct };
   }
 
-  /** @param {unknown} pct */
-  function gpGdClampPct(pct) {
-    const n = Number(pct);
-    if (!Number.isFinite(n)) return 0;
-    return Math.max(0, Math.min(100, Math.round(n)));
-  }
+  /** Tiny checkmark rendered inside filled task circle when complete. */
+  const GP_GD_ST_CHECKMARK_SVG =
+    '<svg class="gp-gd-st-check" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+    '<path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"' +
+    ' d="M20 6L9 17l-5-5"/></svg>';
 
   /** @param {HTMLElement} wrapHost Detail extension root `#gp-gcal-detail-goal-extension`. */
-  function gpGdApplySubtasksEditMode(wrapHost, editing) {
-    const sec = wrapHost.querySelector('.gp-gd-subtasks');
-    if (!(sec instanceof HTMLElement)) return;
-    const enterBtn = /** @type {HTMLButtonElement | null} */ (
-      wrapHost.querySelector('[data-gp-detail-act="subtasks-enter-edit"]')
-    );
-    const exitBtn = /** @type {HTMLButtonElement | null} */ (
-      wrapHost.querySelector('[data-gp-detail-act="subtasks-exit-edit"]')
-    );
-    const addSlot = sec.querySelector('.gp-gd-subtasks-add-slot');
-    const emptyHint = sec.querySelector('.gp-gd-subtasks-empty');
-    const listUl = sec.querySelector('.gp-gd-tasklist');
-    if (editing) {
-      sec.classList.add('gp-gd-subtasks--editing');
-      if (enterBtn) enterBtn.hidden = true;
-      if (exitBtn) exitBtn.hidden = false;
-      sec.querySelectorAll('.gp-gd-task-view').forEach((el) => el.setAttribute('hidden', ''));
-      sec.querySelectorAll('.gp-gd-task-edit').forEach((el) => el.removeAttribute('hidden'));
-      if (addSlot) addSlot.removeAttribute('hidden');
-      if (emptyHint) emptyHint.setAttribute('hidden', '');
-      requestAnimationFrame(() => {
-        const pick =
-          /** @type {HTMLInputElement | null} */ (sec.querySelector('.gp-gd-task-title-input')) ||
-          /** @type {HTMLInputElement | null} */ (sec.querySelector('.gp-gd-task-input-new'));
-        pick?.focus();
-      });
+  function gpGdShowTaskCompose(wrapHost, show) {
+    const compose = wrapHost.querySelector('.gp-gd-st-compose');
+    const addBtn = wrapHost.querySelector('[data-gp-detail-act="sub-add"]');
+    if (!(compose instanceof HTMLElement)) return;
+    if (show) {
+      compose.removeAttribute('hidden');
+      if (addBtn instanceof HTMLElement) addBtn.setAttribute('hidden', '');
+      const inp = /** @type {HTMLInputElement | null} */ (compose.querySelector('.gp-gd-st-new-inp'));
+      requestAnimationFrame(() => inp?.focus());
     } else {
-      sec.classList.remove('gp-gd-subtasks--editing');
-      if (enterBtn) enterBtn.hidden = false;
-      if (exitBtn) exitBtn.hidden = true;
-      sec.querySelectorAll('.gp-gd-task-view').forEach((el) => el.removeAttribute('hidden'));
-      sec.querySelectorAll('.gp-gd-task-edit').forEach((el) => el.setAttribute('hidden', ''));
-      if (addSlot) {
-        addSlot.setAttribute('hidden', '');
-        const ni = /** @type {HTMLInputElement | null} */ (addSlot.querySelector('.gp-gd-task-input-new'));
-        if (ni) ni.value = '';
-      }
-      const hasTasks = !!(listUl && listUl.querySelector('.gp-gd-task-item'));
-      if (emptyHint) {
-        if (hasTasks) emptyHint.setAttribute('hidden', '');
-        else emptyHint.removeAttribute('hidden');
-      }
+      compose.setAttribute('hidden', '');
+      if (addBtn instanceof HTMLElement) addBtn.removeAttribute('hidden');
+      const inp = /** @type {HTMLInputElement | null} */ (compose.querySelector('.gp-gd-st-new-inp'));
+      if (inp) inp.value = '';
     }
-  }
-
-  /** Read edit-mode DOM into a Goal-level subtask array (drops blank titles). */
-  function gpGdCollectSubtasksEditDom(sec) {
-    /** @type {{ id: string, title: string, completed: boolean }[]} */
-    const out = [];
-    for (const li of sec.querySelectorAll('.gp-gd-task-item')) {
-      const id = String(li.getAttribute('data-gp-sub-id') || '').trim();
-      const chk = li.querySelector('.gp-gd-task-cb-edit');
-      const inp = /** @type {HTMLInputElement | null} */ (li.querySelector('.gp-gd-task-title-input'));
-      const title = String(inp?.value || '').trim();
-      if (!title) continue;
-      out.push({
-        id: id || `sub_${generateId().slice(-10)}`,
-        title,
-        completed: chk instanceof HTMLInputElement ? !!chk.checked : false,
-      });
-    }
-    const newInp = /** @type {HTMLInputElement | null} */ (sec.querySelector('.gp-gd-task-input-new'));
-    const nu = String(newInp?.value || '').trim();
-    if (nu) {
-      out.push({
-        id: `sub_${generateId().slice(-10)}`,
-        title: nu,
-        completed: false,
-      });
-    }
-    return out;
   }
 
   function gpGdRenderDetailBlock(hit, tokenHint, mountHost) {
