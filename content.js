@@ -7009,22 +7009,7 @@
       hostRole: host.getAttribute('role'),
     });
 
-    const existingEarly = __gpGdBlockEl;
-    if (existingEarly?.isConnected && existingEarly?.dataset?.gpGoalId) {
-      const cardForAlign = gpGdResolveInspectorCardRoot(host, '');
-      if (cardForAlign instanceof HTMLElement) {
-        if (!gpGdIsGoalBlockPainted(existingEarly)) {
-          gpGdForceMountIntoCard(existingEarly, cardForAlign, null);
-        }
-        gpGdAlignInjectedBlockToCard(existingEarly, host);
-      }
-      if (
-        (gpGdIsGoalBlockVisible(existingEarly) || gpGdIsGoalBlockPainted(existingEarly)) &&
-        (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector())
-      ) {
-        return;
-      }
-    }
+    if (gpGdTryProtectMountedDetailBlock(host)) return;
 
     const legacyGoals = pref.goals || (await getGoals());
     const pinnedExpanded = (() => {
@@ -7044,20 +7029,7 @@
       }
       return out;
     })();
-
-    const barHintsCached = gpGdCollectLocationBarEventHints();
-
-    const hintDedup = new Set();
-    const hints = [];
-    const pushHint = (h) => {
-      const s = h == null || h === '' ? '' : String(h).trim();
-      if (!s || hintDedup.has(s)) return;
-      hintDedup.add(s);
-      hints.push(s);
-    };
-    for (const h of pinnedExpanded) pushHint(h);
-    for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
-    for (const h of barHintsCached) pushHint(h);
+    const pinnedHintSet = new Set(pinnedExpanded);
 
     const pinnedHit = gpGdHitFromPinnedChip(unified, pinnedExpanded);
     if (pinnedHit?.goal?.id && pinnedHit.session?.eventId) {
