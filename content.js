@@ -5187,11 +5187,14 @@
   function scheduleGpGdInspectorOpenBurst() {
     const gen = ++_gpGdOpenBurstGen;
     gpGdMarkDetailScanActive(15000);
-    for (const ms of [0, 180, 450, 900]) {
-      window.setTimeout(() => {
-        if (gen !== _gpGdOpenBurstGen) return;
-        scheduleGpGdDialogScan();
-      }, ms);
+    const run = () => {
+      if (gen !== _gpGdOpenBurstGen) return;
+      gpGdRunDetailHydratePass();
+    };
+    run();
+    requestAnimationFrame(run);
+    for (const ms of [16, 40, 80, 150, 280, 500, 900, 1400]) {
+      window.setTimeout(run, ms);
     }
   }
 
