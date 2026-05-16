@@ -8379,6 +8379,7 @@
 
     const chips = collectGoalChipsForGoalRow(goalRow, legacyGoals);
     if (!chips.length) return -1;
+    if (allowed.length > 1 && chips.length < allowed.length) return -1;
     chips.sort((a, b) => {
       const ra = (a.closest('[data-eventid]') || a).getBoundingClientRect();
       const rb = (b.closest('[data-eventid]') || b).getBoundingClientRect();
