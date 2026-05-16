@@ -5126,6 +5126,48 @@
     _gpGdUnifiedCacheAt = 0;
   }
 
+  function gpGdSyncBlockElRef() {
+    const ext = __gpGdBlockEl;
+    if (ext && !ext.isConnected) __gpGdBlockEl = null;
+  }
+
+  function gpGdIsGoalPlannerInspectorStillOpen() {
+    return !!gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint);
+  }
+
+  function gpGdRefreshPinnedSessionLease() {
+    if (!gpGdIsGoalPlannerInspectorStillOpen()) return;
+    _gpGdPinnedAt = Date.now();
+    gpGdMarkDetailScanActive(22000);
+  }
+
+  /** True when focus is in GCal’s native title/description/notes field inside the inspector. */
+  function gpGdNativeInspectorEditingActive(host) {
+    if (!(host instanceof HTMLElement)) return false;
+    const ae = document.activeElement;
+    if (!(ae instanceof HTMLElement)) return false;
+    if (!gpGdComposedSubtreeContains(host, ae) && !host.contains(ae)) return false;
+    if (ae.isContentEditable) return true;
+    const tag = ae.tagName;
+    if (tag === 'TEXTAREA' || tag === 'INPUT') return true;
+    if (ae.getAttribute('role') === 'textbox' || ae.getAttribute('contenteditable') === 'true') return true;
+    return !!ae.closest('[contenteditable="true"], textarea, input:not([type="hidden"])');
+  }
+
+  /** Whether the on-screen inspector is missing our injected goal block. */
+  function gpGdInspectorNeedsGoalBlock(dialogShell) {
+    const front =
+      gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint) ||
+      (dialogShell instanceof HTMLElement ? dialogShell : null);
+    if (!(front instanceof HTMLElement)) {
+      return dialogShell instanceof HTMLElement && !gpGdDialogsHasInjectedAside(dialogShell);
+    }
+    for (const n of gpGdQuerySelectorAllDeep(front, '#gp-gcal-detail-goal-extension')) {
+      if (gpGdIsGoalBlockVisible(n)) return false;
+    }
+    return true;
+  }
+
   function gpGdStopInspectorOpenWatch() {
     _gpGdInspectorOpenWatchUntil = 0;
     _gpGdInspectorOpenWatchMo?.disconnect();
