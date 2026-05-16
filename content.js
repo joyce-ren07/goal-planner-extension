@@ -6213,7 +6213,7 @@
 
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
-    gpGdWireDetailDelegates(wrap, hit);
+    gpGdEnsureDetailDelegates(wrap, hit);
     const ok = gpGdIsGoalBlockVisible(wrap);
     if (ok) {
       _gpGdHydrateQuietUntil = Date.now() + 4000;
