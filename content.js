@@ -6123,19 +6123,14 @@
       gpGdAlignInjectedBlockToCard(wrap, shell);
     }
 
-    try {
-      wrap.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    } catch (_) {
-      /* ignore */
-    }
-
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdWireDetailDelegates(wrap, hit);
-    const ok = gpGdIsGoalBlockWellPlaced(wrap, shell);
+    const ok = gpGdIsGoalBlockVisible(wrap);
     if (ok) {
-      _gpGdHydrateQuietUntil = Date.now() + 1800;
+      _gpGdHydrateQuietUntil = Date.now() + 4000;
       _gpGdRemountCount = 0;
+      gpGdMarkDetailScanActive(12000);
     }
     const r = wrap.getBoundingClientRect();
     gpGdTrace(
