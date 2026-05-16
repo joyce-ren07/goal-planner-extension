@@ -5481,37 +5481,67 @@
 
   /** Install observer + GoalPlannerUnifiedState listeners (subscriber + chrome.storage echo). Does not wire calendar-chip DOM mutation for goal field reads. */
 
+  /** Guards duplicate chrome listeners / MutationObservers inside `setupGpCalGoalDetailEnrichment` retries. */
+  let _gpCalInspectDetailObserversInstalled = false;
+
   function setupGpCalGoalDetailEnrichment() {
     if (globalThis.__gpCalGoalInspectorEnrichment) return;
-    globalThis.__gpCalGoalInspectorEnrichment = true;
 
-    const Model = globalThis.GoalPlannerModel;
-    if (!Model?.loadUnifiedState) return;
+    /** @returns {boolean} installed now */
+    function installDetailObservers() {
+      const Model = globalThis.GoalPlannerModel;
+      if (!Model?.loadUnifiedState) return false;
+      if (_gpCalInspectDetailObserversInstalled) return true;
+      _gpCalInspectDetailObserversInstalled = true;
 
-    if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
-      chrome.storage.onChanged.addListener((changes, area) => {
-        if (area !== 'local' || (!changes.goalPlannerUnifiedState && !changes.gp_goals)) return;
+      if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
+        chrome.storage.onChanged.addListener((changes, area) => {
+          if (area !== 'local' || (!changes.goalPlannerUnifiedState && !changes.gp_goals)) return;
+          scheduleGpGdFromUnifiedEcho();
+        });
+      }
+
+      Model.subscribeGoalsState?.(() => {
         scheduleGpGdFromUnifiedEcho();
       });
+
+      const obs = new MutationObserver(() => {
+        scheduleGpGdDialogScan();
+      });
+      obs.observe(document.documentElement || document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'aria-modal', 'role', 'open', 'hidden'],
+      });
+
+      let _gdUiBump = 0;
+      const bumpDialogScanDebounced = () => {
+        window.clearTimeout(_gdUiBump);
+        _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 55);
+      };
+      window.addEventListener('pointerdown', bumpDialogScanDebounced, true);
+      window.addEventListener('focusin', bumpDialogScanDebounced, true);
+
+      scheduleGpGdDialogScan();
+      scheduleGpGdFromUnifiedEcho();
+      return true;
     }
 
-    Model.subscribeGoalsState?.(() => {
-      scheduleGpGdFromUnifiedEcho();
-    });
+    if (installDetailObservers()) {
+      globalThis.__gpCalGoalInspectorEnrichment = true;
+      return;
+    }
 
-    const obs = new MutationObserver(() => {
-      scheduleGpGdDialogScan();
-    });
-    obs.observe(document.documentElement || document.body, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ['aria-hidden', 'aria-modal'],
-    });
-
-    scheduleGpGdDialogScan();
-
-    scheduleGpGdFromUnifiedEcho();
+    let tries = 0;
+    const id = window.setInterval(() => {
+      if (installDetailObservers()) {
+        globalThis.__gpCalGoalInspectorEnrichment = true;
+        window.clearInterval(id);
+      } else if (++tries > 200) {
+        window.clearInterval(id);
+      }
+    }, 250);
   }
 
   // ── Native GCal sidebar conflict handling ──
