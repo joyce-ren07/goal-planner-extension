@@ -576,13 +576,8 @@
    * Strict: ONLY the create flow “Suggested sessions” screen (never form-only, edit mode, or home).
    */
   function deriveGhostSessionsForCreationPreviewLayer() {
-    const panel = document.getElementById('gp-panel');
-    if (!panel?.classList.contains('open')) return false;
-
-    const suggScr = document.getElementById('gp-screen-suggestions');
     /** ghostSessionsEnabled ⇒ creation suggested-sessions step only (not edit-reschedule UX). */
-    if (!suggScr?.classList.contains('active')) return false;
-    if (state.editingGoalId) return false;
+    if (!isGhostCreationPreviewUiActive()) return false;
 
     /** Suggestions loaded — authoritative preview anchors for commit + grid. */
     if (state.suggestions?.length) {
