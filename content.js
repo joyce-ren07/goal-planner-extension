@@ -5269,6 +5269,7 @@
   }
 
   function gpGdShouldRunDetailScan() {
+    if (gpGdTeardownDetailIfExtensionChrome()) return false;
     if (__gpGdBlockEl?.isConnected) return true;
     if (Date.now() < _gpGdDetailScanActiveUntil) return true;
     if (Date.now() - _gpGdPinnedAt < 12000 && _gpGdPinnedHints.length) return true;
