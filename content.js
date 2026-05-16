@@ -4981,6 +4981,15 @@
       seenNodes.add(el);
       out.push(el);
     }
+
+    /** Quaternary: metadata copy only (GCal side panel often has no dialog role and no beacon id). */
+    for (const el of gpGdCollectAnnotatedInspectorPanels(html)) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (!el.isConnected) continue;
+      if (seenNodes.has(el)) continue;
+      seenNodes.add(el);
+      out.push(el);
+    }
     return out;
   }
 
