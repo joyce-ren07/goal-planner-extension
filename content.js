@@ -6461,15 +6461,16 @@
     for (const h of barHintsCached) pushHint(h);
 
     for (let hi = 0; hi < hints.length; hi++) {
-      const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
+      let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
       if (!hit?.goal?.id || !hit.session?.eventId) continue;
+      hit = await gpGdEnrichHitForDetail(hit);
 
       const visibleHost =
         gpGdFindEventInspectorShell(hit.goal.title) ||
         gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
         host;
       if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) continue;
-      gpGdTrace('session hit', hints[hi], hit.goal.id);
+      gpGdTrace('session hit', hints[hi], hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
       const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
       if (rendered) return;
       return;
