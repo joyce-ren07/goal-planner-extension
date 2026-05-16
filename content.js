@@ -5195,22 +5195,33 @@
     const cardRoot = gpGdFindEventDetailCardRoot(dialogHost);
     gpGdStripNativeMeetingNotes(cardRoot);
 
+    const rowScopes =
+      cardRoot !== dialogHost ? [cardRoot, dialogHost] : [dialogHost];
     /** @type {HTMLElement | null} */
-    let before =
-      gpGdFindFirstMetadataRowMatching(cardRoot, /\bminutes before\b/i) ||
-      gpGdFindFirstMetadataRowMatching(cardRoot, /\bnotification\b/i) ||
-      gpGdFindFirstMetadataRowMatching(cardRoot, /\bOrganizer\b/i) ||
-      gpGdFindFirstMetadataRowMatching(cardRoot, /^\s*calendar\b/i) ||
-      gpGdFindFirstMetadataRowMatching(cardRoot, /\bcalendar\b.*\(/i) ||
-      gpGdFindFirstMetadataRowMatching(cardRoot, /\bguests?\b/i) ||
-      gpGdFindFirstMetadataRowMatching(cardRoot, /\bvisibility\b/i);
+    let before = null;
+    const rowRes = [
+      /\bminutes before\b/i,
+      /\bnotification\b/i,
+      /\bOrganizer\b/i,
+      /^\s*calendar\b/i,
+      /\bcalendar\b.*\(/i,
+      /\bguests?\b/i,
+      /\bvisibility\b/i,
+    ];
+    for (const scope of rowScopes) {
+      for (const re of rowRes) {
+        before = gpGdFindFirstMetadataRowMatching(scope, re);
+        if (before) break;
+      }
+      if (before) break;
+    }
 
     /** @type {HTMLElement} */
     let mountParent =
       before?.parentElement instanceof HTMLElement
         ? before.parentElement
-        : gpGdPickGoalDetailMountParent(cardRoot);
-    mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot);
+        : gpGdPickGoalDetailMountParent(dialogHost, cardRoot);
+    mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost);
 
     const insertBefore =
       before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before)
