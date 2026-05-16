@@ -7947,7 +7947,24 @@
           _gpGdHydrateQuietUntil = Date.now() + 15000;
           return;
         }
+        }
       }
+    }
+
+    if (!gpGdHasRecentGoalChipOpenIntent()) {
+      const keepEarly = __gpGdBlockEl;
+      if (keepEarly?.isConnected) {
+        for (const h of natives) {
+          if (!gpGdComposedSubtreeContains(h, keepEarly)) continue;
+          if (gpGdIsValidEventDetailInspectorShell(h)) {
+            gpGdStabilizeMountedDetailBlock(keepEarly, h, null);
+            return;
+          }
+        }
+      }
+      if (!pinnedRaw.length) teardownGpGdBlock();
+      gpGdDiag('inject: SKIP — no recent goal-chip open (native calendar event)');
+      return;
     }
 
     const hintDedup = new Set();
@@ -7960,9 +7977,6 @@
     };
     for (const h of pinnedExpanded) pushHint(h);
     for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
-    if (!_gpGdPinnedGoalId) {
-      for (const h of gpGdCollectLocationBarEventHints()) pushHint(h);
-    }
 
     for (let hi = 0; hi < hints.length; hi++) {
       let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
@@ -7984,17 +7998,12 @@
         gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
         host;
       if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) continue;
-      const popupTitle = String(visibleHost.innerText || '').slice(0, 120);
-      const goalTitle = String(hit.goal.title || '').trim();
-      gpGdDiag('popup: title check', {
-        goalTitle,
-        popupTitleSnippet: popupTitle,
-        titleIncludesGoal: goalTitle
-          ? popupTitle.toLowerCase().includes(goalTitle.toLowerCase())
-          : popupTitle.includes('🎯'),
-      });
+      if (!gpGdMayInjectGoalDetailForHit(hit, legacyGoals, hints, visibleHost)) {
+        gpGdDiag('inject: SKIP — unified match but not a goal planner session', hints[hi]);
+        continue;
+      }
       gpGdTrace('session hit', hints[hi], hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
-      const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
+      const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost, legacyGoals);
       if (rendered) {
         gpGdStopInspectorPinWatch();
         return;
