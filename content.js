@@ -5327,7 +5327,7 @@
       if (!t || t.length > 220) return;
       if (!re.test(t)) return;
       const row = gpGdElevateToMetadataRow(dialogHost, node);
-      if (row instanceof HTMLElement) found = row;
+      if (row instanceof HTMLElement && gpGdIsElementVisuallyExposed(row)) found = row;
     });
     return found;
   }
