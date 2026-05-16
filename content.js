@@ -5596,11 +5596,71 @@
     for (const el of gpGdQuerySelectorAllDeep(dialogHost, '[role="dialog"], [role="alertdialog"]')) {
       if (!gpGdIsElementVisuallyExposed(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width >= 240 && r.width <= maxW && r.height >= 120 && !gpGdIsInvalidDetailMountTarget(el)) {
+      if (r.width >= 200 && r.width <= maxW && r.height >= 72 && !gpGdIsWeekGridMountSurface(el)) {
         return el;
       }
     }
 
+    return null;
+  }
+
+  /**
+   * Center popover: pick the narrowest on-screen panel that looks like event metadata
+   * (goal sessions often lack Guests/Organizer copy).
+   */
+  function gpGdFindNarrowestInspectorCard(host, goalTitle) {
+    if (!(host instanceof HTMLElement)) return null;
+    const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
+    const short = needle.slice(0, Math.min(needle.length, 40));
+    const maxW = gpGdMaxInspectorCardWidth();
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestW = Infinity;
+    gpGdWalkComposedElements(host, (el) => {
+      if (!(el instanceof HTMLElement)) return;
+      if (!gpGdIsElementVisuallyExposed(el)) return;
+      if (gpGdIsWeekGridMountSurface(el)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 200 || r.width > maxW || r.height < 72) return;
+      const text = String(el.innerText || '').slice(0, 900);
+      const hasGoal =
+        (short.length >= 2 && text.includes(short)) ||
+        text.includes('🎯') ||
+        /\bGoal\b/i.test(text);
+      const hasTime = /\d{1,2}(?::\d{2})?\s*(?:AM|PM)/i.test(text);
+      const hasMeta =
+        /\bGuests\b|\bOrganizer\b|\bCalendar\s*\(|\bminutes before\b|\bEdit event\b/i.test(text);
+      if (!hasGoal && !hasTime && !hasMeta) return;
+      if (r.width < bestW) {
+        bestW = r.width;
+        best = el;
+      }
+    });
+    return best;
+  }
+
+  /** Resolve the white card column inside a center popover or side inspector shell. */
+  function gpGdResolveInspectorCardRoot(shell, goalTitle) {
+    if (!(shell instanceof HTMLElement)) return null;
+    const picks = [
+      () => gpGdFindNativeGcalPopupCard(shell),
+      () => gpGdFindVisibleEventCardForGoal(shell, goalTitle),
+      () => gpGdFindEventDetailCardRoot(shell),
+      () => gpGdFindNarrowestInspectorCard(shell, goalTitle),
+    ];
+    for (const pick of picks) {
+      const el = pick();
+      if (el instanceof HTMLElement && !gpGdIsWeekGridMountSurface(el)) return el;
+    }
+    const sr = shell.getBoundingClientRect();
+    if (
+      sr.width >= 200 &&
+      sr.width <= gpGdMaxInspectorCardWidth() &&
+      sr.height >= 72 &&
+      !gpGdIsWeekGridMountSurface(shell)
+    ) {
+      return shell;
+    }
     return null;
   }
 
