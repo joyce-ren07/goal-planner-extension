@@ -9863,8 +9863,8 @@
         if (goal) {
           slotIdx = readChipSlotIndexFromDataset(chip, (goal.calEventIds || []).length);
           if (slotIdx < 0) slotIdx = resolveDomSlotIndexFromGoalRow(goal, eid);
-          if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, goal, goals);
           if (slotIdx < 0) slotIdx = resolveSlotIndexByAnchorTime(chip, goal);
+          if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, goal, goals);
           if (slotIdx >= 0 && goal.calEventIds?.[slotIdx]) {
             resolvedEid = String(goal.calEventIds[slotIdx]);
             chip.dataset.gpCalEventId = resolvedEid;
