@@ -6484,6 +6484,7 @@
     if (!(host instanceof HTMLElement)) {
       if (pinnedRaw.length) {
         gpGdTrace('waiting for event inspector near click');
+        scheduleGpGdDialogScan();
         return;
       }
       teardownGpGdBlock();
