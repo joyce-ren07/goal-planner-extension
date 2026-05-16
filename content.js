@@ -5373,6 +5373,7 @@
           skipAsInner = true;
       }
       if (skipAsInner) continue;
+      if (!gpGdIsValidEventDetailInspectorShell(el)) continue;
       seenNodes.add(el);
       out.push(el);
     }
