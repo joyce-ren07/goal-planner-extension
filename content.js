@@ -5320,12 +5320,16 @@
         if (!(ring instanceof HTMLButtonElement)) return;
         const sidRaw = ring.getAttribute('data-gp-sub-ring');
         if (!sidRaw) return;
-        const turningOn = !(ring.getAttribute('aria-checked') === 'true');
-        ring.classList.toggle('gp-gd-st-ring--on', turningOn);
-        ring.setAttribute('aria-checked', turningOn ? 'true' : 'false');
-        const row = ring.closest('.gp-gd-st-item');
-        const lab = row?.querySelector('.gp-gd-st-txt');
-        if (lab instanceof HTMLElement) lab.classList.toggle('gp-gd-st-txt--done', turningOn);
+        const wasDone = ring.getAttribute('aria-checked') === 'true';
+        const turningOn = !wasDone;
+        const row = ring.closest('[data-gp-st-item]');
+        const lab = row?.querySelector('[data-gp-st-label]');
+        const checkSvg = /** @type {SVGSVGElement | null} */ (ring.querySelector('svg'));
+        gpGdApplySubtaskRingVisual(ring, checkSvg, turningOn);
+        if (lab instanceof HTMLElement) {
+          lab.style.color = turningOn ? '#9aa0a6' : '#3c4043';
+          lab.style.textDecoration = turningOn ? 'line-through' : 'none';
+        }
         await gpGdPersistSubtaskRingToggle(wrapHost, sidRaw, turningOn);
       }
     );
