@@ -80,17 +80,31 @@
     return _gridMetricsCache;
   }
 
-  /** Single stable stacking root for previews — children are diffed (no full teardown per input). */
-  function ensureGpGhostPreviewRoot() {
+  /**
+   * Clipped to the main calendar scroll viewport only (not page-level fullscreen) so previews
+   * never paint over weekday/timezone/chrome above the timed grid — same bbox GCal uses for the scrollport.
+   */
+  function syncGpGhostPreviewRootToScrollGrid(scrollCont) {
+    const r = scrollCont.getBoundingClientRect();
     let root = document.getElementById('gp-ghost-preview-root');
     if (!root) {
       root = document.createElement('div');
       root.id = 'gp-ghost-preview-root';
       root.setAttribute('aria-hidden', 'true');
-      root.style.cssText =
-        'position:fixed;inset:0;pointer-events:none;z-index:120;contain:layout style';
       document.body.appendChild(root);
     }
+    root.style.cssText = [
+      'position:fixed',
+      'box-sizing:border-box',
+      `top:${r.top}px`,
+      `left:${r.left}px`,
+      `width:${r.width}px`,
+      `height:${r.height}px`,
+      'overflow:hidden',
+      'pointer-events:none',
+      'z-index:6',
+      'contain:layout style',
+    ].join(';');
     return root;
   }
 
