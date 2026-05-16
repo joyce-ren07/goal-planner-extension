@@ -6974,15 +6974,180 @@
   function gpGdDetailHitFromWrap(wrapHost) {
     const gid = String(wrapHost?.dataset?.gpGoalId ?? '').trim();
     const eid = String(wrapHost?.dataset?.gpSessionEventId ?? '').trim();
-    let sIdx = -1;
-    if (gid && String(_gpGdPinnedGoalId) === gid && _gpGdPinnedSlotIdx >= 0) {
-      sIdx = _gpGdPinnedSlotIdx;
-    }
+    const slotRaw = Number(wrapHost?.dataset?.gpSlotIdx);
+    let sIdx =
+      Number.isFinite(slotRaw) && slotRaw >= 0
+        ? slotRaw
+        : gid && String(_gpGdPinnedGoalId) === gid && _gpGdPinnedSlotIdx >= 0
+          ? _gpGdPinnedSlotIdx
+          : -1;
     return {
       goal: { id: gid },
       session: { eventId: eid, completed: !!gpGdGetDetailMarkCompleteBtn()?.disabled },
       gIdx: -1,
       sIdx,
+    };
+  }
+
+  /** Fill session event id + slot index from unified state and pinned chip hints. */
+  async function gpGdEnrichDetailHitForMark(wrapHost, hit) {
+    const base = hit?.goal?.id ? hit : gpGdDetailHitFromWrap(wrapHost);
+    const goalId = String(base?.goal?.id ?? '').trim();
+    if (!goalId) return base;
+
+    let storageKey = String(base?.session?.eventId ?? wrapHost?.dataset?.gpSessionEventId ?? '').trim();
+    let sIdx = typeof base?.sIdx === 'number' && base.sIdx >= 0 ? base.sIdx : -1;
+    const hints = gpGdConsumePinnedSessionHints();
+
+    if (!storageKey && hints.length) storageKey = String(hints[0]).trim();
+
+    try {
+      const Model = globalThis.GoalPlannerModel;
+      if (Model?.loadUnifiedState) {
+        const st = await Model.loadUnifiedState();
+        const gi = (st.goals || []).findIndex((g) => String(g.id) === goalId);
+        if (gi >= 0) {
+          const g = st.goals[gi];
+          for (const h of hints) {
+            const tight = Model.findSessionByEventId?.(st, h);
+            if (tight?.goal && String(tight.goal.id) === goalId && tight.session) {
+              storageKey = String(tight.session.eventId || h).trim();
+              if (typeof tight.sIdx === 'number' && tight.sIdx >= 0) sIdx = tight.sIdx;
+              break;
+            }
+          }
+          if (sIdx < 0 && String(_gpGdPinnedGoalId) === goalId && _gpGdPinnedSlotIdx >= 0) {
+            sIdx = _gpGdPinnedSlotIdx;
+          }
+          if (sIdx < 0 && g.sessions?.length === 1) sIdx = 0;
+          if (sIdx >= 0 && g.sessions?.[sIdx]?.eventId && !storageKey) {
+            storageKey = String(g.sessions[sIdx].eventId).trim();
+          }
+          return {
+            goal: g,
+            session: {
+              ...(g.sessions?.[sIdx] || base.session || {}),
+              eventId: storageKey || g.sessions?.[sIdx]?.eventId || '',
+            },
+            gIdx: gi,
+            sIdx,
+          };
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    return {
+      ...base,
+      goal: { ...(base.goal || {}), id: goalId },
+      session: { ...(base.session || {}), eventId: storageKey },
+      sIdx,
+    };
+  }
+
+  /**
+   * Resolve planner + DOM keys for marking a session complete from the event popup.
+   * @returns {Promise<{
+   *   goalId: string,
+   *   storageKey: string,
+   *   slotIdx: number,
+   *   plannerEventId: string,
+   *   goalRow: object,
+   *   legacyGoals: object[],
+   *   chipDoneSnapshot: Record<string, boolean>,
+   *   slotPackPrev: Record<string, number[]>,
+   * } | null>}
+   */
+  async function gpGdResolvePopupSessionKeys(wrapHost, hit) {
+    const enriched = await gpGdEnrichDetailHitForMark(wrapHost, hit);
+    const goalId = String(enriched?.goal?.id ?? wrapHost?.dataset?.gpGoalId ?? '').trim();
+    if (!goalId) return null;
+
+    const d = await new Promise((resolve) =>
+      chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], resolve)
+    );
+    const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : [];
+    const goalRow = legacyGoals.find((g) => String(g.id) === goalId);
+    if (!goalRow) return null;
+
+    const allowed = goalRow.calEventIds || [];
+    const hints = gpGdConsumePinnedSessionHints();
+    let storageKey = String(
+      enriched?.session?.eventId ?? wrapHost?.dataset?.gpSessionEventId ?? ''
+    ).trim();
+    if (!storageKey && hints.length) storageKey = String(hints[0]).trim();
+
+    let slotIdx = typeof enriched?.sIdx === 'number' && enriched.sIdx >= 0 ? enriched.sIdx : -1;
+    if (slotIdx < 0 && String(_gpGdPinnedGoalId) === goalId && _gpGdPinnedSlotIdx >= 0) {
+      slotIdx = _gpGdPinnedSlotIdx;
+    }
+    const slotRaw = Number(wrapHost?.dataset?.gpSlotIdx);
+    if (slotIdx < 0 && Number.isFinite(slotRaw) && slotRaw >= 0) slotIdx = slotRaw;
+
+    if (slotIdx < 0 && storageKey) {
+      slotIdx = allowed.findIndex(
+        (id) =>
+          gpChipDoneKeyMatchesCalEventId(storageKey, id) || String(id) === storageKey
+      );
+    }
+
+    if (slotIdx < 0 && Array.isArray(goalRow.sessionAnchors)) {
+      for (let ai = 0; ai < goalRow.sessionAnchors.length; ai++) {
+        const anc = goalRow.sessionAnchors[ai];
+        const ae = anc?.eventId ? String(anc.eventId) : '';
+        if (!ae) continue;
+        if (hints.some((h) => gpChipDoneKeyMatchesCalEventId(h, ae) || String(h) === ae)) {
+          slotIdx = allowed.findIndex(
+            (id) => gpChipDoneKeyMatchesCalEventId(ae, id) || String(id) === ae
+          );
+          if (slotIdx < 0 && allowed.length === goalRow.sessionAnchors.length) slotIdx = ai;
+          if (!storageKey) storageKey = hints[0] || ae;
+          break;
+        }
+      }
+    }
+
+    let plannerEventId = '';
+    if (slotIdx >= 0 && slotIdx < allowed.length) plannerEventId = String(allowed[slotIdx]);
+    if (!plannerEventId && storageKey) {
+      const narrowed = resolvePlannerEventIdForChip(
+        storageKey,
+        legacyGoals.filter((g) => String(g.id) === goalId)
+      );
+      plannerEventId = narrowed || storageKey;
+      if (slotIdx < 0 && narrowed) {
+        slotIdx = allowed.findIndex((id) => String(id) === String(narrowed));
+      }
+    }
+    if (!plannerEventId && allowed.length === 1) {
+      slotIdx = 0;
+      plannerEventId = String(allowed[0]);
+    }
+    if (!plannerEventId && allowed.length > 1) {
+      const slotPack = d.gp_goal_slot_done && typeof d.gp_goal_slot_done === 'object' ? d.gp_goal_slot_done : {};
+      const doneSlots = new Set(
+        (Array.isArray(slotPack[goalId]) ? slotPack[goalId] : []).map((x) => Number(x))
+      );
+      slotIdx = allowed.findIndex((_, i) => !doneSlots.has(i));
+      if (slotIdx < 0) slotIdx = 0;
+      plannerEventId = String(allowed[slotIdx]);
+    }
+    if (!plannerEventId) return null;
+    if (slotIdx < 0) slotIdx = 0;
+
+    return {
+      goalId,
+      storageKey: storageKey || plannerEventId,
+      slotIdx,
+      plannerEventId,
+      goalRow,
+      legacyGoals,
+      chipDoneSnapshot: { ...(d.gp_chip_done || {}) },
+      slotPackPrev:
+        d.gp_goal_slot_done && typeof d.gp_goal_slot_done === 'object'
+          ? { ...d.gp_goal_slot_done }
+          : {},
     };
   }
 
