@@ -8624,8 +8624,8 @@
 
     let idx = readChipSlotIndexFromDataset(chip, allowed.length);
     if (idx < 0) idx = resolveDomSlotIndexFromGoalRow(goalRow, storageKey);
-    if (idx < 0) idx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow, legacyGoals);
     if (idx < 0) idx = resolveSlotIndexByAnchorTime(chip, goalRow);
+    if (idx < 0) idx = resolveSlotIndexByGoalChipsOnCalendar(chip, goalRow, legacyGoals);
     if (idx < 0) idx = computeSlotIndexForGoalSession(chip, goalRow, plannerEventId, storageKey);
     if (idx >= 0) return idx;
 
