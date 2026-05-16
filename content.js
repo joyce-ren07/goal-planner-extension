@@ -5818,23 +5818,18 @@
     ) {
       return;
     }
+    gpGdRunDetailHydratePass();
     if (_gpGdScanTimer) {
       _gpGdScanPending = true;
       return;
     }
     _gpGdScanTimer = requestAnimationFrame(() => {
       _gpGdScanTimer = 0;
-      Promise.resolve()
-        .then(() => gpGdHydrateMountedDetailDecoration())
-        .catch((err) => {
-          gpGdTrace('hydrate error', err);
-        })
-        .finally(() => {
-          if (_gpGdScanPending) {
-            _gpGdScanPending = false;
-            scheduleGpGdDialogScan();
-          }
-        });
+      gpGdRunDetailHydratePass();
+      if (_gpGdScanPending) {
+        _gpGdScanPending = false;
+        scheduleGpGdDialogScan();
+      }
     });
   }
 
