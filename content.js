@@ -6375,21 +6375,24 @@
     let deb = 0;
     const mo = new MutationObserver(() => {
       if (!dialogShell.isConnected) return;
+      if (_gpGdMutatingDetailUi) return;
       gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
       window.clearTimeout(deb);
       deb = window.setTimeout(() => {
+        if (_gpGdMutatingDetailUi) return;
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          gpGdAlignInjectedBlockToCard(ext, dialogShell);
-          gpGdAlignMarkFooterToCard(dialogShell);
-          if (gpGdIsGoalBlockVisible(ext)) {
-            _gpGdHydrateQuietUntil = Date.now() + 6000;
-            return;
-          }
+          gpGdStabilizeMountedDetailBlock(ext, dialogShell, gpGdDetailHitFromWrap(ext));
+          return;
         }
-        if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
-      }, 220);
+        if (
+          !gpGdDialogsHasInjectedAside(dialogShell) &&
+          Date.now() >= _gpGdHydrateQuietUntil
+        ) {
+          scheduleGpGdDialogScan();
+        }
+      }, 400);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
