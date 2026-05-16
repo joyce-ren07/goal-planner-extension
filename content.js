@@ -7046,8 +7046,7 @@
     }
 
     const allowed = goalRow?.calEventIds || [];
-    let storageKey = pushHint && hints[0] ? hints[0] : '';
-    storageKey =
+    let storageKey =
       String(wrapHost?.dataset?.gpSessionEventId ?? hit?.session?.eventId ?? hints[0] ?? '').trim() ||
       hints[0] ||
       '';
