@@ -201,17 +201,36 @@
   }
 
   function findCalendarScrollContainerForGhostPreview() {
+    const found = findCalendarScrollContainer();
     if (!isGhostCreationPreviewUiActive()) {
       releaseGhostPreviewScrollContainer();
-      return findCalendarScrollContainer();
+      return found;
     }
-    if (_gpGhostScrollContPinned?.isConnected) {
-      const r = _gpGhostScrollContPinned.getBoundingClientRect();
-      if (r.height >= 120) return _gpGhostScrollContPinned;
+    if (found instanceof HTMLElement) {
+      _gpGhostScrollContPinned = found;
+      return found;
     }
-    const found = findCalendarScrollContainer();
-    if (found instanceof HTMLElement) _gpGhostScrollContPinned = found;
-    return found || (_gpGhostScrollContPinned?.isConnected ? _gpGhostScrollContPinned : null);
+    const pinned = _gpGhostScrollContPinned;
+    if (pinned?.isConnected) {
+      const r = pinned.getBoundingClientRect();
+      if (r.height >= 120 && findHourAbsolutePositions(pinned).length >= 2) return pinned;
+    }
+    return null;
+  }
+
+  /** Day columns for ghost paint — filtered to main grid, with fallbacks so preview still mounts. */
+  function ghostPreviewDayColumns(scrollCont) {
+    const all = findDayColumnPositions();
+    if (!scrollCont) return all;
+    let cols = filterGhostPreviewDayColumns(scrollCont, all);
+    if (cols.length) return cols;
+    const grid = scrollCont.getBoundingClientRect();
+    cols = all.filter((c) => {
+      const cx = c.left + c.width / 2;
+      return cx >= grid.left - 64 && cx <= grid.right + 64;
+    });
+    if (cols.length) return cols;
+    return isGhostCreationPreviewUiActive() ? all : cols;
   }
 
   function ensureGhostPreviewRecoveryObserver() {
