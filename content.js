@@ -5958,6 +5958,8 @@
     const goalId = String(goal?.id ?? '');
     const token = String(tokenHint || '');
 
+    const subtasks = gpGdSubtasksWithTitles(goal);
+
     const existing = __gpGdBlockEl;
     if (
       existing?.isConnected &&
@@ -5967,6 +5969,8 @@
     ) {
       gpGdAlignInjectedBlockToCard(existing, dialogShell);
       if (gpGdIsGoalBlockVisible(existing)) {
+        gpGdRefreshDetailSubtasks(existing, hit);
+        gpGdEnsureDetailDelegates(existing, hit);
         _gpGdHydrateQuietUntil = Date.now() + 4000;
         _gpGdRemountCount = 0;
         gpGdMarkDetailScanActive(12000);
