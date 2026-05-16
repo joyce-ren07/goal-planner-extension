@@ -816,6 +816,7 @@
     scheduleLeftSidebarGoalsMountAttempts();
     setupCalendarPushObserver();
     setupNativeSidebarObserver();
+    setupGoalChipDecorationCaches();
     setupGoalEventObserver();
     scheduleGoalEventDecoration();
 
