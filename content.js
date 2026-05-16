@@ -6958,7 +6958,172 @@
     scheduleGpGdFromUnifiedEcho();
   }
 
-  /** Mark current session completed (same path as decorated chip checkbox), then dismiss native detail UI. */
+  /** Minimal hit for popup actions when delegate wiring has no live `hit` object. */
+  function gpGdDetailHitFromWrap(wrapHost) {
+    const gid = String(wrapHost?.dataset?.gpGoalId ?? '').trim();
+    const eid = String(wrapHost?.dataset?.gpSessionEventId ?? '').trim();
+    let sIdx = -1;
+    if (gid && String(_gpGdPinnedGoalId) === gid && _gpGdPinnedSlotIdx >= 0) {
+      sIdx = _gpGdPinnedSlotIdx;
+    }
+    return {
+      goal: { id: gid },
+      session: { eventId: eid, completed: !!gpGdGetDetailMarkCompleteBtn()?.disabled },
+      gIdx: -1,
+      sIdx,
+    };
+  }
+
+  /** Apply completed styling to any visible goal chips for this session. */
+  function gpGdApplyCompletionUiForGoalSession(goalId, plannerEventId, storageKey) {
+    const keys = new Set(
+      [plannerEventId, storageKey].filter((k) => k != null && String(k).trim() !== '')
+    );
+    for (const chip of document.querySelectorAll('[data-eventchip].ext-goal-chip')) {
+      if (!chip.querySelector('.ext-goal-root')) continue;
+      const gid = chip.dataset.gpGoalId ? String(chip.dataset.gpGoalId) : '';
+      if (goalId && gid && gid !== String(goalId)) continue;
+      const eidDom = chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || '';
+      const slotApi = chip.dataset.gpCalEventId ? String(chip.dataset.gpCalEventId) : '';
+      const match =
+        [...keys].some(
+          (k) =>
+            k === eidDom ||
+            k === slotApi ||
+            gpChipDoneKeyMatchesCalEventId(k, eidDom) ||
+            gpChipDoneMirrorStrictPair(k, eidDom)
+        ) || (!keys.size && goalId && gid === String(goalId));
+      if (match) GoalInteractionController.applyGoalSessionCompletionUI(chip, true);
+    }
+  }
+
+  /**
+   * Persist session completion from the event popup when the grid chip is not resolvable
+   * (same storage + sidebar path as GoalInteractionController.toggleCompletion).
+   */
+  async function gpGdPersistSessionMarkedComplete(wrapHost, hit) {
+    const goalId = String(wrapHost?.dataset?.gpGoalId ?? hit?.goal?.id ?? '').trim();
+    const storageKey = String(
+      wrapHost?.dataset?.gpSessionEventId ?? hit?.session?.eventId ?? ''
+    ).trim();
+    if (!goalId) return false;
+
+    const d = await new Promise((resolve) =>
+      chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], resolve)
+    );
+    const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : [];
+    const goalRow = legacyGoals.find((g) => String(g.id) === goalId);
+    if (!goalRow) return false;
+
+    const allowed = goalRow.calEventIds || [];
+    let slotIdx = typeof hit?.sIdx === 'number' && hit.sIdx >= 0 ? hit.sIdx : -1;
+    if (slotIdx < 0 && String(_gpGdPinnedGoalId) === goalId && _gpGdPinnedSlotIdx >= 0) {
+      slotIdx = _gpGdPinnedSlotIdx;
+    }
+    if (slotIdx < 0 && storageKey) {
+      slotIdx = allowed.findIndex(
+        (id) =>
+          gpChipDoneKeyMatchesCalEventId(storageKey, id) || String(id) === storageKey
+      );
+    }
+
+    let plannerEventId = '';
+    if (slotIdx >= 0 && slotIdx < allowed.length) plannerEventId = String(allowed[slotIdx]);
+    else if (storageKey) plannerEventId = storageKey;
+    else if (allowed.length === 1) {
+      slotIdx = 0;
+      plannerEventId = String(allowed[0]);
+    }
+    if (!plannerEventId) return false;
+
+    const chipDoneSnapshot = { ...(d.gp_chip_done || {}) };
+    const slotPackPrev =
+      d.gp_goal_slot_done && typeof d.gp_goal_slot_done === 'object'
+        ? { ...d.gp_goal_slot_done }
+        : {};
+
+    const mirrorKeys = mirrorGpChipDoneKeysForSession(plannerEventId, allowed);
+    const map = { ...chipDoneSnapshot };
+    if (storageKey) map[storageKey] = true;
+    for (const k of mirrorKeys) map[k] = true;
+    stampCalEventIdOnChipMap(map, allowed, slotIdx, true);
+
+    if (goalId && slotIdx >= 0) {
+      const prevArr = Array.isArray(slotPackPrev[goalId]) ? slotPackPrev[goalId] : [];
+      const sset = new Set(
+        prevArr.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n >= 0)
+      );
+      sset.add(slotIdx);
+      slotPackPrev[goalId] = [...sset].sort((a, b) => a - b);
+    }
+
+    gpGdApplyCompletionUiForGoalSession(goalId, plannerEventId, storageKey);
+
+    await new Promise((resolve) =>
+      chrome.storage.local.set({ gp_chip_done: map, gp_goal_slot_done: slotPackPrev }, resolve)
+    );
+
+    const persistEventId =
+      allowed.find((id) => mirrorKeys.some((mk) => String(mk) === String(id))) ||
+      plannerEventId;
+
+    try {
+      await globalThis.GoalCalendarSync?.persistSessionCompleted?.(persistEventId, true, {
+        legacyGoals,
+        chipDoneMap: map,
+        slotPack: slotPackPrev,
+      });
+    } catch (_) {
+      /* ignore */
+    }
+
+    const metaSidebar = {
+      reason: 'sessionCompletion',
+      goalId,
+      chipDoneOverride: injectSlotDoneIntoExpandedChipDone(
+        expandChipDoneOntoCalEventIds(map, legacyGoals),
+        legacyGoals,
+        slotPackPrev
+      ),
+      slotPackOverride: slotPackPrev,
+    };
+
+    try {
+      if (goalPlannerModelAvailable()) {
+        await patchMyGoalsSidebarProgressRows(null, metaSidebar);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    try {
+      chrome.runtime.sendMessage({ type: 'GOAL_TOGGLE', id: plannerEventId, complete: true });
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      renderHomeScreen();
+    } catch (_) {
+      /* ignore */
+    }
+    return true;
+  }
+
+  function gpGdWireMarkCompleteButton(wrapHost, hit) {
+    const btn = gpGdGetDetailMarkCompleteBtn();
+    if (!(btn instanceof HTMLButtonElement) || !(wrapHost instanceof HTMLElement)) return;
+    const wireKey =
+      String(wrapHost.dataset.gpGoalId ?? '') + '|' + String(wrapHost.dataset.gpSessionEventId ?? '');
+    if (btn.dataset.gpMarkWired === wireKey) return;
+    btn.dataset.gpMarkWired = wireKey;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      void gpGdMarkSessionDoneAndDismiss(wrapHost, hit || gpGdDetailHitFromWrap(wrapHost));
+    });
+  }
+
+  /** Mark current session completed (chip toggle or storage fallback), then dismiss native detail UI. */
   async function gpGdMarkSessionDoneAndDismiss(wrapHost, hit) {
     const btn = gpGdGetDetailMarkCompleteBtn();
     if (!(btn instanceof HTMLButtonElement)) return;
@@ -6966,15 +7131,27 @@
       gpGdCloseNativeEventPopover(wrapHost);
       return;
     }
-    const raw = wrapHost.dataset.gpSessionEventId ?? hit.session?.eventId ?? '';
-    const chip = gpFindChipForPlannerEventFlexible(String(raw));
-    if (!chip) {
-      alert('Could not locate this session on the grid — toggle completion directly on the calendar chip.');
-      return;
+
+    const raw = String(wrapHost.dataset.gpSessionEventId ?? hit?.session?.eventId ?? '').trim();
+    const chip = raw ? gpFindChipForPlannerEventFlexible(raw) : null;
+
+    if (chip && !chip.classList.contains('ext-goal-completed')) {
+      const domKey =
+        chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || raw;
+      GoalInteractionController.toggleCompletion(domKey, chip);
+    } else if (!chip) {
+      const ok = await gpGdPersistSessionMarkedComplete(wrapHost, hit || gpGdDetailHitFromWrap(wrapHost));
+      if (!ok) {
+        alert(
+          'Could not mark this session complete — open the matching goal event on the calendar grid and use its checkbox, or try again after the event loads.'
+        );
+        return;
+      }
+      gpGdSyncMarkCompleteButton(true);
+    } else {
+      gpGdSyncMarkCompleteButton(true);
     }
-    const domKey =
-      chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || String(raw);
-    GoalInteractionController.toggleCompletion(domKey, chip);
+
     scheduleGpGdFromUnifiedEcho();
     gpGdCloseNativeEventPopover(wrapHost);
   }
