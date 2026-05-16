@@ -9122,9 +9122,7 @@
       clearTimeout(_gpDecorateTimer);
       _gpDecorateTimer = 0;
     }
-    if (_gpDecorateRaf) return;
-    _gpDecorateRaf = requestAnimationFrame(() => {
-      _gpDecorateRaf = 0;
+    queueMicrotask(() => {
       processGoalChips();
     });
   }
