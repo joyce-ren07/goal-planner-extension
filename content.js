@@ -170,7 +170,7 @@
     return `${session?.isoStart ?? ''}|${session?.isoEnd ?? ''}`;
   }
 
-  // ── Ghost events: clear preview nodes inside stable root — tear down scroll listener ──
+  // ── Ghost events: remove preview DOM + tear down in-scroll ghost host ──
   function removeGhostEvents() {
     if (_gpGhostTipEl?.classList) {
       try {
