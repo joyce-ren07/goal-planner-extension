@@ -8678,6 +8678,7 @@
       chip.appendChild(root);
 
       boundChipHeight(chip);
+      clearGoalChipPendingState(chip);
 
       const ec = chip.closest('[data-eventid]');
       requestAnimationFrame(() => {
