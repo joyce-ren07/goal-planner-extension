@@ -5957,23 +5957,23 @@
   }
 
   /**
-   * Insert goal rows before Calendar / Guests / Visibility style native rows when possible.
+   * Where to insert in the center popover body — same parent as native metadata rows
+   * (not a nested scroll column like QSj8ac that can be clipped/off-screen).
    * @returns {{ mountParent: HTMLElement, insertBefore: HTMLElement | null }}
    */
-  function gpGdResolveGoalInjectionMount(dialogHost) {
-    if (!(dialogHost instanceof HTMLElement)) {
-      return {
-        mountParent: /** @type {HTMLElement} */ (document.body),
-        insertBefore: null,
-      };
+  function gpGdFindGoalDetailMountSlot(cardRoot, goalTitle) {
+    if (!(cardRoot instanceof HTMLElement)) {
+      return { mountParent: cardRoot, insertBefore: null };
     }
-    gpGdStripNativeMeetingNotes(dialogHost);
-    const cardRoot = gpGdResolveInspectorCardRoot(dialogHost, '');
-    gpGdStripNativeMeetingNotes(cardRoot);
 
-    const rowScopes = cardRoot instanceof HTMLElement ? [cardRoot] : [dialogHost];
-    /** @type {HTMLElement | null} */
-    let before = null;
+    const beforeNotes = gpGdFindFirstMetadataRowMatching(
+      cardRoot,
+      /take meeting notes|start a new document/i
+    );
+    if (beforeNotes?.parentElement instanceof HTMLElement) {
+      return { mountParent: beforeNotes.parentElement, insertBefore: beforeNotes };
+    }
+
     const rowRes = [
       /\bminutes before\b/i,
       /\bnotification\b/i,
@@ -5983,26 +5983,80 @@
       /\bguests?\b/i,
       /\bvisibility\b/i,
     ];
-    for (const scope of rowScopes) {
-      for (const re of rowRes) {
-        before = gpGdFindFirstMetadataRowMatching(scope, re);
-        if (before) break;
+    for (const re of rowRes) {
+      const row = gpGdFindFirstMetadataRowMatching(cardRoot, re);
+      if (row?.parentElement instanceof HTMLElement) {
+        return { mountParent: row.parentElement, insertBefore: row };
       }
-      if (before) break;
     }
 
-    let mountParent =
-      cardRoot instanceof HTMLElement
-        ? gpGdPickGoalDetailMountParent(dialogHost, cardRoot)
-        : gpGdPickGoalDetailMountParent(dialogHost, null);
-    if (cardRoot instanceof HTMLElement) {
-      mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost);
-      if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) mountParent = cardRoot;
+    const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
+    if (needle.length >= 2) {
+      /** @type {HTMLElement | null} */
+      let titleRow = null;
+      gpGdWalkComposedElements(cardRoot, (el) => {
+        if (titleRow) return;
+        if (!(el instanceof HTMLElement)) return;
+        const t = String(el.innerText || '').replace(/\s+/g, ' ').trim();
+        if (t.length > 180 || t.length < 4) return;
+        if (!t.includes(needle.slice(0, Math.min(needle.length, 28)))) return;
+        if (
+          !/\b(?:AM|PM|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i.test(t) &&
+          !/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(t)
+        ) {
+          return;
+        }
+        const row = gpGdElevateToMetadataRow(cardRoot, el);
+        titleRow = row instanceof HTMLElement ? row : el;
+      });
+      if (titleRow?.parentElement instanceof HTMLElement) {
+        const sib = titleRow.nextElementSibling;
+        return {
+          mountParent: titleRow.parentElement,
+          insertBefore: sib instanceof HTMLElement ? sib : null,
+        };
+      }
     }
 
-    const insertBefore =
-      before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before) ? before : null;
-    return { mountParent, insertBefore, cardRoot: cardRoot instanceof HTMLElement ? cardRoot : null };
+    return { mountParent: cardRoot, insertBefore: null };
+  }
+
+  /**
+   * Insert goal rows before Calendar / Guests / Visibility style native rows when possible.
+   * @returns {{ mountParent: HTMLElement, insertBefore: HTMLElement | null, cardRoot: HTMLElement | null }}
+   */
+  function gpGdResolveGoalInjectionMount(dialogHost, goalTitle) {
+    if (!(dialogHost instanceof HTMLElement)) {
+      return {
+        mountParent: /** @type {HTMLElement} */ (document.body),
+        insertBefore: null,
+        cardRoot: null,
+      };
+    }
+    gpGdStripNativeMeetingNotes(dialogHost);
+    const cardRoot = gpGdResolveInspectorCardRoot(dialogHost, goalTitle || '');
+    gpGdStripNativeMeetingNotes(cardRoot);
+
+    if (!(cardRoot instanceof HTMLElement)) {
+      return { mountParent: dialogHost, insertBefore: null, cardRoot: null };
+    }
+
+    const slot = gpGdFindGoalDetailMountSlot(cardRoot, goalTitle || '');
+    let mountParent = slot.mountParent;
+    let insertBefore = slot.insertBefore;
+
+    if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) {
+      mountParent = cardRoot;
+      insertBefore = null;
+    }
+    if (
+      insertBefore instanceof HTMLElement &&
+      !gpGdComposedSubtreeContains(mountParent, insertBefore)
+    ) {
+      insertBefore = null;
+    }
+
+    return { mountParent, insertBefore, cardRoot };
   }
 
   function gpGdParseSvg(markup) {
