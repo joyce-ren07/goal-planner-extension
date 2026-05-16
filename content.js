@@ -5010,6 +5010,19 @@
   let _gpGdAnchorY = /** @type {number | null} */ (null);
   let _gpGdRemountCount = 0;
   let _gpGdRemountGoalKey = '';
+  let _gpGdDetailScanActiveUntil = 0;
+  let _gpGdDomObsDebounce = 0;
+
+  function gpGdMarkDetailScanActive(ms) {
+    _gpGdDetailScanActiveUntil = Date.now() + (ms || 12000);
+  }
+
+  function gpGdShouldRunDetailScan() {
+    if (__gpGdBlockEl?.isConnected) return true;
+    if (Date.now() < _gpGdDetailScanActiveUntil) return true;
+    if (Date.now() - _gpGdPinnedAt < 12000 && _gpGdPinnedHints.length) return true;
+    return false;
+  }
 
   function gpGdResolveGoalChipFromEvent(e) {
     const path =
