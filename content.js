@@ -6283,7 +6283,7 @@
     teardownGpGdMarkFooter();
     gpGdUnhideNativeMarkCompleted(cardRoot);
 
-    const footer = document.createElement('motion');
+    const footer = document.createElement('div');
     footer.id = 'gp-gcal-detail-mark-footer';
     footer.setAttribute('data-gp-mark-footer', '1');
     footer.style.cssText =
