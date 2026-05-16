@@ -7134,40 +7134,32 @@
    * Persist session completion from the event popup when the grid chip is not resolvable
    * (same storage + sidebar path as GoalInteractionController.toggleCompletion).
    */
-  async function gpGdPersistSessionMarkedComplete(wrapHost, hit) {
-    const goalId = String(wrapHost?.dataset?.gpGoalId ?? hit?.goal?.id ?? '').trim();
-    const storageKey = String(
-      wrapHost?.dataset?.gpSessionEventId ?? hit?.session?.eventId ?? ''
-    ).trim();
-    if (!goalId) return false;
-
-    const d = await new Promise((resolve) =>
-      chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], resolve)
-    );
-    const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : [];
-    const goalRow = legacyGoals.find((g) => String(g.id) === goalId);
-    if (!goalRow) return false;
+  async function gpGdPersistSessionMarkedComplete(wrapHost, hitOrCtx) {
+    const ctx =
+      hitOrCtx?.goalRow && hitOrCtx?.plannerEventId
+        ? hitOrCtx
+        : await gpGdResolvePopupSessionContext(wrapHost, hitOrCtx);
+    const goalId = String(ctx?.goalId ?? '').trim();
+    const goalRow = ctx?.goalRow;
+    if (!goalId || !goalRow) return false;
 
     const allowed = goalRow.calEventIds || [];
-    let slotIdx = typeof hit?.sIdx === 'number' && hit.sIdx >= 0 ? hit.sIdx : -1;
-    if (slotIdx < 0 && String(_gpGdPinnedGoalId) === goalId && _gpGdPinnedSlotIdx >= 0) {
-      slotIdx = _gpGdPinnedSlotIdx;
+    let slotIdx = typeof ctx.slotIdx === 'number' ? ctx.slotIdx : -1;
+    let plannerEventId = String(ctx.plannerEventId ?? '').trim();
+    const storageKey = String(ctx.storageKey ?? '').trim();
+    if (!plannerEventId && slotIdx >= 0 && slotIdx < allowed.length) {
+      plannerEventId = String(allowed[slotIdx]);
     }
-    if (slotIdx < 0 && storageKey) {
-      slotIdx = allowed.findIndex(
-        (id) =>
-          gpChipDoneKeyMatchesCalEventId(storageKey, id) || String(id) === storageKey
-      );
-    }
-
-    let plannerEventId = '';
-    if (slotIdx >= 0 && slotIdx < allowed.length) plannerEventId = String(allowed[slotIdx]);
-    else if (storageKey) plannerEventId = storageKey;
-    else if (allowed.length === 1) {
+    if (!plannerEventId && allowed.length === 1) {
       slotIdx = 0;
       plannerEventId = String(allowed[0]);
     }
     if (!plannerEventId) return false;
+
+    const d = await new Promise((resolve) =>
+      chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], resolve)
+    );
+    const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : ctx.legacyGoals || [];
 
     const chipDoneSnapshot = { ...(d.gp_chip_done || {}) };
     const slotPackPrev =
