@@ -5551,18 +5551,24 @@
 
     const existing = __gpGdBlockEl;
     if (
-      gpGdIsGoalBlockVisible(existing) &&
+      existing?.isConnected &&
       existing.dataset.gpGoalId === goalId &&
       existing.dataset.gpEventToken === token &&
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
-      gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      gpGdTrace('render skipped (visible block already mounted)', goalId);
-      return existing;
+      if (!gpGdIsGoalBlockWellPlaced(existing, dialogShell)) {
+        gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      }
+      if (gpGdIsGoalBlockWellPlaced(existing, dialogShell)) {
+        _gpGdHydrateQuietUntil = Date.now() + 1800;
+        return existing;
+      }
+      gpGdTrace('remount (block visible but misaligned)', goalId);
+      teardownGpGdBlock();
+    } else {
+      teardownGpGdBlock();
     }
-
-    teardownGpGdBlock();
     gpGdTrace('render start', token, goalId);
 
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
