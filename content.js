@@ -5914,11 +5914,18 @@
       natives = gpGdCollectAnnotatedInspectorPanels(html);
     }
 
-    /** No native inspector chrome — teardown */
+    /** No native inspector chrome — wait for async GCal open if user just clicked a goal chip. */
     if (!natives.length) {
+      if (pinnedRaw.length) {
+        gpGdTrace('no inspector host yet — will retry', pinnedRaw[0]);
+        return;
+      }
       teardownGpGdBlock();
+      gpGdTrace('no inspector host — teardown');
       return;
     }
+
+    gpGdTrace('inspector hosts', natives.length);
 
     /** Prefer hosts whose detected card is popover-sized (not zero / full viewport). */
     natives.sort((a, b) => {
