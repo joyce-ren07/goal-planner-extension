@@ -5144,7 +5144,7 @@
       window.clearTimeout(_gpGdPinWatchDebounce);
       _gpGdPinWatchDebounce = window.setTimeout(() => {
         gpGdRunDetailHydratePass();
-      }, 10);
+      }, 100);
     });
     try {
       _gpGdPinWatchMo.observe(document.documentElement || document.body, {
