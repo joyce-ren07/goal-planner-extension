@@ -6562,6 +6562,7 @@
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
+    if (isGhostCreationPreviewUiActive()) return;
     const ext = __gpGdBlockEl;
     if (
       ext &&
