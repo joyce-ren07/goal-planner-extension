@@ -6949,10 +6949,17 @@
       return scoreA - scoreB;
     });
     natives = gpGdPruneNestedInspectorHosts(natives);
+    const nativesPruned = natives.slice();
     natives = natives.filter((h) => gpGdInspectorHostIsOnScreen(h));
+    if (!natives.length) {
+      natives = nativesPruned.filter((h) => gpGdIsElementVisuallyExposed(h));
+    }
 
     let host =
       gpGdFindEventInspectorShell('') || gpGdPickBestVisibleInspectorHost(natives, '');
+    if (!(host instanceof HTMLElement) && nativesDiscovered.length) {
+      host = gpGdPickBestVisibleInspectorHost(nativesDiscovered, '');
+    }
     if (!(host instanceof HTMLElement)) {
       if (pinnedRaw.length) {
         gpGdTrace('waiting for event inspector near click');
