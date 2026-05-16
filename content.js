@@ -5040,10 +5040,9 @@
       return;
     }
 
-    /** @type {import('./dummy').GpUnifiedGoalHit} */
-    let unifiedStateSnapshot;
+    let unified;
     try {
-      unifiedStateSnapshot = await Model.loadUnifiedState();
+      unified = await Model.loadUnifiedState();
     } catch (_) {
       teardownGpGdBlock();
       return;
@@ -5062,18 +5061,17 @@
       const hints = gpCollectEventIdHintsFromRoot(host);
       const hintJoined = hints.join('|');
       for (let hi = 0; hi < hints.length; hi++) {
-        /** @type {UnifiedHitCompat} */
-        let hitCandidate = gpFindUnifiedSessionForDomEventKey(unifiedStateSnapshot, hints[hi]);
+        const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
 
         /** Only decorate Goal-managed sessions carrying 🎯 linkage (unified GoalSession hit). */
-        if (!hitCandidate?.goal?.id || !hitCandidate.session?.eventId) continue;
+        if (!hit?.goal?.id || !hit.session?.eventId) continue;
 
         /** Mount target — footer-adjacent or dialog body trailing region for minimal layout disruption */
         /** @type {HTMLElement} */
         const mountHostCandidate =
           (host.tagName !== 'SECTION' &&
             [...host.children].reverse().find(
-              /** @returns {HTMLElement} */
+              /** @returns {HTMLElement|null} */
               function findScroll(x) {
                 return x.scrollHeight > x.clientHeight + 20 ? /** @type {HTMLElement} */ (x) : null;
               }
@@ -5083,24 +5081,7 @@
 
         if (!mountHostCandidate) continue;
 
-        if (__gpGdBlockEl?.isConnected && _gpGdLastHost === host && _gpGdLastHints === hintJoined) {
-          /** Hot refresh text only */
-
-          teardownGpGdBlock();
-        }
-
-        /** @type {UnifiedHitCompat} */
-        let hitStable = gpFindUnifiedSessionForDomEventKey(
-          unifiedStateSnapshot,
-          hints[hi]
-        );
-
-        /** Re-load hit after teardown */
-        unifiedStateSnapshot = await Model.loadUnifiedState();
-        hitStable = gpFindUnifiedSessionForDomEventKey(unifiedStateSnapshot, hints[hi]);
-        if (!hitStable?.goal?.id) continue;
-
-        await gpGdRenderDetailBlock(hitStable, hints[hi], mountHostCandidate, unifiedStateSnapshot);
+        gpGdRenderDetailBlock(hit, hints[hi], mountHostCandidate);
         _gpGdLastHost = host;
         _gpGdLastHints = hintJoined;
         return;
@@ -5111,7 +5092,6 @@
 
   /** Install observer + GoalPlannerUnifiedState listeners (subscriber + chrome.storage echo). Does not wire calendar-chip DOM mutation for goal field reads. */
 
-  /** @suppress {duplicate} */
   function setupGpCalGoalDetailEnrichment() {
     if (globalThis.__gpCalGoalInspectorEnrichment) return;
     globalThis.__gpCalGoalInspectorEnrichment = true;
