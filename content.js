@@ -6837,7 +6837,7 @@
           visibleHostPinned
         );
         if (renderedPinned) {
-          gpGdStopInspectorPinWatch();
+          gpGdStopWaitForInspector();
           return;
         }
       }
