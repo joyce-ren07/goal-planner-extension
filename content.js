@@ -7098,10 +7098,10 @@
     __gpGdBlockEl = wrap;
     gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sess.completed), cardRoot);
     if (dialogShell instanceof HTMLElement) {
-      gpGdAlignMarkFooterToCard(dialogShell);
       gpGdEnsureDialogRepairObserver(dialogShell);
     }
     gpGdEnsureDetailDelegates(wrap, hit);
+    gpGdRevealOpenDetailUi();
     const ok = placed;
     if (ok) {
       _gpGdHydrateQuietUntil = Date.now() + 15000;
