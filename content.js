@@ -258,6 +258,7 @@
         _gpGhostPreviewRecoveryMo.disconnect();
         _gpGhostPreviewRecoveryMo = null;
       }
+      _gpGhostPreviewRecoveryWatchEl = null;
       window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
       return;
     }
@@ -266,7 +267,12 @@
         ? _gpGhostLockedScrollCont
         : findCalendarScrollContainerForGhostPreview();
     if (!(watchEl instanceof HTMLElement)) return;
-    if (_gpGhostPreviewRecoveryMo) return;
+    if (_gpGhostPreviewRecoveryMo && _gpGhostPreviewRecoveryWatchEl === watchEl) return;
+    if (_gpGhostPreviewRecoveryMo) {
+      _gpGhostPreviewRecoveryMo.disconnect();
+      _gpGhostPreviewRecoveryMo = null;
+    }
+    _gpGhostPreviewRecoveryWatchEl = watchEl;
     _gpGhostPreviewRecoveryMo = new MutationObserver(() => {
       if (!isGhostCreationPreviewUiActive()) {
         ensureGhostPreviewRecoveryObserver();
