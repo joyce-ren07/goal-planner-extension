@@ -6000,6 +6000,7 @@
         ? before.parentElement
         : gpGdPickGoalDetailMountParent(dialogHost, cardRoot);
     mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost);
+    mountParent = gpGdEnsureMountInsideCardScope(mountParent, cardRoot, dialogHost);
 
     const insertBefore =
       before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before)
