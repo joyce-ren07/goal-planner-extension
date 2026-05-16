@@ -961,7 +961,7 @@
     0 0 0 0.5px rgba(211, 86, 75, 0.08);
   isolation: isolate;
   opacity: 0.92;
-  /* Position via transform (patched in JS) — avoids top/left thrash on scroll; no keyframe restart on reuse */
+  /* Position via left/top inside #gp-ghost-preview-root (content coords — scrolls with GCal shell) */
   transition:
     opacity 0.15s cubic-bezier(0.2, 0, 0, 1),
     transform 0.14s cubic-bezier(0.2, 0, 0, 1);
