@@ -5018,7 +5018,13 @@
 
       const rightFlyout = r.left > vw * 0.38 && r.width < vw * 0.62;
       const modalish = r.width < vw * 0.78 && r.height > vh * 0.18 && r.top < vh * 0.85;
-      if (!rightFlyout && !modalish) return;
+      const centerPopover =
+        r.width >= 220 &&
+        r.width <= gpGdMaxInspectorCardWidth() &&
+        r.height >= 100 &&
+        r.left > vw * 0.08 &&
+        r.right < vw * 0.92;
+      if (!rightFlyout && !modalish && !centerPopover) return;
 
       candidates.push(el);
     });
