@@ -4909,8 +4909,6 @@
       })
       .join('');
 
-    const markLbl = sessDone ? 'Completed' : 'Mark completed';
-
     wrap.innerHTML = `
       <div class="gp-gd-nat-row">
         <div class="gp-gd-nat-ic" aria-hidden="true">
