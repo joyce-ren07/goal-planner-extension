@@ -7049,8 +7049,9 @@
             gpGdFindOpenInspectorNearClick(enriched.goal.title) ||
             gpGdFindEventInspectorShell(enriched.goal.title) ||
             host;
-          gpGdReparentBlockIntoScrollColumn(keep, vis);
-          _gpGdHydrateQuietUntil = Date.now() + 5000;
+          gpGdStabilizeBlockPlacement(keep, vis);
+          _gpGdPlacementLocked = true;
+          _gpGdHydrateQuietUntil = Date.now() + 6000;
           return;
         }
       }
