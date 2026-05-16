@@ -725,7 +725,6 @@
   /** Coalesce rapid updates into one animation frame — no intentional extra latency. */
   let _ghostPreviewFlushRaf = 0;
   function scheduleGhostPreviewRefreshDebounced() {
-    if (isGhostCreationPreviewUiActive()) ensureGhostPreviewRecoveryObserver();
     if (_ghostPreviewFlushRaf) cancelAnimationFrame(_ghostPreviewFlushRaf);
     _ghostPreviewFlushRaf = requestAnimationFrame(() => {
       _ghostPreviewFlushRaf = 0;
