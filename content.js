@@ -6961,7 +6961,7 @@
     const pinnedRaw = gpGdConsumePinnedSessionHints();
 
     if (!natives.length && html instanceof HTMLElement && pinnedRaw.length) {
-      natives = gpGdCollectAnnotatedInspectorPanels(html);
+      natives = gpGdFilterEventDetailPopupHosts(gpGdCollectAnnotatedInspectorPanels(html));
     }
 
     /** No native inspector chrome — wait for async GCal open if user just clicked a goal chip. */
