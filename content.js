@@ -6423,12 +6423,6 @@
       emptyEl.hidden = subtasks.length > 0;
     }
 
-    const titleEl = wrap.querySelector('[data-gp-my-goals-title]');
-    if (titleEl instanceof HTMLElement) {
-      const t = String(hit.goal.title || '').trim();
-      titleEl.textContent = t || 'Goal session';
-    }
-
     const markBtn = wrap.querySelector('[data-gp-detail-act="mark-session-complete"]');
     if (markBtn instanceof HTMLButtonElement) {
       const sessDone = !!hit.session?.completed;
