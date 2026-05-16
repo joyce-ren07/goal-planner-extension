@@ -596,14 +596,7 @@
     const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
     const scrollGhost = findCalendarScrollContainerForGhostPreview();
-    let cols = filterGhostPreviewDayColumns(scrollGhost, findDayColumnPositions());
-    if (!cols.length && scrollGhost) {
-      const grid = scrollGhost.getBoundingClientRect();
-      cols = findDayColumnPositions().filter((c) => {
-        const cx = c.left + c.width / 2;
-        return cx >= grid.left - 64 && cx <= grid.right + 64;
-      });
-    }
+    const cols = ghostPreviewDayColumns(scrollGhost);
     if (!cols.length) return [];
 
     const [hour, minRaw] = (r.time || '09:00').split(':').map(Number);
