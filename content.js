@@ -5053,22 +5053,55 @@
     return /Goal Planner session for:/i.test(t) || t.includes('🎯');
   }
 
-  /** Event inspector visible on screen — includes plain GCal popovers before our block mounts. */
-  function gpGdInspectorShellMatchesGoal(shell, goalTitle) {
-    if (!(shell instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(shell)) return false;
-    if (gpGdIsGoalPlannerInspector(shell)) return true;
-    const needle = String(goalTitle || _gpGdPinnedTitleHint || '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const short = needle.slice(0, Math.min(needle.length, 36));
-    const t = String(shell.innerText || '');
-    if (short.length >= 2 && t.includes(short)) return true;
-    if (!gpGdInspectorHasCloseControl(shell)) return false;
-    return /\b(?:AM|PM)\b/i.test(t) && /\bminutes before\b/i.test(t);
+  function gpGdFindGoalInspectorFromEvent(e) {
+    const path =
+      e && typeof e.composedPath === 'function'
+        ? e.composedPath()
+        : [e?.target].filter(Boolean);
+    for (const n of path) {
+      if (!(n instanceof Element)) continue;
+      const dialog = n.closest('[role="dialog"], [role="alertdialog"]');
+      if (dialog instanceof HTMLElement && gpGdIsGoalPlannerInspector(dialog) && gpGdIsElementVisuallyExposed(dialog)) {
+        return dialog;
+      }
+      if (n instanceof HTMLElement && gpGdInspectorHasCloseControl(n) && gpGdIsGoalPlannerInspector(n)) {
+        return n;
+      }
+    }
+    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+        if (!(el instanceof Element)) continue;
+        const d = el.closest('[role="dialog"], [role="alertdialog"]');
+        if (d instanceof HTMLElement && gpGdIsGoalPlannerInspector(d) && gpGdIsElementVisuallyExposed(d)) {
+          return d;
+        }
+      }
+    }
+    return null;
   }
 
-  function gpGdFindAnyVisibleEventInspector(goalTitle) {
+  function gpGdFindFrontGoalInspector(goalTitle) {
+    const scored = gpGdFindEventInspectorShell(goalTitle);
+    if (scored instanceof HTMLElement && gpGdIsElementVisuallyExposed(scored)) return scored;
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    if (ax != null && ay != null) {
+      for (const el of document.elementsFromPoint(ax, ay)) {
+        if (!(el instanceof Element)) continue;
+        const d = el.closest('[role="dialog"], [role="alertdialog"]');
+        if (d instanceof HTMLElement && gpGdIsGoalPlannerInspector(d) && gpGdIsElementVisuallyExposed(d)) {
+          return d;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Locate the visible event popup at click — works before Goal Planner description text paints. */
+  function gpGdFindOpenInspectorNearClick(goalTitle) {
     const title = String(goalTitle || _gpGdPinnedTitleHint || '').trim();
+    const short = title.slice(0, Math.min(title.length, 36));
+
     const byShell = gpGdFindEventInspectorShell(title);
     if (byShell instanceof HTMLElement && gpGdIsElementVisuallyExposed(byShell)) return byShell;
 
@@ -5080,65 +5113,27 @@
         const shell =
           el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
           el.closest('[role="presentation"]');
-        if (
-          shell instanceof HTMLElement &&
-          gpGdInspectorShellMatchesGoal(shell, title)
-        ) {
-          return shell;
-        }
-      }
-    }
-
-    let natives = gpEnumerateNativeEventDetailHosts();
-    const html = document.documentElement;
-    if (!natives.length && html instanceof HTMLElement) {
-      natives = gpGdCollectAnnotatedInspectorPanels(html);
-    }
-    natives = gpGdPruneNestedInspectorHosts(natives);
-    const picked = gpGdPickBestVisibleInspectorHost(natives, title) || natives[0];
-    if (picked instanceof HTMLElement && gpGdInspectorShellMatchesGoal(picked, title)) return picked;
-
-    return null;
-  }
-
-  function gpGdFindGoalInspectorFromEvent(e) {
-    const path =
-      e && typeof e.composedPath === 'function'
-        ? e.composedPath()
-        : [e?.target].filter(Boolean);
-    for (const n of path) {
-      if (!(n instanceof Element)) continue;
-      const dialog = n.closest('[role="dialog"], [role="alertdialog"]');
-      if (dialog instanceof HTMLElement && gpGdInspectorShellMatchesGoal(dialog, '')) {
-        return dialog;
-      }
-      if (n instanceof HTMLElement && gpGdInspectorHasCloseControl(n) && gpGdInspectorShellMatchesGoal(n, '')) {
-        return n;
-      }
-    }
-    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
-      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
-        if (!(el instanceof Element)) continue;
-        const d =
-          el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
-          el.closest('[role="presentation"]');
-        if (d instanceof HTMLElement && gpGdInspectorShellMatchesGoal(d, '')) {
-          return d;
-        }
+        if (!(shell instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(shell)) continue;
+        if (!gpGdInspectorHasCloseControl(shell)) continue;
+        const t = String(shell.innerText || '');
+        if (short.length >= 2 && t.includes(short)) return shell;
+        if (gpGdIsGoalPlannerInspector(shell)) return shell;
+        if (/\b(?:AM|PM)\b/i.test(t) && /\bminutes before\b/i.test(t)) return shell;
       }
     }
     return null;
-  }
-
-  function gpGdFindFrontGoalInspector(goalTitle) {
-    return gpGdFindAnyVisibleEventInspector(goalTitle);
   }
 
   function gpGdBlockInFrontInspector(wrap, goalTitle) {
     if (!(wrap instanceof HTMLElement) || !wrap.isConnected) return false;
-    const front = gpGdFindFrontGoalInspector(goalTitle);
-    if (!front) return gpGdIsGoalBlockVisible(wrap);
+    const front = gpGdFindOpenInspectorNearClick(goalTitle) || gpGdFindFrontGoalInspector(goalTitle);
+    if (!front) return false;
     return gpGdComposedSubtreeContains(front, wrap);
+  }
+
+  function gpGdSyncBlockElRef() {
+    const ext = __gpGdBlockEl;
+    if (ext && !ext.isConnected) __gpGdBlockEl = null;
   }
 
   function gpGdDetailBlockReady(goalTitle) {
@@ -5161,55 +5156,6 @@
   function gpGdInvalidateUnifiedCache() {
     _gpGdUnifiedCache = null;
     _gpGdUnifiedCacheAt = 0;
-  }
-
-  function gpGdSyncBlockElRef() {
-    const ext = __gpGdBlockEl;
-    if (ext && !ext.isConnected) __gpGdBlockEl = null;
-  }
-
-  function gpGdIsGoalPlannerInspectorStillOpen() {
-    if (gpGdFindAnyVisibleEventInspector(_gpGdPinnedTitleHint)) return true;
-    if (_gpGdPinnedHints.length && Date.now() - _gpGdPinnedAt < 25000) return true;
-    return false;
-  }
-
-  function gpGdRefreshPinnedSessionLease() {
-    if (gpGdFindAnyVisibleEventInspector(_gpGdPinnedTitleHint)) {
-      _gpGdPinnedAt = Date.now();
-      gpGdMarkDetailScanActive(22000);
-      return;
-    }
-    if (_gpGdPinnedHints.length && Date.now() - _gpGdPinnedAt < 25000) {
-      gpGdMarkDetailScanActive(12000);
-    }
-  }
-
-  /** True when focus is in GCal’s native title/description/notes field inside the inspector. */
-  function gpGdNativeInspectorEditingActive(host) {
-    if (!(host instanceof HTMLElement)) return false;
-    const ae = document.activeElement;
-    if (!(ae instanceof HTMLElement)) return false;
-    if (!gpGdComposedSubtreeContains(host, ae) && !host.contains(ae)) return false;
-    if (ae.isContentEditable) return true;
-    const tag = ae.tagName;
-    if (tag === 'TEXTAREA' || tag === 'INPUT') return true;
-    if (ae.getAttribute('role') === 'textbox' || ae.getAttribute('contenteditable') === 'true') return true;
-    return !!ae.closest('[contenteditable="true"], textarea, input:not([type="hidden"])');
-  }
-
-  /** Whether the on-screen inspector is missing our injected goal block. */
-  function gpGdInspectorNeedsGoalBlock(dialogShell) {
-    const front =
-      gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint) ||
-      (dialogShell instanceof HTMLElement ? dialogShell : null);
-    if (!(front instanceof HTMLElement)) {
-      return dialogShell instanceof HTMLElement && !gpGdDialogsHasInjectedAside(dialogShell);
-    }
-    for (const n of gpGdQuerySelectorAllDeep(front, '#gp-gcal-detail-goal-extension')) {
-      if (gpGdIsGoalBlockVisible(n)) return false;
-    }
-    return true;
   }
 
   function gpGdStopInspectorOpenWatch() {
@@ -5935,23 +5881,6 @@
   }
 
   /** Re-run hydration when GCal’s React layer drops our sentinel node. */
-  let _gpGdRepairDebounce = 0;
-
-  function gpGdScheduleInspectorRepair(dialogShell) {
-    if (!(dialogShell instanceof HTMLElement) || !dialogShell.isConnected) return;
-    gpGdRefreshPinnedSessionLease();
-    window.clearTimeout(_gpGdRepairDebounce);
-    _gpGdRepairDebounce = window.setTimeout(() => {
-      _gpGdRepairDebounce = 0;
-      gpGdSyncBlockElRef();
-      if (!gpGdInspectorNeedsGoalBlock(dialogShell)) return;
-      gpGdStripNativeMeetingNotes(dialogShell);
-      __gpGdBlockEl = null;
-      _gpGdHydrateQuietUntil = 0;
-      scheduleGpGdDialogScan();
-    }, 72);
-  }
-
   function gpGdEnsureDialogRepairObserver(dialogShell) {
     if (!_gpGdDialogRepairObservers || !(dialogShell instanceof HTMLElement)) return;
     if (_gpGdDialogRepairObservers.has(dialogShell)) return;
@@ -5961,8 +5890,13 @@
       gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
       window.clearTimeout(deb);
       deb = window.setTimeout(() => {
-        if (gpGdInspectorNeedsGoalBlock(dialogShell)) gpGdScheduleInspectorRepair(dialogShell);
-      }, 48);
+        gpGdStripNativeMeetingNotes(dialogShell);
+        const ext = __gpGdBlockEl;
+        if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
+          if (gpGdIsGoalBlockVisible(ext)) return;
+        }
+        if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
+      }, 220);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
@@ -6016,10 +5950,8 @@
   }
 
   function scheduleGpGdDialogScan() {
-    gpGdSyncBlockElRef();
     if (!gpGdShouldRunDetailScan()) return;
     if (gpGdDetailBlockReady()) return;
-    gpGdRefreshPinnedSessionLease();
     if (_gpGdScanTimer) {
       _gpGdScanPending = true;
       return;
@@ -6043,23 +5975,17 @@
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
-    gpGdSyncBlockElRef();
     const ext = __gpGdBlockEl;
-    const composing =
+    if (
       ext &&
       ext.isConnected &&
       typeof ext.matches === 'function' &&
       ext.matches(':focus-within') &&
-      ext.querySelector('[data-gp-st-compose]:not([hidden]), [data-gp-st-new]:focus');
-    if (composing) {
+      ext.querySelector('[data-gp-st-compose]:not([hidden])')
+    ) {
       _gpGdDetailRefreshTimer = setTimeout(() => {
         gpGdAttemptUnifiedEchoHydrate();
       }, 220);
-      return;
-    }
-    if (gpGdDetailBlockReady()) {
-      const host = gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint);
-      if (host) void gpGdHydrateMountedDetailDecoration();
       return;
     }
     void gpGdHydrateMountedDetailDecoration();
@@ -6258,7 +6184,6 @@
 
   /** Build goal-session enrichment as real DOM with inline styles (survives GCal stylesheet resets). */
   function gpGdRenderDetailBlock(hit, tokenHint, dialogShell) {
-    gpGdSyncBlockElRef();
     const goal = hit.goal;
     const sess = hit.session;
     const goalId = String(goal?.id ?? '');
@@ -6310,7 +6235,6 @@
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
     if (dialogShell instanceof HTMLElement) {
       for (const n of gpGdQuerySelectorAllDeep(dialogShell, '#gp-gcal-detail-goal-extension')) {
-        if (n === existing && existing?.isConnected) continue;
         try {
           n.remove();
         } catch (_) {
@@ -6687,7 +6611,6 @@
   /** Core mount pass — derives event key from inspector shell only to index unified Goal rows. All fields render from GoalPlannerUnifiedState snapshots. */
 
   async function gpGdHydrateMountedDetailDecoration() {
-    gpGdSyncBlockElRef();
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.loadUnifiedState) {
       teardownGpGdBlock();
@@ -6737,9 +6660,7 @@
     natives = gpGdPruneNestedInspectorHosts(natives);
 
     let host =
-      gpGdFindAnyVisibleEventInspector(_gpGdPinnedTitleHint) ||
-      gpGdFindEventInspectorShell('') ||
-      gpGdPickBestVisibleInspectorHost(natives, '');
+      gpGdFindEventInspectorShell('') || gpGdPickBestVisibleInspectorHost(natives, '');
     if (!(host instanceof HTMLElement)) {
       if (pinnedRaw.length) {
         gpGdTrace('waiting for event inspector near click');
@@ -6747,19 +6668,6 @@
         return;
       }
       teardownGpGdBlock();
-      return;
-    }
-
-    gpGdRefreshPinnedSessionLease();
-
-    if (
-      __gpGdBlockEl?.isConnected &&
-      gpGdNativeInspectorEditingActive(host) &&
-      pinnedRaw.length &&
-      gpGdInspectorNeedsGoalBlock(host)
-    ) {
-      gpGdTrace('native field edit — defer re-mount');
-      window.setTimeout(() => scheduleGpGdDialogScan(), 160);
       return;
     }
 
@@ -6841,13 +6749,12 @@
     const keep = __gpGdBlockEl;
     if (
       keep?.isConnected &&
-      gpGdDetailBlockReady() &&
+      gpGdIsGoalBlockVisible(keep) &&
       (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length)
     ) {
       return;
     }
-    if (!pinnedRaw.length && !gpGdIsGoalPlannerInspectorStillOpen()) teardownGpGdBlock();
-    else if (pinnedRaw.length || gpGdIsGoalPlannerInspectorStillOpen()) scheduleGpGdDialogScan();
+    if (!pinnedRaw.length) teardownGpGdBlock();
     if (hints.length) gpGdTrace('no unified session match', hints.slice(0, 3));
   }
 
@@ -6879,16 +6786,14 @@
       }
 
       Model.subscribeGoalsState?.(() => {
-        gpGdInvalidateUnifiedCache();
         scheduleGpGdFromUnifiedEcho();
       });
 
       const obs = new MutationObserver(() => {
         if (!gpGdShouldRunDetailScan()) return;
         if (gpGdDetailBlockReady() && Date.now() < _gpGdHydrateQuietUntil) return;
-        gpGdRefreshPinnedSessionLease();
         window.clearTimeout(_gpGdDomObsDebounce);
-        const debounceMs = gpGdDetailBlockReady() ? 200 : 56;
+        const debounceMs = gpGdDetailBlockReady() ? 200 : 48;
         _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), debounceMs);
       });
       obs.observe(document.documentElement || document.body, {
@@ -6897,32 +6802,15 @@
       });
 
       const onGoalOpenGesture = (e) => {
-        const chip = gpGdResolveGoalChipFromEvent(e);
-        if (chip) {
-          if (e.type === 'click' && gpGdDetailBlockReady()) return;
-          gpGdOnUserOpenedGoalSession(e);
-          return;
+        if (e.type === 'click') {
+          const chip = gpGdResolveGoalChipFromEvent(e);
+          if (!chip) return;
+          if (gpGdDetailBlockReady()) return;
         }
-        gpGdOnInspectorInteraction(e);
+        gpGdOnUserOpenedGoalSession(e);
       };
       window.addEventListener('pointerdown', onGoalOpenGesture, true);
       window.addEventListener('click', onGoalOpenGesture, true);
-
-      document.addEventListener(
-        'focusout',
-        (e) => {
-          if (!gpGdShouldRunDetailScan() && !gpGdIsGoalPlannerInspectorStillOpen()) return;
-          const shell =
-            gpGdFindGoalInspectorFromEvent(e) || gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint);
-          if (!shell) return;
-          gpGdRefreshPinnedSessionLease();
-          window.setTimeout(() => {
-            gpGdSyncBlockElRef();
-            if (!gpGdDetailBlockReady()) scheduleGpGdDialogScan();
-          }, 90);
-        },
-        true
-      );
 
       scheduleGpGdDialogScan();
       scheduleGpGdFromUnifiedEcho();
