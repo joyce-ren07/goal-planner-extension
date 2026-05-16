@@ -8538,7 +8538,7 @@
         primeShell.innerHTML =
           '<div class="goal-checkbox ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
           (isDone ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE) + '</div>' +
-          '<motion class="ext-goal-text-col">' +
+          '<div class="ext-goal-text-col">' +
             '<span class="ext-goal-badge">Goal</span>' +
             '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
             '<span class="ext-goal-time">' + initialTime + '</span>' +
