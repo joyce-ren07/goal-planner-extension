@@ -6955,7 +6955,7 @@
       }, 160);
     });
 
-    wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]')?.addEventListener(
+    gpGdGetDetailMarkCompleteBtn()?.addEventListener(
       'click',
       () => void gpGdMarkSessionDoneAndDismiss(wrapHost, hit)
     );
