@@ -892,8 +892,7 @@
   // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
   function renderGhostEvents() {
     const previewActive = isGhostCreationPreviewUiActive();
-    if (previewActive) ensureGhostPreviewRecoveryObserver();
-    else ensureGhostPreviewRecoveryObserver();
+    ensureGhostPreviewRecoveryObserver();
 
     const layered = deriveGhostSessionsForCreationPreviewLayer();
     if (layered === false) {
