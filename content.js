@@ -2430,10 +2430,18 @@
 
   /** Mount (or re-mount) the extension sidebar block into Google Calendar’s left stack. */
   function mountLeftSidebarGoalsSection() {
+    const roots = document.querySelectorAll('#gp-gcal-sidebar-goals-root');
+    for (let i = 1; i < roots.length; i++) {
+      try {
+        roots[i].remove();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
     let root = document.getElementById('gp-gcal-sidebar-goals-root');
     if (root && root.isConnected) {
       syncMyGoalsSidebarChromeFromNative();
-      requestAnimationFrame(() => syncMyGoalsSidebarChromeFromNative());
       return root;
     }
 
@@ -2444,7 +2452,6 @@
     root = buildLeftSidebarGoalsSection();
     insertGoalsSectionIntoSidebarScroll(scroll, root);
     syncMyGoalsSidebarChromeFromNative();
-    requestAnimationFrame(() => syncMyGoalsSidebarChromeFromNative());
     return root;
   }
 
