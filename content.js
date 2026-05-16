@@ -4757,6 +4757,7 @@
     if (card instanceof HTMLElement) {
       gpGdForceMountIntoCard(ext, card, null);
       gpGdAlignInjectedBlockToCard(ext, host);
+      gpGdAlignMarkFooterToCard(host);
     }
     if (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) {
       _gpGdHydrateQuietUntil = Date.now() + 15000;
