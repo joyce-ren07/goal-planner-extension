@@ -196,6 +196,61 @@
     return `${session?.isoStart ?? ''}|${session?.isoEnd ?? ''}`;
   }
 
+  function releaseGhostPreviewScrollContainer() {
+    _gpGhostScrollContPinned = null;
+  }
+
+  function findCalendarScrollContainerForGhostPreview() {
+    if (!isGhostCreationPreviewUiActive()) {
+      releaseGhostPreviewScrollContainer();
+      return findCalendarScrollContainer();
+    }
+    if (_gpGhostScrollContPinned?.isConnected) {
+      const r = _gpGhostScrollContPinned.getBoundingClientRect();
+      if (r.height >= 120) return _gpGhostScrollContPinned;
+    }
+    const found = findCalendarScrollContainer();
+    if (found instanceof HTMLElement) _gpGhostScrollContPinned = found;
+    return found || (_gpGhostScrollContPinned?.isConnected ? _gpGhostScrollContPinned : null);
+  }
+
+  function ensureGhostPreviewRecoveryObserver() {
+    if (!isGhostCreationPreviewUiActive()) {
+      if (_gpGhostPreviewRecoveryMo) {
+        _gpGhostPreviewRecoveryMo.disconnect();
+        _gpGhostPreviewRecoveryMo = null;
+      }
+      window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
+      return;
+    }
+    if (_gpGhostPreviewRecoveryMo) return;
+    _gpGhostPreviewRecoveryMo = new MutationObserver(() => {
+      if (!isGhostCreationPreviewUiActive()) {
+        ensureGhostPreviewRecoveryObserver();
+        return;
+      }
+      if (document.querySelector('#gp-ghost-preview-root .goal-ghost-event')) return;
+      window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
+      _gpGhostPreviewRecoveryDebounce = window.setTimeout(() => {
+        if (
+          !isGhostCreationPreviewUiActive() ||
+          document.querySelector('#gp-ghost-preview-root .goal-ghost-event')
+        ) {
+          return;
+        }
+        scheduleGhostPreviewRefreshDebounced();
+      }, 100);
+    });
+    try {
+      _gpGhostPreviewRecoveryMo.observe(document.documentElement || document.body, {
+        childList: true,
+        subtree: true,
+      });
+    } catch (_) {
+      _gpGhostPreviewRecoveryMo = null;
+    }
+  }
+
   /** Goal create flow Screen 3 only — used to avoid tearing down overlay on transient DOM/paint churn. */
   function isGhostCreationPreviewUiActive() {
     const panel = document.getElementById('gp-panel');
