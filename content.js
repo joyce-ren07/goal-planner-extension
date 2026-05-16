@@ -6078,6 +6078,21 @@
     wrap.style.transform = '';
   }
 
+  /** True when block is in the inspector card (works while pre-reveal hidden). */
+  function gpGdIsGoalBlockMountedInCard(wrap, cardRoot, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
+    if (!gpGdComposedSubtreeContains(cardRoot, wrap)) return false;
+    if (!(dialogShell instanceof HTMLElement) || !gpGdInspectorHostIsOnScreen(dialogShell)) {
+      return false;
+    }
+    const br = wrap.getBoundingClientRect();
+    const cr = cardRoot.getBoundingClientRect();
+    const w = br.width > 0 ? br.width : gpGdComputeCardContentWidth(cardRoot);
+    if (w < 40 || br.height < 12) return false;
+    if (cr.width < 200) return true;
+    return w <= cr.width * 1.2 + 24;
+  }
+
   /** Insert only inside the inspector card at precomputed width (never a wide overlay parent). */
   function gpGdInsertDetailNodeInCard(node, cardRoot, insertBefore, hiddenUntilReveal) {
     if (!(node instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
@@ -6088,11 +6103,16 @@
         insertBefore instanceof HTMLElement &&
         gpGdComposedSubtreeContains(cardRoot, insertBefore)
       ) {
-        cardRoot.insertBefore(node, insertBefore);
+        const rowParent = insertBefore.parentElement;
+        if (rowParent instanceof HTMLElement) {
+          rowParent.insertBefore(node, insertBefore);
+        } else {
+          cardRoot.appendChild(node);
+        }
       } else {
         cardRoot.appendChild(node);
       }
-      return true;
+      return gpGdComposedSubtreeContains(cardRoot, node);
     } catch (_) {
       return false;
     }
