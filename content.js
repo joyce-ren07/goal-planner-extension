@@ -6643,7 +6643,7 @@
     };
 
     const placementOk = () => {
-      gpGdAlignInjectedBlockToCard(wrap, shell);
+      gpGdReparentBlockIntoScrollColumn(wrap, shell);
       return gpGdIsGoalBlockWellPlaced(wrap, shell, false);
     };
 
