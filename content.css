@@ -1344,8 +1344,10 @@
   background: transparent;
   box-shadow: none;
   border-radius: 0;
+  width: auto;
   max-width: 100%;
   overflow: hidden;
+  clear: both;
 }
 
 #gp-gcal-detail-goal-extension .gp-gd-nat-row {
