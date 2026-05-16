@@ -7487,6 +7487,8 @@
   }
 
   async function gpGdHydrateMountedDetailDecoration() {
+    gpGdTeardownOrphanedDetailUi();
+
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.loadUnifiedState) {
       teardownGpGdBlock();
