@@ -7737,19 +7737,12 @@
     if (keep?.isConnected) {
       for (const h of natives) {
         if (!gpGdComposedSubtreeContains(h, keep)) continue;
-        gpGdAlignInjectedBlockToCard(keep, h);
-        if (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep)) {
-          _gpGdHydrateQuietUntil = Date.now() + 12000;
-          gpGdMarkDetailScanActive(12000);
+        if (gpGdIsValidEventDetailInspectorShell(h)) {
+          gpGdStabilizeMountedDetailBlock(keep, h, gpGdDetailHitFromWrap(keep));
           return;
         }
       }
-      if (
-        gpGdIsGoalBlockVisible(keep) &&
-        (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length || gpGdHasOpenEventInspector())
-      ) {
-        return;
-      }
+      if (Date.now() < _gpGdHydrateQuietUntil) return;
     }
     if (!pinnedRaw.length && !gpGdHasOpenEventInspector()) teardownGpGdBlock();
     const salvaged =
