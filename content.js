@@ -6281,9 +6281,14 @@
       const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
       if (!hit?.goal?.id || !hit.session?.eventId) continue;
 
-      const visibleHost = gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) || host;
+      const visibleHost =
+        gpGdFindEventInspectorShell(hit.goal.title) ||
+        gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
+        host;
+      if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) continue;
       gpGdTrace('session hit', hints[hi], hit.goal.id);
-      gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
+      const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
+      if (rendered) return;
       return;
     }
     teardownGpGdBlock();
