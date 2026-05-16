@@ -6663,7 +6663,10 @@
     natives = gpGdPruneNestedInspectorHosts(natives);
 
     let host =
-      gpGdFindEventInspectorShell('') || gpGdPickBestVisibleInspectorHost(natives, '');
+      gpGdFindOpenInspectorNearClick(_gpGdPinnedTitleHint) ||
+      gpGdFindEventInspectorShell(_gpGdPinnedTitleHint || '') ||
+      gpGdPickBestVisibleInspectorHost(natives, _gpGdPinnedTitleHint || '') ||
+      natives[0];
     if (!(host instanceof HTMLElement)) {
       if (pinnedRaw.length) {
         gpGdTrace('waiting for event inspector near click');
