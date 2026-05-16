@@ -7678,6 +7678,7 @@
         }
       }
       if (
+        gpGdIsDetailUiInEventDialog(keep) &&
         gpGdIsGoalBlockVisible(keep) &&
         (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length || gpGdHasOpenEventInspector())
       ) {
@@ -7685,6 +7686,7 @@
       }
     }
     if (!pinnedRaw.length && !gpGdHasOpenEventInspector()) teardownGpGdBlock();
+    gpGdTeardownOrphanedDetailUi();
     const salvaged =
       keep?.isConnected &&
       (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep));
