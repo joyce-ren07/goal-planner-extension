@@ -6945,11 +6945,14 @@
       });
       return null;
     }
-    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell, goal?.title);
-    if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) {
-      gpGdTrace('abort render — mount parent invalid');
-      return null;
-    }
+    const { insertBefore: slotInsertBefore } = gpGdResolveGoalInjectionMount(shell, goal?.title);
+    const insertBefore =
+      slotInsertBefore instanceof HTMLElement &&
+      gpGdComposedSubtreeContains(cardRoot, slotInsertBefore)
+        ? slotInsertBefore
+        : null;
+
+    const preflightW = gpGdComputeCardContentWidth(cardRoot);
 
     /** @type {HTMLElement} */
     const wrap = document.createElement('aside');
