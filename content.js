@@ -5070,7 +5070,6 @@
   let _gpGdRemountCount = 0;
   let _gpGdRemountGoalKey = '';
   let _gpGdDetailScanActiveUntil = 0;
-  let _gpGdDomObsDebounce = 0;
   /** @type {{ at: number, unified: object | null, goals: object[] | null }} */
   let _gpGdPrefetch = { at: 0, unified: null, goals: null };
   /** @type {Promise<void> | null} */
