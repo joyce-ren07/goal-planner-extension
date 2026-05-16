@@ -4504,8 +4504,15 @@
       btn.disabled = false;
       setTimeout(() => { showScreen('home'); document.getElementById('gp-toast').classList.remove('visible'); }, 1800);
     } catch (e) {
-      console.error(e);
-      alert('Could not add to Calendar. Make sure the extension has Calendar access.');
+      console.error('[GoalPlanner] confirmAddToCalendar failed', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      const hint =
+        /invalid_grant|access_denied|No OAuth token/i.test(msg)
+          ? 'Sign in again: click the Goal Planner icon on the right, then retry. If it persists, remove the extension from chrome://extensions and add it back.'
+          : /401|403|Calendar API/i.test(msg)
+            ? `Calendar permission was denied or expired (${msg}). Try signing in again via the Goal Planner panel.`
+            : `Could not add to Calendar: ${msg}`;
+      alert(hint);
       btn.textContent = isEditing ? 'Save changes' : 'Create goal';
       btn.disabled = false;
       scheduleGhostPreviewRefreshDebounced();
