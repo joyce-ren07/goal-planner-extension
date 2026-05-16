@@ -6179,7 +6179,7 @@
       // Re-render ghost events after GCal week/month navigation
       setTimeout(() => {
         const p = document.getElementById('gp-panel');
-        if (p?.classList.contains('open')) renderGhostEvents();
+        if (p?.classList.contains('open')) scheduleGhostPreviewRefreshDebounced();
       }, 1200);
       // Re-apply goal session decorations after navigation (GCal re-renders all chips)
       setTimeout(scheduleGoalEventDecoration, 1400);
