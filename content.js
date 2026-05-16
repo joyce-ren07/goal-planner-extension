@@ -4899,20 +4899,50 @@
   /** @type {WeakMap<HTMLElement, MutationObserver>} */
   const _gpGdDialogRepairObservers = typeof WeakMap === 'undefined' ? null : new WeakMap();
 
+  /** @type {WeakSet<ParentNode>} */
+  const _gpGdRepairObserveRoots =
+    typeof WeakSet === 'undefined' ? /** @type {WeakSet<ParentNode>} */ (/** @type {unknown} */ (null)) : new WeakSet();
+
+  /** Sentinel search across open shadow subtrees (repair observer subtree:true does not). */
+  function gpGdDialogsHasInjectedAside(dialogShell) {
+    if (!(dialogShell instanceof HTMLElement)) return false;
+    return gpGdQuerySelectorAllDeep(dialogShell, '[data-goals-injected="true"]').length > 0;
+  }
+
+  function gpGdObserveRepairSubtreeRoot(mo, root) {
+    if (!_gpGdRepairObserveRoots || !(root instanceof Node)) return;
+    try {
+      if (_gpGdRepairObserveRoots.has(root)) return;
+      _gpGdRepairObserveRoots.add(root);
+      mo.observe(root, { childList: true, subtree: true });
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function gpGdEnsureDialogRepairShadowWiring(mo, dialogShell) {
+    gpGdWalkComposedElements(dialogShell, (el) => {
+      const sr = el.shadowRoot;
+      if (sr) gpGdObserveRepairSubtreeRoot(mo, sr);
+    });
+  }
+
   /** Re-run hydration when GCal’s React layer drops our sentinel node. */
   function gpGdEnsureDialogRepairObserver(dialogShell) {
     if (!_gpGdDialogRepairObservers || !(dialogShell instanceof HTMLElement)) return;
     if (_gpGdDialogRepairObservers.has(dialogShell)) return;
     let deb = 0;
     const mo = new MutationObserver(() => {
-      if (!document.documentElement.contains(dialogShell)) return;
+      if (!dialogShell.isConnected) return;
+      gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
       window.clearTimeout(deb);
       deb = window.setTimeout(() => {
         gpGdStripNativeMeetingNotes(dialogShell);
-        if (!dialogShell.querySelector('[data-goals-injected="true"]')) scheduleGpGdDialogScan();
+        if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
       }, 45);
     });
-    mo.observe(dialogShell, { childList: true, subtree: true });
+    gpGdObserveRepairSubtreeRoot(mo, dialogShell);
+    gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
     _gpGdDialogRepairObservers.set(dialogShell, mo);
   }
 
