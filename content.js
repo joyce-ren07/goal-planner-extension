@@ -6892,16 +6892,15 @@
         if (!sidRaw) return;
         const wasDone = ring.getAttribute('aria-checked') === 'true';
         const turningOn = !wasDone;
-        const row = ring.closest('[data-gp-st-item]');
-        const lab = row?.querySelector('[data-gp-st-label]');
-        const checkSvg = /** @type {SVGSVGElement | null} */ (ring.querySelector('svg'));
-        gpGdApplySubtaskRingVisual(ring, checkSvg, turningOn);
-        if (lab instanceof HTMLElement) {
-          lab.classList.toggle('gp-gd-st-txt--done', turningOn);
-          lab.style.color = turningOn ? '#9aa0a6' : '#3c4043';
-          lab.style.textDecoration = turningOn ? 'line-through' : 'none';
-        }
-        await gpGdPersistSubtaskRingToggle(wrapHost, sidRaw, turningOn);
+        const gRow = await gpGdPersistSubtaskRingToggle(wrapHost, sidRaw, turningOn);
+        if (!gRow || !wrapHost.isConnected) return;
+        gpGdRefreshDetailSubtasks(wrapHost, {
+          goal: { id: gRow.id, title: gRow.title, subtasks: gpGdSubtasksWithTitles(gRow) },
+          session: {
+            completed: !!wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]')
+              ?.disabled,
+          },
+        });
       }
     );
   }
