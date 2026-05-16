@@ -729,7 +729,8 @@
     }
 
     if (!layouts.length) {
-      removeGhostEvents();
+      if (previewUi) clearGhostPreviewChipsOnly();
+      else removeGhostEvents();
       return false;
     }
 
