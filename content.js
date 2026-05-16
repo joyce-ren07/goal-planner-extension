@@ -6558,7 +6558,9 @@
     ul.setAttribute('role', 'list');
     ul.setAttribute('data-gp-st-list', '1');
     ul.className = 'gp-gd-st-list';
-    ul.style.cssText = 'list-style:none;margin:0;padding:0;width:100%;';
+    ul.style.cssText =
+      'list-style:none;margin:0;padding:0;width:100%;max-height:min(220px,36vh);' +
+      'overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;';
     gpGdPaintSubtaskList(ul, subtasks);
 
     stCol.appendChild(stHead);
