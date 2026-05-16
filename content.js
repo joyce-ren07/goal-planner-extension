@@ -690,7 +690,7 @@
 
     const dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
     if (!dayColumns.length) {
-      removeGhostEvents();
+      if (!previewUi) removeGhostEvents();
       return false;
     }
 
