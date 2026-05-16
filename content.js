@@ -6126,9 +6126,11 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          if (gpGdIsGoalBlockVisible(ext) && gpGdIsGoalBlockWellPlaced(ext, dialogShell, false)) return;
-          gpGdReparentBlockIntoScrollColumn(ext, dialogShell);
-          if (gpGdIsGoalBlockVisible(ext)) return;
+          gpGdStripNativeMeetingNotes(dialogShell);
+          if (gpGdIsGoalBlockVisible(ext)) {
+            gpGdStabilizeBlockPlacement(ext, dialogShell);
+            return;
+          }
         }
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
       }, 220);
