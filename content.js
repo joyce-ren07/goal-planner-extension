@@ -6047,18 +6047,15 @@
       return true;
     }
 
-    if (installDetailObservers()) {
-      globalThis.__gpCalGoalInspectorEnrichment = true;
-      return;
-    }
+    if (installDetailObservers()) return;
 
     let tries = 0;
     const id = window.setInterval(() => {
       if (installDetailObservers()) {
-        globalThis.__gpCalGoalInspectorEnrichment = true;
         window.clearInterval(id);
       } else if (++tries > 200) {
         window.clearInterval(id);
+        gpGdTrace('gave up waiting for GoalPlannerModel');
       }
     }, 250);
   }
