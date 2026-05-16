@@ -6332,7 +6332,8 @@
     const existingEarly = __gpGdBlockEl;
     if (
       Date.now() < _gpGdHydrateQuietUntil &&
-      gpGdIsGoalBlockWellPlaced(existingEarly, host) &&
+      existingEarly?.isConnected &&
+      gpGdIsGoalBlockVisible(existingEarly) &&
       existingEarly?.dataset?.gpGoalId
     ) {
       return;
