@@ -6362,6 +6362,14 @@
 
     const tryMount = (parent, beforeNode) => {
       if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
+      console.log('Inserting into:', parent);
+      gpGdDiag('Inserting into:', {
+        tag: parent.tagName,
+        id: parent.id,
+        className: String(parent.className || '').slice(0, 80),
+        role: parent.getAttribute('role'),
+        rect: parent.getBoundingClientRect(),
+      });
       try {
         if (
           beforeNode instanceof HTMLElement &&
