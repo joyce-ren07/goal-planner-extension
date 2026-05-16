@@ -584,7 +584,9 @@
     if (pxPerHour <= 0) return false;
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
-    const dayColumns = findDayColumnPositions();
+    const dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
+    if (!dayColumns.length) return false;
+
     const goalLabel = finalLabel.length > 34 ? `${finalLabel.slice(0, 33)}…` : finalLabel;
 
     const contRect = scrollCont.getBoundingClientRect();
