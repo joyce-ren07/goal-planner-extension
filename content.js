@@ -8680,9 +8680,19 @@
   async function pickPlannerEventIdFromUnifiedSessions(chip, goal, legacyGoals, chipDoneMap) {
     const ids = goal?.calEventIds || [];
     if (!ids.length) return '';
-    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
-    if (!geo?.startTime) return '';
-    const target = Date.parse(geo.startTime);
+    const startIso = gpResolveSessionStartIsoFromChip(chip);
+    if (!startIso) return '';
+    const scheduleSlot = gpResolveSlotIndexByScheduleAnchors(
+      {
+        calEventIds: ids,
+        sessionAnchors: (goal?.sessionAnchors || []).length
+          ? goal.sessionAnchors
+          : ids.map((id) => ({ eventId: id, isoStart: '' })),
+      },
+      startIso
+    );
+    if (scheduleSlot >= 0 && ids[scheduleSlot]) return String(ids[scheduleSlot]);
+    const target = Date.parse(startIso);
     if (!Number.isFinite(target)) return '';
     const Model = globalThis.GoalPlannerModel;
     if (!Model) return '';
@@ -8699,6 +8709,16 @@
     }
     const ug = st.goals.find((g) => String(g.id) === String(goal.id));
     const sessions = ug?.sessions || [];
+    const anchorRow = {
+      calEventIds: ids,
+      sessionAnchors: sessions
+        .filter((s) => s?.eventId && s?.startTime)
+        .map((s) => ({ eventId: s.eventId, isoStart: s.startTime })),
+    };
+    const fromUnifiedSchedule = gpResolveSlotIndexByScheduleAnchors(anchorRow, startIso);
+    if (fromUnifiedSchedule >= 0 && ids[fromUnifiedSchedule]) {
+      return String(ids[fromUnifiedSchedule]);
+    }
     let best = '';
     let bestDelta = Infinity;
     for (const s of sessions) {
