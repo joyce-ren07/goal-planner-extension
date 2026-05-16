@@ -5464,7 +5464,7 @@
       seenNodes.add(el);
       out.push(el);
     }
-    return out;
+    return out.filter((h) => gpGdIsValidNativeEventInspectorHost(h));
   }
 
   /** Strip native metadata rows replaced or superseded by the Goal Planner detail block. */
