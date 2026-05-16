@@ -6820,6 +6820,7 @@
     gpGdApplyCardContainmentStyles(wrap, cardRoot);
 
     __gpGdBlockEl = wrap;
+    gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sess.completed), cardRoot);
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdEnsureDetailDelegates(wrap, hit);
     const ok = placed;
