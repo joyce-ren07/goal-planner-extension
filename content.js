@@ -9088,6 +9088,10 @@
       clearTimeout(_gpDecorateTimer);
       _gpDecorateTimer = 0;
     }
+    if (_gpChipDoneCache && _gpGoalsCache) {
+      processGoalChips();
+      return;
+    }
     if (_gpDecorateRaf) return;
     _gpDecorateRaf = requestAnimationFrame(() => {
       _gpDecorateRaf = 0;
