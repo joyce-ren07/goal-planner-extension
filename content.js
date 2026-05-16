@@ -6433,9 +6433,9 @@
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdEnsureDetailDelegates(wrap, hit);
-    const ok = gpGdIsGoalBlockVisible(wrap);
+    const ok = gpGdIsGoalBlockVisible(wrap) || gpGdIsGoalBlockPainted(wrap);
     if (ok) {
-      _gpGdHydrateQuietUntil = Date.now() + 4000;
+      _gpGdHydrateQuietUntil = Date.now() + 12000;
       _gpGdRemountCount = 0;
       gpGdMarkDetailScanActive(12000);
     }
