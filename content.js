@@ -6213,6 +6213,35 @@
     });
   }
 
+  /** Update subtasks / mark button on the mounted block without a full hydrate pass. */
+  async function gpGdLightweightRefreshMountedBlock() {
+    const ext = __gpGdBlockEl;
+    if (!(ext instanceof HTMLElement) || !ext.isConnected || !ext.dataset.gpGoalId) return false;
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.loadUnifiedState) return false;
+    let unified;
+    try {
+      unified = await gpGdLoadUnifiedCached();
+    } catch (_) {
+      return false;
+    }
+    if (!unified) return false;
+    const legacyGoals = await getGoals();
+    const title = ext.dataset.gpGoalTitle || _gpGdPinnedTitleHint || '';
+    const hints = gpCollectEventIdHintsFromRoot(ext);
+    const hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, title);
+    if (!hit?.goal?.id || !hit.session) return false;
+    const enriched = await gpGdEnrichHitForDetail(hit);
+    gpGdRefreshDetailSubtasks(ext, enriched);
+    gpGdEnsureDetailDelegates(ext, enriched);
+    const shell =
+      gpGdFindOpenInspectorNearClick(enriched.goal.title) ||
+      gpGdFindEventInspectorShell(enriched.goal.title);
+    if (shell instanceof HTMLElement) gpGdStabilizeBlockPlacement(ext, shell);
+    _gpGdHydrateQuietUntil = Date.now() + 5000;
+    return true;
+  }
+
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
@@ -6227,6 +6256,10 @@
       _gpGdDetailRefreshTimer = setTimeout(() => {
         gpGdAttemptUnifiedEchoHydrate();
       }, 220);
+      return;
+    }
+    if (gpGdDetailBlockReady()) {
+      void gpGdLightweightRefreshMountedBlock();
       return;
     }
     void gpGdHydrateMountedDetailDecoration();
