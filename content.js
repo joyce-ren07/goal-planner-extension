@@ -8446,11 +8446,113 @@
   //   left completely untouched.  Mouse events that don't land on our checkbox
   //   fall through the overlay to GCal's native elements below.
   //
+  /** In-memory mirrors so decoration does not wait on chrome.storage (removes native flash). */
+  /** @type {Record<string, boolean> | null} */
+  let _gpChipDoneCache = null;
+  /** @type {object[] | null} */
+  let _gpGoalsCache = null;
+
+  function setupGoalChipDecorationCaches() {
+    chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
+      _gpChipDoneCache = d.gp_chip_done || {};
+      _gpGoalsCache = Array.isArray(d.gp_goals) ? d.gp_goals : [];
+    });
+    if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if (changes.gp_chip_done) {
+          _gpChipDoneCache = /** @type {Record<string, boolean>} */ (changes.gp_chip_done.newValue || {});
+        }
+        if (changes.gp_goals) {
+          const next = changes.gp_goals.newValue;
+          _gpGoalsCache = Array.isArray(next) ? next : _gpGoalsCache || [];
+        }
+      });
+    }
+  }
+
+  function isGoalCalendarChip(el) {
+    return (
+      el instanceof HTMLElement &&
+      el.matches?.('[data-eventchip]') &&
+      String(el.textContent || '').includes('🎯')
+    );
+  }
+
+  /** Synchronous: class + solid overlay shell so native GCal paint never shows between frames. */
+  function primeGoalChipInstant(chip) {
+    if (!isGoalCalendarChip(chip) || !chip.isConnected) return false;
+    chip.classList.add('ext-goal-chip');
+    if (chip.querySelector('.ext-goal-root')) return true;
+    chip._gpDecorLock = true;
+    const shell = document.createElement('motion');
+    shell.className = 'ext-goal-root ext-goal-root--prime';
+    shell.setAttribute('aria-hidden', 'true');
+    chip.appendChild(shell);
+    requestAnimationFrame(() => {
+      boundChipHeight(chip);
+      chip._gpDecorLock = false;
+    });
+    return true;
+  }
+
+  function forEachGoalChipInNodeList(nodes, visit) {
+    for (const node of nodes) {
+      if (node.nodeType !== 1) continue;
+      const el = /** @type {Element} */ (node);
+      if (isGoalCalendarChip(el)) visit(/** @type {HTMLElement} */ (el));
+      el.querySelectorAll?.('[data-eventchip]').forEach((c) => {
+        if (isGoalCalendarChip(c)) visit(/** @type {HTMLElement} */ (c));
+      });
+    }
+  }
+
   function injectGoalChipContent(chip, goalData, isDone) {
     // Idempotent: patch in place when overlay exists; never clear native chip children.
     // Suppress the per-chip MutationObserver during intentional reinjection so
     // removing/re-adding .ext-goal-root does not schedule restoreChip (which
     // would race storage and clear completion — see GoalInteractionController).
+    const primeShell = chip.querySelector('.ext-goal-root--prime');
+    if (primeShell instanceof HTMLElement) {
+      chip._gpDecorLock = true;
+      try {
+        chip.classList.add('ext-goal-chip');
+        chip.classList.remove('ext-goal-done');
+        chip.classList.toggle('ext-goal-completed', isDone);
+        if (goalData.id != null && goalData.id !== '') {
+          chip.dataset.gpGoalId = String(goalData.id);
+        }
+        if (goalData.slotIdx != null && goalData.slotIdx !== '' && Number.isFinite(Number(goalData.slotIdx))) {
+          chip.dataset.gpSlotIdx = String(goalData.slotIdx);
+        }
+        {
+          const liveEid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
+          chip.dataset.gpChipKey = liveEid || goalData.chipKey;
+        }
+        if (isDone) chip.dataset.goalCompleted = 'true';
+        else delete chip.dataset.goalCompleted;
+
+        primeShell.classList.remove('ext-goal-root--prime');
+        primeShell.removeAttribute('aria-hidden');
+        const initialTime = goalData.time ? escHtml(goalData.time) : '';
+        primeShell.innerHTML =
+          '<motion class="goal-checkbox ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
+          (isDone ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE) + '</div>' +
+          '<motion class="ext-goal-text-col">' +
+            '<span class="ext-goal-badge">Goal</span>' +
+            '<span class="ext-goal-title">' + escHtml(goalData.title) + '</span>' +
+            '<span class="ext-goal-time">' + initialTime + '</span>' +
+          '</motion>';
+        boundChipHeight(chip);
+        requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
+      } finally {
+        setTimeout(() => {
+          chip._gpDecorLock = false;
+        }, 0);
+      }
+      return;
+    }
+
     const existingRoot = chip.querySelector('.ext-goal-root');
     if (existingRoot) {
       chip.classList.add('ext-goal-chip');
