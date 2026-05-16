@@ -44,8 +44,8 @@
   let ctxMenuGoalId = null;
 
   // ── Ghost event state ──
-  let _ghostScrollEl = null;
-  let _ghostScrollHandler = null;
+  /** Scroll container we inlined `position:relative` on solely so the ghost host can anchor inside it — reverted when host is torn down. */
+  let _gpGhostScrollPositionFixEl = null;
   let _gpGhostCueRaf = 0;
   /** Ghost under pointer for “Planned” tooltip cue (interaction only; no Goal state). */
   let _gpGhostTipEl = null;
