@@ -6626,11 +6626,16 @@
     if (!(host instanceof HTMLElement)) {
       if (pinnedRaw.length) {
         gpGdTrace('waiting for event inspector near click');
+        gpGdDiag('popup: MISS — hosts exist but gpGdFindEventInspectorShell failed');
         return;
       }
       teardownGpGdBlock();
       return;
     }
+    gpGdDiag('popup: host found', {
+      titleSnippet: String(host.innerText || '').slice(0, 80),
+      hostRole: host.getAttribute('role'),
+    });
 
     const existingEarly = __gpGdBlockEl;
     if (
