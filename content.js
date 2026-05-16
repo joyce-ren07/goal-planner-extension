@@ -6911,6 +6911,7 @@
     }
 
     let natives = gpEnumerateNativeEventDetailHosts();
+    const nativesDiscovered = natives.slice();
     const html = document.documentElement;
     const pinnedRaw = gpGdConsumePinnedSessionHints();
 
