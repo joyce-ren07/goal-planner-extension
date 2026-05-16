@@ -4745,6 +4745,7 @@
    * @returns {boolean} true when an existing mounted block was kept
    */
   function gpGdTryProtectMountedDetailBlock(host) {
+    if (gpGdTeardownDetailIfExtensionChrome()) return false;
     const ext = __gpGdBlockEl;
     if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
       return false;
