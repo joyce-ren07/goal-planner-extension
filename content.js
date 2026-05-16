@@ -4689,33 +4689,42 @@
     }
     let cur = needle;
     for (let d = 0; d < 90 && cur; d++) {
+      if (cur === haystack) return true;
       const pn = /** @type {Node | null} */ (cur.parentNode);
       if (!pn) break;
-      if (pn instanceof ShadowRoot && pn.host) {
-        cur = pn.host;
+      if (pn instanceof ShadowRoot && pn.host) cur = pn.host;
+      else cur = pn;
+    }
+    return false;
+  }
 
-```
+  function gpCollectEventIdHintsFromRoot(rootEl) {
+    const out = [];
+    const seen = new Set();
+    if (!rootEl) return out;
 
+    gpGdWalkComposedElements(rootEl, (node) => {
+      if (!node.hasAttribute('data-eventid')) return;
+      const raw = node.getAttribute('data-eventid');
+      if (!raw || seen.has(raw)) return;
+      seen.add(raw);
+      out.push(raw);
+    });
 
-
-Oh no - I messed up the search_replace - I truncated the gpCollectEventIdHintsFromRoot function incorrectly. Let me read the file around that area and fix it.
-
-
-
-
-Read
-    for (const a of links) {
-      const href = a.getAttribute('href') || '';
+    gpGdWalkComposedElements(rootEl, (el) => {
+      if (el.tagName !== 'A') return;
+      const href = el.getAttribute('href') || '';
+      if (!/calendar\.google|google\.com\/calendar|eid=/i.test(href)) return;
       let m =
         /\beid=(https%3A%2F%2F[^&]+)/i.exec(href) ||
         /\beventId=([^&]+)/i.exec(href) ||
         /\/calendar\/(.*\/)?(event|events)\/(e\/|r\/)?([^/?#]+)/i.exec(href);
       const token =
         Array.isArray(m) && typeof m[m.length - 1] === 'string' ? m[m.length - 1] : '';
-      if (!token || seen.has(token)) continue;
+      if (!token || seen.has(token)) return;
       seen.add(token);
       out.push(token);
-    }
+    });
 
     return out;
   }
