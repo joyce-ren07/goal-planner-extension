@@ -6586,20 +6586,16 @@
     footer.setAttribute('data-gp-mark-footer', '1');
     footer.style.cssText =
       'display:block !important;position:relative !important;box-sizing:border-box !important;' +
-      'width:100% !important;max-width:100% !important;margin:0 !important;' +
-      'padding:8px 16px 16px !important;border:0 !important;background:transparent !important;' +
-      'clear:both !important;left:0 !important;right:auto !important;transform:none !important;';
+      'margin:0 !important;padding:8px 16px 16px !important;border:0 !important;' +
+      'background:transparent !important;clear:both !important;left:0 !important;' +
+      'right:auto !important;transform:none !important;';
     footer.appendChild(markBtn);
+    gpGdHideNativeMarkCompletedAffordances(cardRoot);
 
     const nativeFooter = gpGdFindNativeMarkCompletedFooterRow(cardRoot);
-    if (nativeFooter?.parentElement instanceof HTMLElement) {
-      nativeFooter.parentElement.insertBefore(footer, nativeFooter);
-    } else {
-      cardRoot.appendChild(footer);
-    }
-    gpGdHideNativeMarkCompletedAffordances(cardRoot);
-    gpGdForceMountIntoCard(footer, cardRoot, null);
-    gpGdApplyCardContainmentStyles(footer, cardRoot);
+    const footerInsertBefore =
+      nativeFooter?.parentElement instanceof HTMLElement ? nativeFooter : null;
+    gpGdInsertDetailNodeInCard(footer, cardRoot, footerInsertBefore, true);
     __gpGdMarkFooterEl = footer;
     if (__gpGdBlockEl instanceof HTMLElement) {
       gpGdWireMarkCompleteButton(__gpGdBlockEl, null);
