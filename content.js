@@ -4844,7 +4844,7 @@
     return Math.max(0, Math.min(100, Math.round(n)));
   }
 
-  async function gpGdRenderDetailBlock(hit, tokenHint, mountHost) {
+  function gpGdRenderDetailBlock(hit, tokenHint, mountHost) {
     const goal = hit.goal;
     const sess = hit.session;
 
