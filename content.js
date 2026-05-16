@@ -3900,7 +3900,7 @@
         .filter((id) => id != null && id !== '')
         .map(async (rawId) =>
           fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(String(rawId))}`,
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${String(rawId)}`,
             {
               method: 'PATCH',
               headers: {
