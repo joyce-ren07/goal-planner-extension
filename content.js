@@ -5831,6 +5831,82 @@
     return best;
   }
 
+  /** Scrollable body inside the white event card (keeps injected rows inside the popup). */
+  function gpGdFindInspectorScrollColumn(cardRoot) {
+    if (!(cardRoot instanceof HTMLElement)) return null;
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestExtra = 0;
+    gpGdWalkComposedElements(cardRoot, (el) => {
+      if (!(el instanceof HTMLElement)) return;
+      const st = window.getComputedStyle(el);
+      const oy = st.overflowY;
+      if (oy !== 'auto' && oy !== 'scroll' && oy !== 'overlay') return;
+      const extra = el.scrollHeight - el.clientHeight;
+      if (extra < 32 || el.clientHeight < 64) return;
+      if (extra > bestExtra) {
+        bestExtra = extra;
+        best = el;
+      }
+    });
+    return best;
+  }
+
+  function gpGdEnsureMountInsideCardScope(mountParent, cardRoot, dialogHost) {
+    if (!(cardRoot instanceof HTMLElement)) return mountParent;
+    if (mountParent instanceof HTMLElement && gpGdComposedSubtreeContains(cardRoot, mountParent)) {
+      return mountParent;
+    }
+    return (
+      gpGdFindInspectorScrollColumn(cardRoot) ||
+      gpGdPickGoalDetailMountParent(dialogHost, cardRoot)
+    );
+  }
+
+  /** When already inside the card, use full-width padding — skip gutter marginLeft hack. */
+  function gpGdNormalizeBlockInCardLayout(wrap, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return;
+    const card = gpGdFindEventDetailCardRoot(dialogShell);
+    if (card instanceof HTMLElement && gpGdComposedSubtreeContains(card, wrap)) {
+      wrap.style.marginLeft = '0';
+      wrap.style.marginRight = '0';
+      wrap.style.width = '100%';
+      wrap.style.maxWidth = '100%';
+      wrap.style.paddingLeft = '16px';
+      wrap.style.paddingRight = '16px';
+      wrap.style.boxSizing = 'border-box';
+      return;
+    }
+    gpGdAlignInjectedBlockToCard(wrap, dialogShell);
+  }
+
+  /** Move goal block into the inspector scroll column so it does not paint over the grid. */
+  function gpGdReparentBlockIntoScrollColumn(wrap, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    const card = gpGdFindEventDetailCardRoot(dialogShell);
+    if (!(card instanceof HTMLElement)) return false;
+    const scrollCol = gpGdFindInspectorScrollColumn(card);
+    if (!(scrollCol instanceof HTMLElement)) {
+      gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
+      return false;
+    }
+    const cardRect = card.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const insideScroll =
+      scrollCol === wrap.parentElement || gpGdComposedSubtreeContains(scrollCol, wrap);
+    const spillsBelow = wrapRect.bottom > cardRect.bottom - 10;
+    if (!insideScroll || spillsBelow) {
+      try {
+        scrollCol.appendChild(wrap);
+      } catch (_) {
+        gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
+        return false;
+      }
+    }
+    gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
+    return true;
+  }
+
   /** Prefer the scrollable metadata column inside the inspector card (not the dialog chrome). */
   function gpGdPickGoalDetailMountParent(dialogHost, cardRootOpt) {
     const cardRoot =
