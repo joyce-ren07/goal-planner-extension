@@ -7205,11 +7205,6 @@
       }, 160);
     });
 
-    gpGdGetDetailMarkCompleteBtn()?.addEventListener(
-      'click',
-      () => void gpGdMarkSessionDoneAndDismiss(wrapHost, hit)
-    );
-
     wrapHost.addEventListener(
       'click',
       /** @type {(ev: MouseEvent) => Promise<void>} */ async function gpGdNativeStyleGoalDetailClick(ev) {
