@@ -8499,6 +8499,7 @@
   /** Synchronous: class + solid overlay shell so native GCal paint never shows between frames. */
   function primeGoalChipInstant(chip) {
     if (!isGoalCalendarChip(chip) || !chip.isConnected) return false;
+    markGoalEventContainer(chip);
     chip.classList.add('ext-goal-chip');
     if (chip.querySelector('.ext-goal-root')) return true;
     chip._gpDecorLock = true;
