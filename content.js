@@ -6633,8 +6633,8 @@
     if (
       Date.now() < _gpGdHydrateQuietUntil &&
       existingEarly?.isConnected &&
-      gpGdIsGoalBlockVisible(existingEarly) &&
-      existingEarly?.dataset?.gpGoalId
+      existingEarly?.dataset?.gpGoalId &&
+      gpGdBlockInFrontInspector(existingEarly, _gpGdPinnedTitleHint)
     ) {
       return;
     }
