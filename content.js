@@ -5921,7 +5921,8 @@
     let subtasks = gpGdSubtasksWithTitles(hit.goal);
     if (!subtasks.length) {
       try {
-        const goals = await getGoals();
+        const pref = await gpGdReadPrefetch();
+        const goals = pref.goals || (await getGoals());
         const leg = goals.find((g) => String(g.id) === String(hit.goal.id));
         if (leg?.subtasks?.length) subtasks = gpGdSubtasksWithTitles(leg);
       } catch (_) {
