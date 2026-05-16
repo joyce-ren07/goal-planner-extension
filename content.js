@@ -8554,9 +8554,14 @@
           if (!chip.querySelector('.ext-goal-root')) needsRestore = true;
           if (!needsRestore) return;
           clearTimeout(restoreTimeout);
+          chip.classList.add('ext-goal-chip');
           /** GCal rewires `[data-eventchip]` frequently during resize; avoid restore spam + races. */
           const delay =
-            chip.classList.contains('ext-goal-resizing') || chip._resizeDebounce ? 460 : 220;
+            chip.classList.contains('ext-goal-resizing') || chip._resizeDebounce ? 360 : 0;
+          if (delay === 0) {
+            restoreChip(chip, goalData);
+            return;
+          }
           restoreTimeout = window.setTimeout(() => restoreChip(chip, goalData), delay);
         }).observe(chip, { childList: true, subtree: true });
 
