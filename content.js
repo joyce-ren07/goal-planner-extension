@@ -6770,12 +6770,13 @@
       });
 
       const onGoalOpenGesture = (e) => {
-        if (e.type === 'click') {
-          const chip = gpGdResolveGoalChipFromEvent(e);
-          if (!chip) return;
-          if (gpGdDetailBlockReady()) return;
+        const chip = gpGdResolveGoalChipFromEvent(e);
+        if (chip) {
+          if (e.type === 'click' && gpGdDetailBlockReady()) return;
+          gpGdOnUserOpenedGoalSession(e);
+          return;
         }
-        gpGdOnUserOpenedGoalSession(e);
+        gpGdOnInspectorInteraction(e);
       };
       window.addEventListener('pointerdown', onGoalOpenGesture, true);
       window.addEventListener('click', onGoalOpenGesture, true);
