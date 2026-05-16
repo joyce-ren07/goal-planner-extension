@@ -6553,7 +6553,7 @@
       return;
     }
 
-    const legacyGoals = await getGoals();
+    const legacyGoals = pref.goals || (await getGoals());
     const pinnedExpanded = (() => {
       const out = [...pinnedRaw];
       const seen = new Set(out);
