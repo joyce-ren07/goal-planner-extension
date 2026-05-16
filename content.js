@@ -6412,7 +6412,9 @@
       'h=' + Math.round(r.height),
       gpGdIsGoalBlockPainted(wrap) ? 'painted' : 'occluded'
     );
+    gpGdDiag('inject: done', { goalId, placed: ok });
 
+    if (popup instanceof HTMLElement) popup.style.opacity = '1';
     return wrap;
   }
 
