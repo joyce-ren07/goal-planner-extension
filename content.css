@@ -940,12 +940,12 @@
 
 /* ── Ghost events injected onto the calendar grid ── */
 .goal-ghost-event {
-  position: fixed;
+  position: absolute;
   left: 0;
   top: 0;
   pointer-events: none;
-  /* Must sit above GCal grid surfaces; fixed body children below ~80 are often fully obscured */
-  z-index: 120;
+  /* z-index on chips is within #gp-ghost-preview-root only; root is fixed to scrollport bbox */
+  z-index: 1;
   box-sizing: border-box;
   overflow: visible;
   border-radius: 4px;
