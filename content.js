@@ -6976,12 +6976,15 @@
       return scoreA - scoreB;
     });
     natives = gpGdPruneNestedInspectorHosts(natives);
+    natives = gpGdFilterEventDetailPopupHosts(natives);
 
     let host =
       gpGdFindOpenInspectorNearClick(_gpGdPinnedTitleHint) ||
       gpGdFindEventInspectorShell(_gpGdPinnedTitleHint || '') ||
       gpGdPickBestVisibleInspectorHost(natives, _gpGdPinnedTitleHint || '') ||
       natives[0];
+    if (host instanceof HTMLElement && !gpGdIsEventDetailPopupHost(host)) host = null;
+    if (!host && natives.length) host = natives[0];
     if (!(host instanceof HTMLElement)) {
       if (pinnedRaw.length) {
         gpGdTrace('waiting for event inspector near click');
