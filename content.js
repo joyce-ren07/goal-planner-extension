@@ -4973,6 +4973,9 @@
     add(chip.dataset.gpChipKey);
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
+    const r = chip.getBoundingClientRect();
+    _gpGdAnchorX = r.left + r.width / 2;
+    _gpGdAnchorY = r.top + r.height / 2;
     gpGdTrace('pinned session hints', hints);
   }
 
@@ -4980,7 +4983,13 @@
     if (!_gpCalInspectDetailObserversInstalled) setupGpCalGoalDetailEnrichment();
     const chip = gpGdResolveGoalChipFromEvent(e);
     if (!chip) return;
+    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      _gpGdAnchorX = e.clientX;
+      _gpGdAnchorY = e.clientY;
+    }
     gpGdPinSessionHintsFromChip(chip);
+    _gpGdRemountCount = 0;
+    _gpGdRemountGoalKey = '';
     scheduleGpGdInspectorOpenBurst();
   }
 
