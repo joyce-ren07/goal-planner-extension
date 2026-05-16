@@ -8454,10 +8454,21 @@
   /** @type {object[] | null} */
   let _gpGoalsCache = null;
 
+  function primeAllVisibleGoalChips() {
+    document.querySelectorAll('[data-eventid]').forEach((ec) => {
+      if (!(ec instanceof HTMLElement) || !eventContainerLooksLikeGoal(ec)) return;
+      ec.classList.add('gp-goal-event');
+      ec.querySelectorAll('[data-eventchip]').forEach((chip) => {
+        primeGoalChipInstant(chip);
+      });
+    });
+  }
+
   function setupGoalChipDecorationCaches() {
     chrome.storage.local.get(['gp_chip_done', 'gp_goals'], (d) => {
       _gpChipDoneCache = d.gp_chip_done || {};
       _gpGoalsCache = Array.isArray(d.gp_goals) ? d.gp_goals : [];
+      primeAllVisibleGoalChips();
     });
     if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
       chrome.storage.onChanged.addListener((changes, area) => {
