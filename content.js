@@ -5106,7 +5106,7 @@
         if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'transparent';
       });
 
-      const checkSvg =
+      let checkSvg =
         gpGdParseSvg(
           '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">' +
             '<path fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ' +
@@ -5116,7 +5116,7 @@
         /** @type {SVGSVGElement} */ (checkSvg).style.cssText =
           'display:block;width:12px;height:12px;opacity:0;pointer-events:none;';
 
-      ring.appendChild(checkSvg);
+      if (checkSvg) ring.appendChild(checkSvg);
       gpGdApplySubtaskRingVisual(
         ring,
         checkSvg instanceof SVGSVGElement ? checkSvg : null,
