@@ -3889,6 +3889,30 @@
     );
   }
 
+  /** Best-effort PATCH event summary for renamed goals (mirror 🎯 naming used elsewhere). */
+  async function patchCalendarGoalSummariesForIds(eventIds, plainTitle, token) {
+    const clean = String(plainTitle || '').trim();
+    if (!clean || !Array.isArray(eventIds)) return;
+    const summary = `🎯 ${clean}`;
+    await Promise.allSettled(
+      eventIds
+        .filter((id) => id != null && id !== '')
+        .map(async (rawId) =>
+          fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(String(rawId))}`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ summary }),
+            }
+          )
+        )
+    );
+  }
+
   // ── Form helpers ──
   function updateFormBtns() {
     const hasTitle = document.getElementById('gp-goal-title').value.trim().length > 0;
