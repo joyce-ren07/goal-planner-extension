@@ -5610,6 +5610,65 @@
     return main.querySelectorAll('[data-eventid]').length >= 4;
   }
 
+  /** GCal’s fixed left rail or our My Goals sidebar — not the transient event detail popup. */
+  function gpGdIsGCalLeftSidebarRegion(el) {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.closest('#gp-gcal-sidebar-goals-root, #gp-panel, #gp-sidebar-btn')) return true;
+    try {
+      const sb = getGCalNativeSidebar();
+      if (sb instanceof HTMLElement && (sb === el || sb.contains(el))) return true;
+    } catch (_) {
+      /* ignore */
+    }
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    if (r.width < 48 || r.height < 48) return false;
+    const leftDocked =
+      r.left < 28 && r.right < vw * 0.36 && r.width < 440 && r.height > 200;
+    if (leftDocked) return true;
+    const nav = el.closest('[role="navigation"]');
+    if (nav instanceof HTMLElement && r.left < vw * 0.34) return true;
+    return false;
+  }
+
+  /** True for the floating event inspector / popover (not the left calendar list sidebar). */
+  function gpGdIsEventDetailPopupHost(el) {
+    if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+    if (gpGdIsGCalLeftSidebarRegion(el)) return false;
+    if (gpGdIsCalendarGridContainer(el)) return false;
+    if (!gpGdIsElementVisuallyExposed(el)) return false;
+    const r = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    if (r.width < 200 || r.height < 100) return false;
+    const t = String(el.innerText || '');
+    const hasEventCopy =
+      /Goal Planner session for:/i.test(t) ||
+      /\bminutes before\b/i.test(t) ||
+      (/\d{1,2}:\d{2}/.test(t) && /\b(?:AM|PM)\b/i.test(t) && /\b(?:Organizer|Guests|notification)\b/i.test(t));
+    if (!hasEventCopy) return false;
+    const isDialog =
+      el.matches('[role="dialog"], [role="alertdialog"]') || el.getAttribute('aria-modal') === 'true';
+    if (!isDialog && !gpGdInspectorHasCloseControl(el)) return false;
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    if (ax != null && ay != null && Number.isFinite(ax) && Number.isFinite(ay)) {
+      const containsClick =
+        ax >= r.left - 48 && ax <= r.right + 48 && ay >= r.top - 72 && ay <= r.bottom + 72;
+      const dist = Math.hypot((r.left + r.right) / 2 - ax, (r.top + r.bottom) / 2 - ay);
+      if (!containsClick && dist > 520) return false;
+      if (r.left < vw * 0.22 && !containsClick) return false;
+    } else if (r.left < vw * 0.22 && r.right < vw * 0.38) {
+      return false;
+    }
+    return true;
+  }
+
+  function gpGdFilterEventDetailPopupHosts(hosts) {
+    return hosts.filter(
+      (h) => h instanceof HTMLElement && gpGdIsEventDetailPopupHost(h)
+    );
+  }
+
   function gpGdInspectorHasCloseControl(root) {
     if (!(root instanceof HTMLElement)) return false;
     for (const btn of gpGdQuerySelectorAllDeep(root, 'button')) {
