@@ -6224,8 +6224,13 @@
     });
     natives = gpGdPruneNestedInspectorHosts(natives);
 
-    const host = gpGdPickBestVisibleInspectorHost(natives, '');
+    let host =
+      gpGdFindEventInspectorShell('') || gpGdPickBestVisibleInspectorHost(natives, '');
     if (!(host instanceof HTMLElement)) {
+      if (pinnedRaw.length) {
+        gpGdTrace('waiting for event inspector near click');
+        return;
+      }
       teardownGpGdBlock();
       return;
     }
