@@ -4636,21 +4636,74 @@
     return null;
   }
 
-  function gpCollectEventIdHintsFromRoot(rootEl) {
-    const out = [];
-    const seen = new Set();
-    if (!rootEl) return out;
+  /**
+   * Traverse open shadow subtrees alongside light DOM (`querySelector`/MutationObserver subtree does not).
+   * @param {(el: HTMLElement) => void} visit
+   */
+  function gpGdWalkComposedElements(start, visit) {
+    if (!(start instanceof HTMLElement)) return;
+    const stack = /** @type {HTMLElement[]} */ ([start]);
+    while (stack.length) {
+      const el = /** @type {HTMLElement} */ (stack.pop());
+      visit(el);
+      const child = /** @type {HTMLElement | undefined} */ (el.firstElementChild);
+      for (let c = child; c; c = /** @type {HTMLElement} */ (c.nextElementSibling)) stack.push(c);
+      const sr = el.shadowRoot;
+      const s0 = sr && /** @type {HTMLElement | undefined} */ (sr.firstElementChild);
+      for (let c = s0; c; c = /** @type {HTMLElement} */ (c.nextElementSibling)) stack.push(c);
+    }
+  }
 
-    /** @type {Element[]} */
-    const nodesWithId = [...rootEl.querySelectorAll('[data-eventid]')];
-    nodesWithId.forEach((node) => {
-      const raw = node.getAttribute('data-eventid');
-      if (!raw || seen.has(raw)) return;
-      seen.add(raw);
-      out.push(raw);
+  /** @param {HTMLElement} root */
+  function gpGdQuerySelectorAllDeep(root, selector) {
+    const hits = /** @type {HTMLElement[]} */ ([]);
+    gpGdWalkComposedElements(root, (el) => {
+      try {
+        if (el.matches(selector)) hits.push(el);
+      } catch (_) {
+        /* ignore */
+      }
     });
+    return hits;
+  }
 
-    const links = [...rootEl.querySelectorAll('a[href*="calendar.google"], a[href*="google.com/calendar"], a[href*="eid="]')];
+  /** Parent spanning shadow-root boundary (elevate/metadata walks). */
+  function gpGdComposableParentHTMLElement(node) {
+    if (!(node instanceof HTMLElement)) return null;
+    /** @type {Node | null} */
+    let p = node.parentNode;
+    if (!p) return null;
+    if (p instanceof ShadowRoot && p.host) return /** @type {HTMLElement} */ (p.host);
+    return /** @type {HTMLElement | null} */ (
+      node.parentElement || (p instanceof HTMLElement ? p : null)
+    );
+  }
+
+  /** `Node.contains`-style ancestry when `needle` lives under an open shadow root under `haystack`. */
+  function gpGdComposedSubtreeContains(haystack, needle) {
+    if (!(haystack instanceof HTMLElement) || !(needle instanceof Node)) return false;
+    try {
+      if (haystack.contains(needle)) return true;
+    } catch (_) {
+      /* ignore */
+    }
+    let cur = needle;
+    for (let d = 0; d < 90 && cur; d++) {
+      const pn = /** @type {Node | null} */ (cur.parentNode);
+      if (!pn) break;
+      if (pn instanceof ShadowRoot && pn.host) {
+        cur = pn.host;
+
+```
+
+
+
+Oh no - I messed up the search_replace - I truncated the gpCollectEventIdHintsFromRoot function incorrectly. Let me read the file around that area and fix it.
+
+
+
+
+Read
     for (const a of links) {
       const href = a.getAttribute('href') || '';
       let m =
