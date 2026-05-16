@@ -101,6 +101,19 @@
     { id: 'progress', pattern: /\bin progress\b/i },
     { id: 'done', pattern: /^\s*done\s*$/i },
   ];
+  const KANBAN_FILTER_STORAGE_KEY = 'gpKanbanFilters';
+  const KANBAN_VIEW_DEFS = [
+    { id: 'due-this-week', label: 'Due This Week', iconKey: 'calendar' },
+    { id: 'overdue', label: 'Overdue', iconKey: 'warning' },
+  ];
+  const KANBAN_NAV_FILTER_IDS = [...KANBAN_VIEW_DEFS.map(({ id }) => id), 'starred'];
+  const KANBAN_FILTER_ANIM_MS = 180;
+  const KANBAN_NAV_ICONS = {
+    allTasks: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M8.5 12.2 10.8 14.5 15.5 9.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>`,
+    starred: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5l2.47 5.01 5.53.8-4 3.9.94 5.5L12 16.9l-4.94 2.6.94-5.5-4-3.9 5.53-.8L12 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>`,
+    calendar: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="2"></rect><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>`,
+    warning: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4.5 20.5 19H3.5L12 4.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path><path d="M12 10v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>`,
+  };
 
   function getDefaultTags() {
     return KANBAN_COURSE_OPTIONS.map((label) => ({
@@ -2948,23 +2961,260 @@
           createDefaultKanbanCard('done-3', 'COGS14B'),
         ],
       },
-      filters: {
-        starredOnly: false,
-        activeList: 'all',
-      },
+      filters: getDefaultKanbanFilters(),
       tags,
     };
   }
 
-  function normalizeKanbanFilters(filters) {
-    const activeList = KANBAN_COLUMN_DEFS.some(({ id }) => id === filters?.activeList) || filters?.activeList === 'all'
-      ? (filters?.activeList || 'all')
+  function getDefaultKanbanFilters() {
+    return {
+      activeList: 'all',
+      activeNavIds: [],
+      activeCategories: [],
+      selectedTags: [],
+      sectionsCollapsed: {
+        categories: false,
+        tags: false,
+      },
+    };
+  }
+
+  function normalizeNavIdList(value) {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(value.filter((id) => KANBAN_NAV_FILTER_IDS.includes(id)))];
+  }
+
+  function normalizeCategoryList(value) {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(value.map((label) => String(label).trim()).filter(Boolean))];
+  }
+
+  function migrateLegacyNavFilters(merged) {
+    const fromArray = normalizeNavIdList(merged.activeNavIds);
+    if (fromArray.length) return fromArray;
+
+    if (merged.activeNav && KANBAN_NAV_FILTER_IDS.includes(merged.activeNav)) {
+      return [merged.activeNav];
+    }
+    if (merged.starredOnly) return ['starred'];
+    if (merged.activeView && KANBAN_NAV_FILTER_IDS.includes(merged.activeView)) {
+      return [merged.activeView];
+    }
+    return [];
+  }
+
+  function migrateLegacyCategoryFilters(merged) {
+    const fromArray = normalizeCategoryList(merged.activeCategories);
+    if (fromArray.length) return fromArray;
+
+    if (typeof merged.activeCategory === 'string' && merged.activeCategory.trim()) {
+      return [merged.activeCategory.trim()];
+    }
+    return [];
+  }
+
+  function readFiltersFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(KANBAN_FILTER_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function persistFiltersToLocalStorage(filters) {
+    try {
+      localStorage.setItem(KANBAN_FILTER_STORAGE_KEY, JSON.stringify(filters));
+    } catch {
+      /* ignore quota errors */
+    }
+  }
+
+  function normalizeKanbanFilters(filters, options = {}) {
+    const defaults = getDefaultKanbanFilters();
+    const stored = options.preferLocalStorage ? readFiltersFromLocalStorage() : null;
+    const merged = options.preferLocalStorage
+      ? {
+        ...defaults,
+        ...(filters || {}),
+        ...(stored || {}),
+      }
+      : {
+        ...defaults,
+        ...(filters || {}),
+      };
+
+    const activeList = KANBAN_COLUMN_DEFS.some(({ id }) => id === merged.activeList) || merged.activeList === 'all'
+      ? (merged.activeList || 'all')
       : 'all';
 
-    return {
-      starredOnly: Boolean(filters?.starredOnly),
-      activeList,
+    const activeNavIds = normalizeNavIdList(migrateLegacyNavFilters(merged));
+    const activeCategories = normalizeCategoryList(migrateLegacyCategoryFilters(merged));
+
+    const selectedTags = Array.isArray(merged.selectedTags)
+      ? [...new Set(merged.selectedTags.map((t) => String(t).trim()).filter(Boolean))]
+      : [];
+
+    const sectionsCollapsed = {
+      categories: Boolean(merged.sectionsCollapsed?.categories),
+      tags: Boolean(merged.sectionsCollapsed?.tags),
     };
+
+    const normalized = {
+      activeList,
+      activeNavIds,
+      activeCategories,
+      selectedTags,
+      sectionsCollapsed,
+    };
+
+    persistFiltersToLocalStorage(normalized);
+    return normalized;
+  }
+
+  function getDueThisWeekRange(now = new Date()) {
+    const start = normalizeDateOnly(now);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    return { start, end };
+  }
+
+  function isCardDueThisWeek(card, now = new Date()) {
+    const due = getTaskDueDateFromCard(card);
+    if (!due) return false;
+    const dueDay = normalizeDateOnly(due);
+    const { start, end } = getDueThisWeekRange(now);
+    return dueDay >= start && dueDay <= end;
+  }
+
+  function isCardOverdue(card, now = new Date()) {
+    const due = getTaskDueDateFromCard(card);
+    if (!due) return false;
+    const dueDay = normalizeDateOnly(due);
+    const today = normalizeDateOnly(now);
+    return dueDay < today;
+  }
+
+  function isBoardFilterActive(filters) {
+    if (!filters) return false;
+    return Boolean(
+      (filters.activeNavIds && filters.activeNavIds.length > 0)
+      || (filters.activeCategories && filters.activeCategories.length > 0)
+      || (filters.selectedTags && filters.selectedTags.length > 0),
+    );
+  }
+
+  function isAllTasksFilterActive(filters) {
+    if (!filters) return true;
+    return !(filters.activeNavIds && filters.activeNavIds.length)
+      && !(filters.activeCategories && filters.activeCategories.length)
+      && !(filters.selectedTags && filters.selectedTags.length);
+  }
+
+  function cardMatchesNavFilter(card, navId) {
+    if (navId === 'starred') return Boolean(card.starred);
+    if (navId === 'due-this-week') return isCardDueThisWeek(card);
+    if (navId === 'overdue') return isCardOverdue(card);
+    return false;
+  }
+
+  function getCardTagLabel(card) {
+    return String(card?.chip || card?.course || '').trim();
+  }
+
+  function cardMatchesBoardFilters(card, columnId, filters) {
+    if (!card) return false;
+    if (!isBoardFilterActive(filters)) return true;
+
+    const navIds = filters.activeNavIds || [];
+    if (navIds.length && !navIds.some((navId) => cardMatchesNavFilter(card, navId))) {
+      return false;
+    }
+
+    const tagLabel = getCardTagLabel(card);
+
+    const categories = filters.activeCategories || [];
+    if (categories.length && !categories.includes(tagLabel)) {
+      return false;
+    }
+
+    if (filters.selectedTags?.length) {
+      const matchesTag = filters.selectedTags.some((tag) => tag === tagLabel);
+      if (!matchesTag) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  function collectBoardTagUsage(state) {
+    const usage = new Map();
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      (state.columns[id] || []).forEach((card) => {
+        const label = String(card?.chip || '').trim();
+        if (!label) return;
+        usage.set(label, (usage.get(label) || 0) + 1);
+      });
+    });
+
+    return usage;
+  }
+
+  function resolveTagMetaForLabel(state, label) {
+    const tag = findTagByLabel(state.tags, label);
+    if (tag) {
+      return {
+        label: tag.label,
+        colorKey: tag.colorKey,
+        customHex: tag.customHex,
+        hidden: tag.hidden,
+      };
+    }
+
+    return {
+      label,
+      colorKey: resolveKanbanChipColor(label),
+      customHex: undefined,
+      hidden: false,
+    };
+  }
+
+  function getBoardCategoryRows(state) {
+    const usage = collectBoardTagUsage(state);
+    return [...usage.entries()]
+      .map(([label, count]) => ({
+        ...resolveTagMetaForLabel(state, label),
+        count,
+      }))
+      .filter((row) => !row.hidden)
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  function getBoardTagPills(state) {
+    const usage = collectBoardTagUsage(state);
+    return (state.tags || [])
+      .filter((tag) => !tag.hidden && usage.has(tag.label))
+      .map((tag) => ({
+        ...tag,
+        count: usage.get(tag.label) || 0,
+      }));
+  }
+
+  function findKanbanCardInState(state, cardId) {
+    if (!cardId) return null;
+
+    for (const { id } of KANBAN_COLUMN_DEFS) {
+      const match = (state.columns[id] || []).find((card) => card.id === cardId);
+      if (match) {
+        return { card: match, columnId: id };
+      }
+    }
+
+    return null;
   }
 
   function normalizeKanbanState(state) {
@@ -2981,7 +3231,9 @@
 
     return {
       columns,
-      filters: normalizeKanbanFilters(state?.filters || defaults.filters),
+      filters: normalizeKanbanFilters(state?.filters || defaults.filters, {
+        preferLocalStorage: true,
+      }),
       tags,
     };
   }
@@ -3164,11 +3416,11 @@
     };
 
     KANBAN_COLUMN_DEFS.forEach(({ id }) => {
-      if (state.filters.activeList !== 'all' && state.filters.activeList !== id) {
-        return;
-      }
-
       getCardsForColumn(state, id).forEach((task) => {
+        if (!cardMatchesBoardFilters(task, id, state.filters)) {
+          return;
+        }
+
         if (id === 'done') {
           buckets.completed.push({ task, columnId: id });
           return;
@@ -3206,11 +3458,16 @@
       || Boolean(document.querySelector('.mk-card.is-dragging'));
   }
 
-  function refreshLinkedTaskViews(state) {
+  function refreshLinkedTaskViews(state, options = {}) {
     const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
     const panel = document.getElementById('gp-panel');
     if (panel && !isSidebarTitleEditActive() && !isMkDueEditorActive()) {
       renderSidebarTasks(panel, normalized);
+    }
+
+    const filterNav = document.querySelector('.mytasks-filter-nav');
+    if (filterNav) {
+      renderKanbanFilterNav(filterNav, normalized);
     }
 
     if (isKanbanDragActive()) return;
@@ -3218,12 +3475,21 @@
     const roots = [...document.querySelectorAll('.mytasks-kanban')];
     if (!roots.length) return;
 
+    const filtersOnly = Boolean(options.filtersOnly);
+
     roots.forEach((root) => {
-      renderKanbanBoard(root, normalized);
       const board = root.querySelector('.mytasks-kanban__board');
-      if (!board) return;
-      board.dataset.dndWired = 'false';
-      wireKanbanDragAndDrop(board);
+      const hasColumns = Boolean(board?.querySelector('.mk-column'));
+
+      if (!filtersOnly || !hasColumns) {
+        renderKanbanBoard(root, normalized);
+        const nextBoard = root.querySelector('.mytasks-kanban__board');
+        if (!nextBoard) return;
+        nextBoard.dataset.dndWired = 'false';
+        wireKanbanDragAndDrop(nextBoard);
+      }
+
+      applyKanbanBoardFilters(root, normalized, { animate: filtersOnly });
     });
   }
 
@@ -3259,19 +3525,55 @@
     });
   }
 
-  async function loadKanbanState() {
-    const stored = await readSidebarStorage([KANBAN_STORAGE_KEY]);
-    kanbanStateCache = normalizeKanbanState(stored[KANBAN_STORAGE_KEY]);
+  function primeKanbanFiltersFromLocalStorage() {
+    const stored = readFiltersFromLocalStorage();
+    if (!stored) return null;
+
+    const base = kanbanStateCache || getDefaultKanbanState();
+    kanbanStateCache = normalizeKanbanState({
+      ...base,
+      filters: stored,
+    });
     return kanbanStateCache;
   }
 
-  async function saveKanbanState(state) {
+  async function loadKanbanState() {
+    const stored = await readSidebarStorage([KANBAN_STORAGE_KEY]);
+    const chromeState = stored[KANBAN_STORAGE_KEY];
+    const lsFilters = readFiltersFromLocalStorage();
+
+    kanbanStateCache = normalizeKanbanState({
+      ...(chromeState || getDefaultKanbanState()),
+      filters: {
+        ...(chromeState?.filters || getDefaultKanbanFilters()),
+        ...(lsFilters || {}),
+      },
+    });
+    return kanbanStateCache;
+  }
+
+  async function saveKanbanState(state, options = {}) {
     kanbanStateCache = normalizeKanbanState(state);
+    persistFiltersToLocalStorage(kanbanStateCache.filters);
     await writeSidebarStorage({
       [KANBAN_STORAGE_KEY]: kanbanStateCache,
     });
-    refreshLinkedTaskViews(kanbanStateCache);
+    refreshLinkedTaskViews(kanbanStateCache, options);
     return kanbanStateCache;
+  }
+
+  async function updateKanbanFilters(updates, options = {}) {
+    const state = await loadKanbanState();
+
+    if (updates?.clearAll) {
+      state.filters = normalizeKanbanFilters(getDefaultKanbanFilters());
+    } else {
+      const next = { ...state.filters, ...updates };
+
+      state.filters = normalizeKanbanFilters(next);
+    }
+
+    return saveKanbanState(state, { filtersOnly: Boolean(options.filtersOnly) });
   }
 
   function renderCard(task) {
@@ -3286,6 +3588,9 @@
       delete card.dataset.chipCustomHex;
     }
     card.dataset.starred = task.starred ? 'true' : 'false';
+    if (task.chip) {
+      card.dataset.chip = task.chip;
+    }
     if (task.dueDate) {
       card.dataset.dueDate = task.dueDate;
     }
@@ -3515,26 +3820,16 @@
     return collapseDuplicateKanbanIds(columns);
   }
 
-  function getVisibleKanbanColumns(state) {
-    if (state.filters.activeList === 'all') {
-      return KANBAN_COLUMN_DEFS;
-    }
-
-    return KANBAN_COLUMN_DEFS.filter(({ id }) => id === state.filters.activeList);
-  }
-
   function getCardsForColumn(state, columnId) {
-    const cards = state.columns[columnId] || [];
-    if (!state.filters.starredOnly) return cards;
-    return cards.filter((card) => card.starred);
+    return state.columns[columnId] || [];
   }
 
   function updateKanbanToolbar(toolbar, state) {
     if (!toolbar) return;
 
-    const showStarred = state.filters.starredOnly;
-    const showViewAll = state.filters.activeList !== 'all';
-    const hasIndicator = showStarred || showViewAll;
+    const showStarred = (state.filters.activeNavIds || []).includes('starred');
+    const hasBoardFilters = isBoardFilterActive(state.filters);
+    const hasIndicator = showStarred || hasBoardFilters;
 
     toolbar.hidden = !hasIndicator;
     toolbar.classList.toggle('is-visible', hasIndicator);
@@ -3547,8 +3842,156 @@
     }
 
     if (viewAllBtn) {
-      viewAllBtn.hidden = !showViewAll;
+      viewAllBtn.hidden = !hasBoardFilters;
+      viewAllBtn.textContent = 'Clear filters';
     }
+  }
+
+  function buildKanbanColumnHeader(label, filtered) {
+    const title = document.createElement('h3');
+    title.className = 'mk-column-header';
+    if (filtered) {
+      title.classList.add('mk-column-header--filtered');
+    }
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'mk-column-header__label';
+    labelEl.textContent = label;
+    title.appendChild(labelEl);
+
+    if (filtered) {
+      const badge = document.createElement('span');
+      badge.className = 'mk-column-header__filter-badge';
+      badge.textContent = 'Filtered';
+      badge.setAttribute('aria-label', 'Board is filtered');
+      title.appendChild(badge);
+    }
+
+    return title;
+  }
+
+  function syncKanbanColumnFilterHeaders(board, filtered) {
+    if (!board) return;
+
+    board.querySelectorAll('.mk-column').forEach((column) => {
+      const columnId = column.dataset.columnId;
+      const def = KANBAN_COLUMN_DEFS.find(({ id }) => id === columnId);
+      const label = def?.label || columnId || '';
+      const existingHeader = column.querySelector('.mk-column-header');
+
+      if (!existingHeader) return;
+
+      const replacement = buildKanbanColumnHeader(label, filtered);
+      existingHeader.replaceWith(replacement);
+    });
+  }
+
+  function buildKanbanColumnEmptyState() {
+    const empty = document.createElement('div');
+    empty.className = 'mk-column-empty';
+    empty.setAttribute('aria-hidden', 'true');
+    empty.innerHTML = `
+      <span class="mk-column-empty__icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16v16H4z"></path>
+          <path d="M4 9h16"></path>
+          <path d="M9 4v16"></path>
+        </svg>
+      </span>
+      <p class="mk-column-empty__text">No tasks match this filter</p>
+    `;
+    return empty;
+  }
+
+  function syncKanbanColumnEmptyState(column, visibleCount, filtered) {
+    const cardsContainer = column?.querySelector('.mk-column-cards');
+    if (!cardsContainer) return;
+
+    let empty = cardsContainer.querySelector('.mk-column-empty');
+    if (!filtered || visibleCount > 0) {
+      empty?.remove();
+      return;
+    }
+
+    if (!empty) {
+      empty = buildKanbanColumnEmptyState();
+      cardsContainer.appendChild(empty);
+    }
+    empty.hidden = false;
+  }
+
+  function setKanbanCardFilterVisibility(cardEl, matches, animate) {
+    const wasHidden = cardEl.classList.contains('mk-card--filter-hidden')
+      || cardEl.classList.contains('mk-card--filter-collapsed');
+
+    cardEl.setAttribute('aria-hidden', matches ? 'false' : 'true');
+
+    if (!animate) {
+      cardEl.classList.toggle('mk-card--filter-hidden', !matches);
+      cardEl.classList.toggle('mk-card--filter-collapsed', !matches);
+      cardEl.classList.remove('mk-card--filter-leave', 'mk-card--filter-enter', 'mk-card--filter-enter-active');
+      return;
+    }
+
+    if (matches) {
+      cardEl.classList.remove('mk-card--filter-leave');
+      if (wasHidden) {
+        cardEl.classList.remove('mk-card--filter-collapsed', 'mk-card--filter-hidden');
+        cardEl.classList.add('mk-card--filter-enter');
+        requestAnimationFrame(() => {
+          cardEl.classList.add('mk-card--filter-enter-active');
+        });
+        window.setTimeout(() => {
+          cardEl.classList.remove('mk-card--filter-enter', 'mk-card--filter-enter-active');
+        }, KANBAN_FILTER_ANIM_MS);
+      }
+      return;
+    }
+
+    if (!wasHidden) {
+      cardEl.classList.add('mk-card--filter-leave');
+      window.setTimeout(() => {
+        cardEl.classList.remove('mk-card--filter-leave');
+        cardEl.classList.add('mk-card--filter-collapsed', 'mk-card--filter-hidden');
+      }, KANBAN_FILTER_ANIM_MS);
+      return;
+    }
+
+    cardEl.classList.add('mk-card--filter-hidden', 'mk-card--filter-collapsed');
+  }
+
+  function applyKanbanBoardFilters(root, state, options = {}) {
+    const board = root?.querySelector('.mytasks-kanban__board');
+    if (!board) return;
+
+    const filters = state.filters || getDefaultKanbanFilters();
+    const filtered = isBoardFilterActive(filters);
+    const animate = options.animate !== false;
+    board.classList.toggle('mytasks-kanban__board--filtered', filtered);
+    board.classList.remove('mytasks-kanban__board--single-column');
+
+    syncKanbanColumnFilterHeaders(board, filtered);
+
+    board.querySelectorAll('.mk-column').forEach((column) => {
+      const columnId = column.dataset.columnId;
+      let visibleCount = 0;
+
+      column.querySelectorAll('.mk-card').forEach((cardEl) => {
+        const located = findKanbanCardInState(state, cardEl.dataset.cardId);
+        const card = located?.card;
+        const matchColumnId = columnId || located?.columnId;
+        const matches = card
+          ? cardMatchesBoardFilters(card, matchColumnId, filters)
+          : !filtered;
+
+        setKanbanCardFilterVisibility(cardEl, matches, animate);
+        if (matches) visibleCount += 1;
+      });
+
+      syncKanbanColumnEmptyState(column, visibleCount, filtered);
+    });
+
+    updateKanbanToolbar(root.querySelector('.mytasks-kanban__toolbar'), state);
   }
 
   function renderKanbanBoard(root, state) {
@@ -3557,25 +4000,28 @@
 
     clearMkDeleteConfirm();
 
-    const visibleColumns = getVisibleKanbanColumns(state);
-    board.classList.toggle('mytasks-kanban__board--single-column', state.filters.activeList !== 'all');
+    const filtered = isBoardFilterActive(state.filters);
+    board.classList.remove('mytasks-kanban__board--single-column');
+    board.classList.toggle('mytasks-kanban__board--filtered', filtered);
     board.innerHTML = '';
 
-    visibleColumns.forEach(({ id, label }) => {
+    KANBAN_COLUMN_DEFS.forEach(({ id, label }) => {
       const column = document.createElement('div');
       column.className = 'mk-column';
       column.dataset.columnId = id;
 
-      const title = document.createElement('h3');
-      title.className = 'mk-column-header';
-      title.textContent = label;
+      const title = buildKanbanColumnHeader(label, filtered);
 
       const cards = document.createElement('div');
       cards.className = 'mk-column-cards';
       cards.dataset.columnId = id;
 
       getCardsForColumn(state, id).forEach((card) => {
-        cards.appendChild(renderCard(card));
+        const cardEl = renderCard(card);
+        if (!cardMatchesBoardFilters(card, id, state.filters)) {
+          cardEl.classList.add('mk-card--filter-hidden', 'mk-card--filter-collapsed');
+        }
+        cards.appendChild(cardEl);
       });
 
       column.appendChild(title);
@@ -3584,6 +4030,7 @@
     });
 
     updateKanbanToolbar(root.querySelector('.mytasks-kanban__toolbar'), state);
+    applyKanbanBoardFilters(root, state, { animate: false });
   }
 
   function createKanbanShell() {
@@ -5227,19 +5674,30 @@
 
   async function setKanbanStarredFilter(root, starredOnly) {
     const state = await loadKanbanState();
-    state.filters.starredOnly = Boolean(starredOnly);
+    const navIds = new Set(state.filters.activeNavIds || []);
     if (starredOnly) {
-      state.filters.activeList = 'all';
+      navIds.add('starred');
+    } else {
+      navIds.delete('starred');
     }
-    await saveKanbanState(state);
+    await updateKanbanFilters({
+      activeNavIds: [...navIds],
+      activeList: 'all',
+    }, { filtersOnly: true });
+  }
+
+  async function clearAllKanbanFilters(root) {
+    await updateKanbanFilters({ clearAll: true }, { filtersOnly: true });
   }
 
   async function setKanbanActiveList(root, activeList) {
+    if (activeList === 'all') {
+      await clearAllKanbanFilters(root);
+      return;
+    }
+
     const state = await loadKanbanState();
     state.filters.activeList = activeList;
-    if (activeList === 'all') {
-      state.filters.starredOnly = false;
-    }
     await saveKanbanState(state);
   }
 
@@ -5402,7 +5860,7 @@
 
       if (event.target.closest('.mytasks-kanban__view-all-btn')) {
         event.preventDefault();
-        setKanbanActiveList(root, 'all');
+        clearAllKanbanFilters(root);
         return;
       }
     });
@@ -6055,6 +6513,459 @@
     });
   }
 
+  function tagColorStyles(tagMeta) {
+    const colorKey = tagMeta?.colorKey || 'blue';
+    if (colorKey === 'custom' && normalizeHexColor(tagMeta?.customHex)) {
+      const hex = normalizeHexColor(tagMeta.customHex);
+      return {
+        swatch: hex,
+        pillClass: 'mytasks-filter-tag-pill--custom',
+        pillStyle: `--gp-filter-tag-fg:${hex};--gp-filter-tag-bg:${hex}22`,
+      };
+    }
+
+    return {
+      swatch: tagResolvedHex({ colorKey }),
+      pillClass: `mytasks-filter-tag-pill--${chipClassForColorKey(colorKey)}`,
+      pillStyle: '',
+    };
+  }
+
+  function buildKanbanNavItem(options) {
+    const {
+      label,
+      iconHtml,
+      isActive,
+      dataset = {},
+      extraClass = '',
+    } = options;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `mytasks-nav-item${extraClass ? ` ${extraClass}` : ''}`;
+    if (isActive) {
+      btn.classList.add('is-active');
+      btn.setAttribute('aria-current', 'true');
+    }
+
+    Object.entries(dataset).forEach(([key, value]) => {
+      btn.dataset[key] = value;
+    });
+
+    const icon = document.createElement('span');
+    icon.className = 'mytasks-nav-item__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = iconHtml;
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'mytasks-nav-item__label';
+    labelEl.textContent = label;
+
+    btn.appendChild(icon);
+    btn.appendChild(labelEl);
+    return btn;
+  }
+
+  function buildKanbanFilterNavMarkup() {
+    return `
+<aside class="mytasks-filter-nav" aria-label="Task filters">
+  <div class="mytasks-filter-nav__create-wrap">
+    <button type="button" class="mytasks-create-btn" data-nav-create="true">
+      <span class="mytasks-create-btn__icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </span>
+      <span class="mytasks-create-btn__label">Create</span>
+    </button>
+  </div>
+  <nav class="mytasks-filter-nav__primary" aria-label="Task views">
+    <div class="mytasks-filter-nav__primary-list" data-filter-list="primary"></div>
+  </nav>
+  <div class="mytasks-filter-nav__scroll">
+
+    <section class="mytasks-filter-nav__section mytasks-filter-nav__section--categories">
+      <div class="mytasks-filter-nav__section-head mytasks-filter-nav__section-head--categories">
+        <button type="button" class="mytasks-filter-nav__section-toggle" data-section="categories" aria-expanded="true">
+          <svg class="mytasks-filter-nav__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span class="mytasks-filter-nav__heading">Categories</span>
+        </button>
+        <button type="button" class="mytasks-filter-nav__select-all-categories" hidden>Select all</button>
+        <button type="button" class="mytasks-filter-nav__clear-categories" hidden>Clear</button>
+      </div>
+      <div class="mytasks-filter-nav__section-panel" data-section-panel="categories">
+        <div class="mytasks-filter-nav__list" data-filter-list="categories"></div>
+        <button type="button" class="mytasks-filter-nav__manage-tags">+ Manage tags</button>
+      </div>
+    </section>
+
+    <section class="mytasks-filter-nav__section mytasks-filter-nav__section--tags">
+      <div class="mytasks-filter-nav__tags-head">
+        <button type="button" class="mytasks-filter-nav__section-toggle" data-section="tags" aria-expanded="true">
+          <svg class="mytasks-filter-nav__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+          <span class="mytasks-filter-nav__heading">Tags</span>
+        </button>
+        <button type="button" class="mytasks-filter-nav__select-all-tags" hidden>Select all</button>
+        <button type="button" class="mytasks-filter-nav__clear-tags" hidden>Clear</button>
+      </div>
+      <div class="mytasks-filter-nav__section-panel" data-section-panel="tags">
+        <div class="mytasks-filter-nav__tag-chips" data-filter-list="tags"></div>
+      </div>
+    </section>
+  </div>
+</aside>
+`.trim();
+  }
+
+  function renderKanbanFilterNav(nav, state) {
+    if (!nav) return;
+
+    const filters = state.filters || getDefaultKanbanFilters();
+    const primaryList = nav.querySelector('[data-filter-list="primary"]');
+    const categoriesList = nav.querySelector('[data-filter-list="categories"]');
+    const tagsList = nav.querySelector('[data-filter-list="tags"]');
+    const clearTagsBtn = nav.querySelector('.mytasks-filter-nav__clear-tags');
+    const selectAllTagsBtn = nav.querySelector('.mytasks-filter-nav__select-all-tags');
+    const clearCategoriesBtn = nav.querySelector('.mytasks-filter-nav__clear-categories');
+    const selectAllCategoriesBtn = nav.querySelector('.mytasks-filter-nav__select-all-categories');
+    const navIds = filters.activeNavIds || [];
+    const activeCategories = filters.activeCategories || [];
+
+    if (primaryList) {
+      primaryList.innerHTML = '';
+
+      primaryList.appendChild(buildKanbanNavItem({
+        label: 'Select all',
+        iconHtml: KANBAN_NAV_ICONS.allTasks,
+        isActive: isAllTasksFilterActive(filters),
+        dataset: { navAllTasks: 'true' },
+      }));
+
+      KANBAN_VIEW_DEFS.forEach((view) => {
+        primaryList.appendChild(buildKanbanNavItem({
+          label: view.label,
+          iconHtml: KANBAN_NAV_ICONS[view.iconKey] || '',
+          isActive: navIds.includes(view.id),
+          dataset: { filterNav: view.id },
+        }));
+      });
+
+      primaryList.appendChild(buildKanbanNavItem({
+        label: 'Starred',
+        iconHtml: KANBAN_NAV_ICONS.starred,
+        isActive: navIds.includes('starred'),
+        dataset: { filterNav: 'starred' },
+        extraClass: navIds.includes('starred') ? 'mytasks-nav-item--starred' : '',
+      }));
+    }
+
+    if (categoriesList) {
+      categoriesList.innerHTML = '';
+      const categories = getBoardCategoryRows(state);
+
+      if (!categories.length) {
+        const empty = document.createElement('p');
+        empty.className = 'mytasks-filter-nav__empty';
+        empty.textContent = 'No categories yet';
+        categoriesList.appendChild(empty);
+      }
+
+      categories.forEach((category) => {
+        const colors = tagColorStyles(category);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mytasks-filter-nav__row mytasks-filter-nav__row--category';
+        btn.dataset.filterCategory = category.label;
+        if (activeCategories.includes(category.label)) {
+          btn.classList.add('is-active');
+          btn.setAttribute('aria-current', 'true');
+        }
+
+        btn.innerHTML = `
+          <span class="mytasks-filter-nav__swatch" style="background:${colors.swatch}" aria-hidden="true"></span>
+          <span class="mytasks-filter-nav__row-label">${category.label}</span>
+          <span class="mytasks-filter-nav__count">${category.count}</span>
+        `;
+        categoriesList.appendChild(btn);
+      });
+    }
+
+    if (tagsList) {
+      tagsList.innerHTML = '';
+      const pills = getBoardTagPills(state);
+
+      if (!pills.length) {
+        const empty = document.createElement('p');
+        empty.className = 'mytasks-filter-nav__empty mytasks-filter-nav__empty--tags';
+        empty.textContent = 'No tags on tasks';
+        tagsList.appendChild(empty);
+      }
+
+      pills.forEach((tag) => {
+        const colors = tagColorStyles(tag);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `mytasks-filter-nav__tag-pill ${colors.pillClass}`;
+        if (colors.pillStyle) {
+          btn.setAttribute('style', colors.pillStyle);
+        }
+        btn.dataset.filterTag = tag.label;
+        btn.textContent = tag.label;
+
+        if (filters.selectedTags.includes(tag.label)) {
+          btn.classList.add('is-selected');
+          btn.setAttribute('aria-pressed', 'true');
+        } else {
+          btn.setAttribute('aria-pressed', 'false');
+        }
+
+        tagsList.appendChild(btn);
+      });
+    }
+
+    if (categoriesList) {
+      const categoryRows = getBoardCategoryRows(state);
+      const allCategoryLabels = categoryRows.map((row) => row.label);
+      const allCategoriesSelected = allCategoryLabels.length > 0
+        && allCategoryLabels.every((label) => activeCategories.includes(label));
+
+      if (clearCategoriesBtn) {
+        clearCategoriesBtn.hidden = activeCategories.length === 0;
+      }
+      if (selectAllCategoriesBtn) {
+        selectAllCategoriesBtn.hidden = !allCategoryLabels.length || allCategoriesSelected;
+      }
+    }
+
+    if (clearTagsBtn || selectAllTagsBtn) {
+      const pills = getBoardTagPills(state);
+      const allTagLabels = pills.map((pill) => pill.label);
+      const allTagsSelected = allTagLabels.length > 0
+        && allTagLabels.every((label) => filters.selectedTags.includes(label));
+
+      if (clearTagsBtn) {
+        clearTagsBtn.hidden = filters.selectedTags.length === 0;
+      }
+      if (selectAllTagsBtn) {
+        selectAllTagsBtn.hidden = !allTagLabels.length || allTagsSelected;
+      }
+    }
+
+    nav.querySelectorAll('.mytasks-filter-nav__section').forEach((section) => {
+      const key = section.classList.contains('mytasks-filter-nav__section--categories')
+        ? 'categories'
+        : (section.classList.contains('mytasks-filter-nav__section--tags') ? 'tags' : null);
+      if (!key) return;
+
+      const collapsed = Boolean(filters.sectionsCollapsed?.[key]);
+      section.classList.toggle('is-collapsed', collapsed);
+      const toggle = section.querySelector('.mytasks-filter-nav__section-toggle');
+      const panel = section.querySelector('.mytasks-filter-nav__section-panel');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      }
+    });
+  }
+
+  let kanbanFilterNavWired = false;
+
+  function wireKanbanFilterNav(nav) {
+    if (!nav || kanbanFilterNavWired) return;
+    kanbanFilterNavWired = true;
+
+    nav.addEventListener('click', (event) => {
+      const createBtn = event.target.closest('[data-nav-create]');
+      if (createBtn && nav.contains(createBtn)) {
+        event.preventDefault();
+        openGlobalCreateTaskModal({});
+        return;
+      }
+
+      const allTasksBtn = event.target.closest('[data-nav-all-tasks]');
+      if (allTasksBtn && nav.contains(allTasksBtn)) {
+        event.preventDefault();
+        void clearAllKanbanFilters(getActiveKanbanRoot());
+        return;
+      }
+
+      const navFilterBtn = event.target.closest('[data-filter-nav]');
+      if (navFilterBtn && nav.contains(navFilterBtn)) {
+        event.preventDefault();
+        void loadKanbanState().then((state) => {
+          const navId = navFilterBtn.dataset.filterNav;
+          const selected = new Set(state.filters.activeNavIds || []);
+          if (selected.has(navId)) {
+            selected.delete(navId);
+          } else {
+            selected.add(navId);
+          }
+          return updateKanbanFilters({
+            activeNavIds: [...selected],
+          }, { filtersOnly: true });
+        });
+        return;
+      }
+
+      const categoryBtn = event.target.closest('[data-filter-category]');
+      if (categoryBtn && nav.contains(categoryBtn)) {
+        event.preventDefault();
+        void loadKanbanState().then((state) => {
+          const label = categoryBtn.dataset.filterCategory;
+          const selected = new Set(state.filters.activeCategories || []);
+          if (selected.has(label)) {
+            selected.delete(label);
+          } else {
+            selected.add(label);
+          }
+          return updateKanbanFilters({
+            activeCategories: [...selected],
+          }, { filtersOnly: true });
+        });
+        return;
+      }
+
+      const selectAllCategoriesBtn = event.target.closest('.mytasks-filter-nav__select-all-categories');
+      if (selectAllCategoriesBtn && nav.contains(selectAllCategoriesBtn)) {
+        event.preventDefault();
+        void loadKanbanState().then((state) => {
+          const labels = getBoardCategoryRows(state).map((row) => row.label);
+          return updateKanbanFilters({ activeCategories: labels }, { filtersOnly: true });
+        });
+        return;
+      }
+
+      const clearCategoriesBtn = event.target.closest('.mytasks-filter-nav__clear-categories');
+      if (clearCategoriesBtn && nav.contains(clearCategoriesBtn)) {
+        event.preventDefault();
+        void updateKanbanFilters({ activeCategories: [] }, { filtersOnly: true });
+        return;
+      }
+
+      const selectAllTagsBtn = event.target.closest('.mytasks-filter-nav__select-all-tags');
+      if (selectAllTagsBtn && nav.contains(selectAllTagsBtn)) {
+        event.preventDefault();
+        void loadKanbanState().then((state) => {
+          const labels = getBoardTagPills(state).map((pill) => pill.label);
+          return updateKanbanFilters({ selectedTags: labels }, { filtersOnly: true });
+        });
+        return;
+      }
+
+      const tagBtn = event.target.closest('[data-filter-tag]');
+      if (tagBtn && nav.contains(tagBtn)) {
+        event.preventDefault();
+        void loadKanbanState().then((state) => {
+          const label = tagBtn.dataset.filterTag;
+          const selected = new Set(state.filters.selectedTags || []);
+          if (selected.has(label)) {
+            selected.delete(label);
+          } else {
+            selected.add(label);
+          }
+          return updateKanbanFilters({
+            selectedTags: [...selected],
+          }, { filtersOnly: true });
+        });
+        return;
+      }
+
+      const clearTagsBtn = event.target.closest('.mytasks-filter-nav__clear-tags');
+      if (clearTagsBtn && nav.contains(clearTagsBtn)) {
+        event.preventDefault();
+        void updateKanbanFilters({ selectedTags: [] }, { filtersOnly: true });
+        return;
+      }
+
+      const manageTagsBtn = event.target.closest('.mytasks-filter-nav__manage-tags');
+      if (manageTagsBtn && nav.contains(manageTagsBtn)) {
+        event.preventDefault();
+        openManageTagsModalForNav();
+        return;
+      }
+
+      const sectionToggle = event.target.closest('.mytasks-filter-nav__section-toggle');
+      if (sectionToggle && nav.contains(sectionToggle)) {
+        event.preventDefault();
+        const sectionKey = sectionToggle.dataset.section;
+        if (!sectionKey) return;
+
+        void loadKanbanState().then((state) => {
+          const collapsed = { ...state.filters.sectionsCollapsed };
+          collapsed[sectionKey] = !collapsed[sectionKey];
+          return updateKanbanFilters({
+            sectionsCollapsed: collapsed,
+          }, { filtersOnly: true });
+        });
+      }
+    });
+  }
+
+  function openManageTagsModalForNav() {
+    ensureGlobalTaskModals();
+    void loadKanbanState().then((state) => {
+      gpManageTagsDraft = normalizeTags(state.tags).map((t) => ({ ...t }));
+      const layer = document.getElementById('gp-mt-layer');
+      const root = getGlobalTaskModalsRoot();
+      if (!layer || !root) return;
+
+      gpResumeCreateTaskLayerAfterTags = false;
+      renderManageTagRows();
+      root.hidden = false;
+      layer.hidden = false;
+      document.body.classList.add('gp-task-modals-open');
+    });
+  }
+
+  function ensureKanbanFilterNav(navShell) {
+    if (!navShell) return null;
+
+    let frameWrap = navShell.querySelector(':scope > .mytasks-native-tasks-nav__frame');
+    const iframe = findNativeTasksIframe(navShell);
+
+    if (iframe && !frameWrap) {
+      frameWrap = document.createElement('div');
+      frameWrap.className = 'mytasks-native-tasks-nav__frame';
+      navShell.insertBefore(frameWrap, iframe);
+      frameWrap.appendChild(iframe);
+    }
+
+    let filterNav = navShell.querySelector(':scope > .mytasks-filter-nav');
+    if (filterNav && (
+      !filterNav.querySelector('[data-filter-list="primary"]')
+      || !filterNav.querySelector('[data-nav-create]')
+    )) {
+      filterNav.remove();
+      filterNav = null;
+      kanbanFilterNavWired = false;
+    }
+
+    if (!filterNav) {
+      const template = document.createElement('template');
+      template.innerHTML = buildKanbanFilterNavMarkup();
+      filterNav = template.content.firstElementChild;
+      if (!filterNav) return null;
+      if (frameWrap) {
+        navShell.insertBefore(filterNav, frameWrap);
+      } else {
+        navShell.appendChild(filterNav);
+      }
+      wireKanbanFilterNav(filterNav);
+    } else if (frameWrap && filterNav.compareDocumentPosition(frameWrap) & Node.DOCUMENT_POSITION_PRECEDING) {
+      navShell.insertBefore(filterNav, frameWrap);
+    }
+
+    void loadKanbanState().then((state) => {
+      renderKanbanFilterNav(filterNav, state);
+    });
+
+    return filterNav;
+  }
+
   function ensureNativeTasksNavShell(host) {
     if (!host) return null;
 
@@ -6082,6 +6993,7 @@
     }
 
     restoreNativeTasksIframe(navShell);
+    ensureKanbanFilterNav(navShell);
     return navShell;
   }
 
@@ -6213,7 +7125,10 @@
     }
 
     if (event.data.type === 'MYTASKS_NATIVE_LIST') {
-      setKanbanActiveList(root, event.data.listId || 'all');
+      const listId = event.data.listId || 'all';
+      if (listId === 'all') {
+        clearAllKanbanFilters(root);
+      }
     }
   }
 
@@ -6399,6 +7314,63 @@
       return matcher?.id || null;
     };
 
+    const isEmbedCreateControl = (label) => (
+      (/\b(create|add)\b/i.test(label) && /\b(task|list)\b/i.test(label))
+      && !/\bcreate\s+new\s+list\b/i.test(label)
+    );
+
+    const hideEmbedNativeSidebar = () => {
+      const hideEmbedNavElement = (el) => {
+        if (!(el instanceof Element)) return;
+        el.setAttribute('data-mytasks-embed-nav-hidden', 'true');
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+      };
+
+      document.querySelectorAll('[data-mytasks-embed-nav="true"]').forEach((el) => {
+        hideEmbedNavElement(el);
+      });
+
+      document.querySelectorAll('button, [role="button"], a, [role="menuitem"], li, [role="listitem"]').forEach((el) => {
+        if (!(el instanceof Element)) return;
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || !rect.height || rect.left > 280) return;
+
+        const label = getControlLabel(el);
+        if (isEmbedCreateControl(label)
+          || /^\s*lists?\s*$/i.test(label)
+          || isAllTasksNavLabel(label)
+          || isStarredNavLabel(label)
+          || /\bcreate\s+new\s+list\b/i.test(label)
+          || /\bmy\s+tasks?\b/i.test(label)
+          || (matchListId(label) && matchListId(label) !== 'all')) {
+          hideEmbedNavElement(el);
+        }
+      });
+
+      document.querySelectorAll('div, section, nav, ul, li, h1, h2, h3, h4, span').forEach((el) => {
+        if (!(el instanceof Element)) return;
+        if (el.getAttribute('data-mytasks-embed-nav-hidden') === 'true') return;
+
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || !rect.height || rect.left > 280 || rect.top > 320) return;
+
+        const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!text || text.length > 120) return;
+
+        if (/^\s*lists?\s*$/i.test(text)
+          || isAllTasksNavLabel(text)
+          || isStarredNavLabel(text)
+          || /\bcreate\s+new\s+list\b/i.test(text)
+          || /\bmy\s+tasks?\b/i.test(text)
+          || /^\+?\s*create\s*$/i.test(text)
+          || isEmbedCreateControl(text)) {
+          hideEmbedNavElement(el);
+        }
+      });
+    };
+
     const hideEmbedTaskPane = () => {
       document.querySelectorAll('[role="main"], main, [role="region"]').forEach((el) => {
         if (!(el instanceof Element)) return;
@@ -6420,6 +7392,25 @@
           el.setAttribute('data-mytasks-embed-nav', 'true');
         }
       });
+
+      hideEmbedNativeSidebar();
+    };
+
+    const injectEmbedNavStyles = () => {
+      if (document.getElementById('gp-embed-nav-styles')) return;
+      const style = document.createElement('style');
+      style.id = 'gp-embed-nav-styles';
+      style.textContent = `
+        [data-mytasks-embed-nav-hidden="true"],
+        [data-mytasks-embed-list-hidden="true"] {
+          display: none !important;
+          visibility: hidden !important;
+          height: 0 !important;
+          overflow: hidden !important;
+          pointer-events: none !important;
+        }
+      `;
+      document.documentElement.appendChild(style);
     };
 
     document.addEventListener('click', (event) => {
@@ -6455,16 +7446,16 @@
       }
 
       const listId = matchListId(label);
-      if (listId) {
+      if (listId && listId !== 'all') {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        postToParent({ type: 'MYTASKS_NATIVE_LIST', listId });
       }
     }, true);
 
     const embedObserver = new MutationObserver(() => {
       hideEmbedTaskPane();
+      hideEmbedNativeSidebar();
       syncEmbedNavSelection();
     });
 
@@ -6475,7 +7466,9 @@
       attributeFilter: ['hidden', 'aria-hidden', 'class', 'style', 'aria-selected', 'aria-current', 'aria-pressed'],
     });
 
+    injectEmbedNavStyles();
     hideEmbedTaskPane();
+    hideEmbedNativeSidebar();
     syncEmbedNavSelection();
   }
 
@@ -6601,6 +7594,7 @@
   }
 
   async function bootstrapCalendarTasksUi() {
+    primeKanbanFiltersFromLocalStorage();
     await maybeClearKanbanBoardStorageOnce();
     ensureGlobalTaskModals();
     setupNativeTasksFrameBridge();
