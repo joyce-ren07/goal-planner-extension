@@ -8954,8 +8954,8 @@
 
           let slotIdx = readChipSlotIndexFromDataset(chip, allowed.length);
           if (slotIdx < 0) slotIdx = resolveDomSlotIndexFromGoalRow(slotGoalRow, storageKey);
-          if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, slotGoalRow, legacyGoals);
           if (slotIdx < 0) slotIdx = resolveSlotIndexByAnchorTime(chip, slotGoalRow);
+          if (slotIdx < 0) slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, slotGoalRow, legacyGoals);
           if (slotIdx < 0) {
             slotIdx = await resolveSlotIndexForGoalToggle(
               chip,
