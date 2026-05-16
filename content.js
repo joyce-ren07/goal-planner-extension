@@ -4951,9 +4951,11 @@
         if (
           LABEL_RE.test(sample) &&
           r.width >= 200 &&
+          r.width <= gpGdMaxInspectorCardWidth() &&
           r.height >= hMin &&
           r.bottom > 40 &&
-          r.right > 80
+          r.right > 80 &&
+          !gpGdIsCalendarGridContainer(cur)
         ) {
           best = cur;
         }
