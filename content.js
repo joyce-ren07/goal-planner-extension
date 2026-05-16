@@ -6595,14 +6595,20 @@
     }
     if (existing?.isConnected && existing.dataset.gpGoalId === goalId) {
       const shell = resolvedShell;
-      if (shell instanceof HTMLElement) gpGdStabilizeBlockPlacement(existing, shell);
-      gpGdRefreshDetailSubtasks(existing, hit);
-      gpGdEnsureDetailDelegates(existing, hit);
-      __gpGdBlockEl = existing;
-      _gpGdHydrateQuietUntil = Date.now() + 6000;
-      _gpGdRemountCount = 0;
-      gpGdMarkDetailScanActive(12000);
-      return existing;
+      if (shell instanceof HTMLElement && gpGdBlockInCurrentEventPopup(existing, shell, goal?.title)) {
+        existing.dataset.gpDomEventId = String(tokenHint || sess?.eventId || '');
+        existing.dataset.gpSessionEventId = String(sess?.eventId ?? '');
+        gpGdStabilizeBlockPlacement(existing, shell);
+        gpGdRefreshDetailSubtasks(existing, hit);
+        gpGdEnsureDetailDelegates(existing, hit);
+        __gpGdBlockEl = existing;
+        _gpGdHydrateQuietUntil = Date.now() + 6000;
+        _gpGdRemountCount = 0;
+        gpGdMarkDetailScanActive(12000);
+        return existing;
+      }
+      teardownGpGdBlock();
+      _gpGdPlacementLocked = false;
     }
     if (existing?.isConnected) teardownGpGdBlock();
     gpGdTrace('render start', token, goalId);
