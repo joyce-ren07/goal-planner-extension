@@ -6921,7 +6921,7 @@
       Date.now() < _gpGdHydrateQuietUntil &&
       existingEarly?.isConnected &&
       existingEarly?.dataset?.gpGoalId &&
-      gpGdBlockInFrontInspector(existingEarly, _gpGdPinnedTitleHint)
+      gpGdDetailBlockReady(_gpGdPinnedTitleHint)
     ) {
       return;
     }
