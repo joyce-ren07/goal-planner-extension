@@ -506,13 +506,14 @@
     };
   }
 
-  let _ghostPrevDebounceT = 0;
+  /** Coalesce rapid updates into one animation frame — no intentional extra latency. */
+  let _ghostPreviewFlushRaf = 0;
   function scheduleGhostPreviewRefreshDebounced() {
-    if (_ghostPrevDebounceT) clearTimeout(_ghostPrevDebounceT);
-    _ghostPrevDebounceT = setTimeout(() => {
-      _ghostPrevDebounceT = 0;
+    if (_ghostPreviewFlushRaf) cancelAnimationFrame(_ghostPreviewFlushRaf);
+    _ghostPreviewFlushRaf = requestAnimationFrame(() => {
+      _ghostPreviewFlushRaf = 0;
       renderGhostEvents();
-    }, 48);
+    });
   }
 
   /**
@@ -521,9 +522,9 @@
    * still need those for Calendar POST must retain them separately from `clearGoalCreationPreview`.
    */
   function cancelDebouncedGhostPreviewAndRemoveLayers() {
-    if (_ghostPrevDebounceT) {
-      clearTimeout(_ghostPrevDebounceT);
-      _ghostPrevDebounceT = 0;
+    if (_ghostPreviewFlushRaf) {
+      cancelAnimationFrame(_ghostPreviewFlushRaf);
+      _ghostPreviewFlushRaf = 0;
     }
     removeGhostEvents();
   }
