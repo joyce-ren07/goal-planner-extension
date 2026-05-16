@@ -4777,6 +4777,7 @@
       _gpGdHydrateQuietUntil = Date.now() + 15000;
       _gpGdRemountCount = 0;
       gpGdMarkDetailScanActive(15000);
+      gpGdRevealOpenDetailUi();
     } finally {
       window.setTimeout(() => {
         _gpGdMutatingDetailUi = false;
