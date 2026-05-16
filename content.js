@@ -5862,7 +5862,11 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          if (gpGdIsGoalBlockVisible(ext)) return;
+          gpGdAlignInjectedBlockToCard(ext, dialogShell);
+          if (gpGdIsGoalBlockVisible(ext)) {
+            _gpGdHydrateQuietUntil = Date.now() + 6000;
+            return;
+          }
         }
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
       }, 220);
