@@ -1411,8 +1411,7 @@
   margin-top: 10px;
 }
 
-#gp-gcal-detail-goal-extension .gp-gd-session-list-caption,
-#gp-gcal-detail-goal-extension .gp-gd-subtasks-cap {
+#gp-gcal-detail-goal-extension .gp-gd-session-list-caption {
   font-size: 11px;
   font-weight: 500;
   line-height: 16px;
