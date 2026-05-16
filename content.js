@@ -6846,47 +6846,11 @@
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
-      gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      if (!gpGdIsGoalBlockVisible(existing)) {
-        gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      }
-      if (gpGdIsGoalBlockVisible(existing) || gpGdIsGoalBlockPainted(existing)) {
-        gpGdRefreshDetailSubtasks(existing, hit);
-        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
-        if (keepCard instanceof HTMLElement) {
-          if (!gpGdGetDetailMarkCompleteBtn()) {
-            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
-          } else {
-            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
-          }
-        }
-        gpGdEnsureDetailDelegates(existing, hit);
-        _gpGdHydrateQuietUntil = Date.now() + 12000;
-        _gpGdRemountCount = 0;
-        gpGdMarkDetailScanActive(12000);
-        return existing;
-      }
-      const remountKey = goalId + '|' + token;
-      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
-        gpGdTrace('remount capped — keep last block', goalId);
-        gpGdRefreshDetailSubtasks(existing, hit);
-        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
-        if (keepCard instanceof HTMLElement) {
-          if (!gpGdGetDetailMarkCompleteBtn()) {
-            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
-          } else {
-            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
-          }
-        }
-        gpGdEnsureDetailDelegates(existing, hit);
-        _gpGdHydrateQuietUntil = Date.now() + 12000;
-        return existing;
-      }
-      _gpGdRemountGoalKey = remountKey;
-      _gpGdRemountCount += 1;
-      gpGdTrace('remount (block not visible)', goalId);
-      teardownGpGdBlock();
-    } else {
+      gpGdStabilizeMountedDetailBlock(existing, dialogShell, hit);
+      gpGdMarkDetailScanActive(15000);
+      return existing;
+    }
+    if (existing?.isConnected) {
       teardownGpGdBlock();
     }
     gpGdTrace('render start', token, goalId);
@@ -6897,6 +6861,7 @@
         dialogShell,
         '#gp-gcal-detail-goal-extension, #gp-gcal-detail-mark-footer'
       )) {
+        if (n === __gpGdBlockEl || n === __gpGdMarkFooterEl) continue;
         try {
           n.remove();
         } catch (_) {
