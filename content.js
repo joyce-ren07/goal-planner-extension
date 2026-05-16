@@ -5351,6 +5351,7 @@
   /** When mount parent is a wide flex row, shift goal block into the white card column. */
   function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
     if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    if (gpGdIsCalendarGridContainer(wrap.parentElement)) return false;
     const card = gpGdFindEventDetailCardRoot(dialogShell);
     if (!(card instanceof HTMLElement)) return false;
     const cr = card.getBoundingClientRect();
