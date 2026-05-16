@@ -126,7 +126,7 @@
       if (r.height < 120) continue;
       /** When the week fits the viewport, scrollHeight ≈ clientHeight — still a valid grid shell. */
       if (el.scrollHeight > el.clientHeight + 20) return el;
-      if (sel === '.FtZfle' || sel === '.M7Vc1b') return el;
+      if (sel === '.FtZfle' || sel === '.M7Vc1b' || sel === '.ZCaJde') return el;
     }
     for (const el of document.querySelectorAll('div')) {
       if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay')) continue;
