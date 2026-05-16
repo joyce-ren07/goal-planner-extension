@@ -6710,8 +6710,12 @@
 
     /** Prefer inner card-sized shells — drop full-viewport overlay ancestors. */
     natives.sort((a, b) => {
-      const ca = gpGdFindEventDetailCardRoot(a).getBoundingClientRect().width;
-      const cb = gpGdFindEventDetailCardRoot(b).getBoundingClientRect().width;
+      const ca =
+        gpGdFindEventDetailCardRoot(a)?.getBoundingClientRect?.()?.width ??
+        a.getBoundingClientRect().width + 2000;
+      const cb =
+        gpGdFindEventDetailCardRoot(b)?.getBoundingClientRect?.()?.width ??
+        b.getBoundingClientRect().width + 2000;
       const scoreA = ca >= 220 && ca <= 700 ? ca : a.getBoundingClientRect().width + 2000;
       const scoreB = cb >= 220 && cb <= 700 ? cb : b.getBoundingClientRect().width + 2000;
       return scoreA - scoreB;
