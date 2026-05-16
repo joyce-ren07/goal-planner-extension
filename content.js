@@ -5463,12 +5463,13 @@
 
     const existing = __gpGdBlockEl;
     if (
-      existing?.isConnected &&
+      gpGdIsGoalBlockVisible(existing) &&
       existing.dataset.gpGoalId === goalId &&
       existing.dataset.gpEventToken === token &&
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
+      gpGdAlignInjectedBlockToCard(existing, dialogShell);
       return existing;
     }
 
