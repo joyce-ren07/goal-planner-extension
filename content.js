@@ -5154,11 +5154,12 @@
   }
 
   function scheduleGpGdInspectorOpenBurst() {
-    const gen = ++_gpGdOpenBurstGen;
-    gpGdMarkDetailScanActive(15000);
-    for (const ms of [0, 180, 450, 900]) {
+    gpGdMarkDetailScanActive(18000);
+    const delays = [0, 16, 40, 80, 140, 220, 340, 500, 720, 1000, 1400, 2000, 2800];
+    for (const ms of delays) {
       window.setTimeout(() => {
-        if (gen !== _gpGdOpenBurstGen) return;
+        if (!gpGdShouldRunDetailScan()) return;
+        if (gpGdDetailBlockReady()) return;
         scheduleGpGdDialogScan();
       }, ms);
     }
