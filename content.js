@@ -9110,6 +9110,21 @@
       let primed = false;
       let touched = false;
       for (const m of mutations) {
+        if (m.type === 'attributes' && m.target instanceof HTMLElement) {
+          const t = m.target;
+          if (
+            t.matches('[data-eventid]') &&
+            (m.attributeName === 'aria-label' ||
+              m.attributeName === 'data-tooltip' ||
+              m.attributeName === 'title') &&
+            eventContainerLooksLikeGoal(t)
+          ) {
+            touched = true;
+            t.querySelectorAll('[data-eventchip]').forEach((chip) => {
+              if (primeGoalChipInstant(chip)) primed = true;
+            });
+          }
+        }
         if (m.type === 'childList') {
           forEachGoalChipCandidateInNodeList(m.addedNodes, (chip) => {
             touched = true;
