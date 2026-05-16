@@ -6577,6 +6577,14 @@
       }
       if (gpGdIsGoalBlockVisible(existing) || gpGdIsGoalBlockPainted(existing)) {
         gpGdRefreshDetailSubtasks(existing, hit);
+        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
+        if (keepCard instanceof HTMLElement) {
+          if (!gpGdGetDetailMarkCompleteBtn()) {
+            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
+          } else {
+            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
+          }
+        }
         gpGdEnsureDetailDelegates(existing, hit);
         _gpGdHydrateQuietUntil = Date.now() + 12000;
         _gpGdRemountCount = 0;
