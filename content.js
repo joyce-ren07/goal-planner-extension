@@ -6461,6 +6461,7 @@
     if (!natives.length) {
       if (pinnedRaw.length) {
         gpGdTrace('no inspector host yet — will retry', pinnedRaw[0]);
+        scheduleGpGdDialogScan();
         return;
       }
       teardownGpGdBlock();
