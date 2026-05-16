@@ -845,6 +845,7 @@
     setupCalendarCreateMenuGoalItem();
     setupMyGoalsSidebarStorageSync();
     setupGoalsSidebarReactiveBinding();
+    setupGpCalGoalDetailEnrichment();
     setupLeftSidebarGoalsMountObserver();
     renderHomeScreen();
     scheduleLeftSidebarGoalsMountAttempts();
