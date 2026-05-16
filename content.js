@@ -4796,7 +4796,7 @@
       ext.isConnected &&
       typeof ext.matches === 'function' &&
       ext.matches(':focus-within') &&
-      ext.querySelector('.gp-gd-subtasks.gp-gd-subtasks--editing')
+      ext.querySelector('.gp-gd-st-compose:not([hidden])')
     ) {
       _gpGdDetailRefreshTimer = setTimeout(() => {
         gpGdAttemptUnifiedEchoHydrate();
