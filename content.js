@@ -8834,19 +8834,16 @@
     }, { capture: true });
   }
 
-  function processGoalChips() {
-    chrome.storage.local.get(['gp_chip_done'], async (data) => {
-      const doneMap = data.gp_chip_done || {};
-      const goals   = await getGoals();
+  function decorateOneGoalChip(chip, doneMap, goals) {
+    if (!isGoalCalendarChip(chip)) return;
 
-      document.querySelectorAll('[data-eventchip]').forEach(chip => {
-        if (!chip.textContent.includes('🎯')) return;
+    primeGoalChipInstant(chip);
 
-        // Dedup guard — inner structure already injected; sync done state and
-        // re-bound the chip height in case GCal reflowed (e.g. window resize,
-        // navigation, panel open/close changes column widths).
-        if (!chip.classList.contains('ext-goal-chip')) chip.classList.add('ext-goal-chip');
-        if (chip.querySelector('.ext-goal-root')) {
+    // Dedup guard — inner structure already injected; sync done state and
+    // re-bound the chip height in case GCal reflowed (e.g. window resize,
+    // navigation, panel open/close changes column widths).
+    if (!chip.classList.contains('ext-goal-chip')) chip.classList.add('ext-goal-chip');
+    if (chip.querySelector('.ext-goal-root:not(.ext-goal-root--prime)')) {
           boundChipHeight(chip);
           const eidAttr = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
           const prevDatasetKey = chip.dataset.gpChipKey;
