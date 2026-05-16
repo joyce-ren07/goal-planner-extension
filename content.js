@@ -6513,7 +6513,7 @@
       gpGdTrace('abort render — card root is calendar grid');
       return null;
     }
-    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(cardRoot);
+    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell);
     if (gpGdIsCalendarGridContainer(mountParent)) {
       gpGdTrace('abort render — mount parent is calendar grid');
       return null;
