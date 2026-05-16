@@ -6693,7 +6693,8 @@
     gpGdEnsureDetailDelegates(wrap, hit);
     const ok = gpGdIsGoalBlockVisible(wrap);
     if (ok) {
-      _gpGdHydrateQuietUntil = Date.now() + 4000;
+      _gpGdPlacementLocked = true;
+      _gpGdHydrateQuietUntil = Date.now() + 6000;
       _gpGdRemountCount = 0;
       gpGdMarkDetailScanActive(12000);
     }
