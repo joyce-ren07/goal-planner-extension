@@ -7179,45 +7179,20 @@
    * (same storage + sidebar path as GoalInteractionController.toggleCompletion).
    */
   async function gpGdPersistSessionMarkedComplete(wrapHost, hit) {
-    const goalId = String(wrapHost?.dataset?.gpGoalId ?? hit?.goal?.id ?? '').trim();
-    const storageKey = String(
-      wrapHost?.dataset?.gpSessionEventId ?? hit?.session?.eventId ?? ''
-    ).trim();
-    if (!goalId) return false;
+    const keys = await gpGdResolvePopupSessionKeys(wrapHost, hit);
+    if (!keys) return false;
 
-    const d = await new Promise((resolve) =>
-      chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], resolve)
-    );
-    const legacyGoals = Array.isArray(d.gp_goals) ? d.gp_goals : [];
-    const goalRow = legacyGoals.find((g) => String(g.id) === goalId);
-    if (!goalRow) return false;
-
+    const {
+      goalId,
+      storageKey,
+      slotIdx,
+      plannerEventId,
+      goalRow,
+      legacyGoals,
+      chipDoneSnapshot,
+      slotPackPrev,
+    } = keys;
     const allowed = goalRow.calEventIds || [];
-    let slotIdx = typeof hit?.sIdx === 'number' && hit.sIdx >= 0 ? hit.sIdx : -1;
-    if (slotIdx < 0 && String(_gpGdPinnedGoalId) === goalId && _gpGdPinnedSlotIdx >= 0) {
-      slotIdx = _gpGdPinnedSlotIdx;
-    }
-    if (slotIdx < 0 && storageKey) {
-      slotIdx = allowed.findIndex(
-        (id) =>
-          gpChipDoneKeyMatchesCalEventId(storageKey, id) || String(id) === storageKey
-      );
-    }
-
-    let plannerEventId = '';
-    if (slotIdx >= 0 && slotIdx < allowed.length) plannerEventId = String(allowed[slotIdx]);
-    else if (storageKey) plannerEventId = storageKey;
-    else if (allowed.length === 1) {
-      slotIdx = 0;
-      plannerEventId = String(allowed[0]);
-    }
-    if (!plannerEventId) return false;
-
-    const chipDoneSnapshot = { ...(d.gp_chip_done || {}) };
-    const slotPackPrev =
-      d.gp_goal_slot_done && typeof d.gp_goal_slot_done === 'object'
-        ? { ...d.gp_goal_slot_done }
-        : {};
 
     const mirrorKeys = mirrorGpChipDoneKeysForSession(plannerEventId, allowed);
     const map = { ...chipDoneSnapshot };
