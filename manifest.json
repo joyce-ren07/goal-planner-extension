@@ -16,11 +16,6 @@
   "content_scripts": [
     {
       "matches": ["https://calendar.google.com/*"],
-      "css": ["goal-chip-flash-guard.css"],
-      "run_at": "document_start"
-    },
-    {
-      "matches": ["https://calendar.google.com/*"],
       "js": ["goalModel.js", "goalCalendarSync.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
