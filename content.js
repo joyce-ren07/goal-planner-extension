@@ -7248,7 +7248,7 @@
     });
   }
 
-  /** Mark current session completed (chip toggle or storage fallback), then dismiss native detail UI. */
+  /** Mark current session completed from popup (storage + sidebar; grid chip optional). */
   async function gpGdMarkSessionDoneAndDismiss(wrapHost, hit) {
     const btn = gpGdGetDetailMarkCompleteBtn();
     if (!(btn instanceof HTMLButtonElement)) return;
@@ -7257,43 +7257,30 @@
       return;
     }
 
-    const raw = String(wrapHost.dataset.gpSessionEventId ?? hit?.session?.eventId ?? '').trim();
-    let chip = raw ? gpFindChipForPlannerEventFlexible(raw) : null;
-    if (!chip && raw) {
-      for (const h of gpGdConsumePinnedSessionHints()) {
-        if (h && h !== raw) {
-          chip = gpFindChipForPlannerEventFlexible(h);
-          if (chip) break;
-        }
-      }
-    }
-    if (!chip) {
-      const gid = String(wrapHost.dataset.gpGoalId ?? hit?.goal?.id ?? '');
-      const goals = await getGoals();
-      const row = goals.find((g) => String(g.id) === gid);
-      for (const id of row?.calEventIds || []) {
-        chip = gpFindChipForPlannerEventFlexible(String(id));
-        if (chip) break;
-      }
+    const ctx = await gpGdResolvePopupSessionContext(
+      wrapHost,
+      hit || gpGdDetailHitFromWrap(wrapHost)
+    );
+    if (!ctx.goalId || !ctx.goalRow) {
+      alert('Could not find this goal session. Reopen the event from a goal chip on your calendar.');
+      return;
     }
 
-    if (chip && !chip.classList.contains('ext-goal-completed')) {
-      const domKey =
-        chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || raw;
-      GoalInteractionController.toggleCompletion(domKey, chip);
-    } else if (!chip) {
-      const ok = await gpGdPersistSessionMarkedComplete(wrapHost, hit || gpGdDetailHitFromWrap(wrapHost));
-      if (!ok) {
-        alert(
-          'Could not mark this session complete — open the matching goal event on the calendar grid and use its checkbox, or try again after the event loads.'
-        );
-        return;
-      }
-      gpGdSyncMarkCompleteButton(true);
-    } else {
-      gpGdSyncMarkCompleteButton(true);
+    const ok = await gpGdPersistSessionMarkedComplete(wrapHost, ctx);
+    if (!ok) {
+      alert('Could not mark this session complete. Try again after the calendar finishes loading.');
+      return;
     }
 
+    for (const h of ctx.hints || []) {
+      const chip = gpFindChipForPlannerEventFlexible(h);
+      if (chip && !chip.classList.contains('ext-goal-completed')) {
+        GoalInteractionController.applyGoalSessionCompletionUI(chip, true);
+      }
+    }
+    gpGdApplyCompletionUiForGoalSession(ctx.goalId, ctx.plannerEventId, ctx.storageKey);
+
+    gpGdSyncMarkCompleteButton(true);
     scheduleGpGdFromUnifiedEcho();
     gpGdCloseNativeEventPopover(wrapHost);
   }
