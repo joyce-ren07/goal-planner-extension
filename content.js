@@ -5016,6 +5016,9 @@
   let _gpGdLastOpenGestureAt = 0;
   let _gpGdInspectorOpenWatchUntil = 0;
   let _gpGdInspectorOpenWatchMo = /** @type {MutationObserver | null} */ (null);
+  let _gpGdPinnedTitleHint = '';
+  let _gpGdUnifiedCache = /** @type {object | null} */ (null);
+  let _gpGdUnifiedCacheAt = 0;
 
   function gpGdMarkDetailScanActive(ms) {
     _gpGdDetailScanActiveUntil = Date.now() + (ms || 12000);
