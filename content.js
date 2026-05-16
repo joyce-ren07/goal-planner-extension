@@ -4926,7 +4926,7 @@
           <div class="gp-gd-st-compose" hidden>
             <input type="text" class="gp-gd-st-new-inp" maxlength="400" autocomplete="off" aria-label="New task title" />
           </div>
-          <div class="gp-gd-st-tail-after" role="presentation" tabindex="0" data-gp-detail-act="sub-tail" aria-label="Add a task"></div>
+          <div class="gp-gd-st-tail-after" role="button" tabindex="0" data-gp-detail-act="sub-tail" aria-label="Add a task"></div>
         </div>
       </div>
       <button type="button" class="gp-gd-mark-complete${sessDone ? ' gp-gd-mark-complete--done' : ''}" data-gp-detail-act="mark-session-complete"${sessDone ? ' disabled' : ''}>Mark completed</button>
