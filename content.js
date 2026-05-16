@@ -4773,7 +4773,7 @@
     /** Secondary: anchored popovers lacking role=dialog — still scoped to transient UI shells. */
     for (const el of gpGdQuerySelectorAllDeep(html, '[role="presentation"]')) {
       if (!(el instanceof HTMLElement)) continue;
-      if (!document.body.contains(el) && !(el.offsetParent ?? el.offsetWidth)) continue;
+      if (!el.isConnected) continue;
       if (el.closest('#gp-panel, #gp-recurrence-overlay')) continue;
       if (!gpGdQuerySelectorAllDeep(el, '[data-eventid]').length) continue;
       const rr = el.getBoundingClientRect();
