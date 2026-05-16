@@ -6097,7 +6097,7 @@
 
     const placementOk = () => {
       gpGdAlignInjectedBlockToCard(wrap, shell);
-      return gpGdIsGoalBlockWellPlaced(wrap, shell);
+      return gpGdIsGoalBlockWellPlaced(wrap, shell, false);
     };
 
     if (!tryMount(mountParent, insertBefore) && cardRoot instanceof HTMLElement) {
