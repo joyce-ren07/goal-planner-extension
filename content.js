@@ -5308,8 +5308,10 @@
 
   function gpGdShouldRunDetailScan() {
     if (__gpGdBlockEl?.isConnected) return true;
-    if (Date.now() < _gpGdDetailScanActiveUntil) return true;
-    if (Date.now() - _gpGdPinnedAt < 12000 && _gpGdPinnedHints.length) return true;
+    if (gpGdHasRecentGoalChipOpenIntent()) {
+      if (Date.now() < _gpGdDetailScanActiveUntil) return true;
+      if (Date.now() - _gpGdPinnedAt < 12000) return true;
+    }
     return false;
   }
 
