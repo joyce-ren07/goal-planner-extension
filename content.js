@@ -6172,9 +6172,12 @@
     _gpGdDialogRepairObservers.set(dialogShell, mo);
   }
 
-  /** Whether a goal subtask row is completed (supports legacy `done`). */
+  /** Whether a goal subtask row is completed (explicit `completed` / legacy `done` only). */
   function gpSubtaskIsCompleted(st) {
-    return !!(st && (st.completed || st.done));
+    if (!st || typeof st !== 'object') return false;
+    if (st.completed === true) return true;
+    if (st.done === true) return true;
+    return false;
   }
 
   /** Normalize subtasks for gp_goals + unified mirror: `{ id, title, completed }` only. */
@@ -6182,7 +6185,7 @@
     return [...(Array.isArray(raw) ? raw : [])].map((x) => ({
       id: String(x?.id ?? '').trim() || `sub_${generateId().slice(-10)}`,
       title: typeof x.title === 'string' ? x.title.slice(0, 400) : String(x.title || '').slice(0, 400),
-      completed: !!(x.completed || x.done),
+      completed: gpSubtaskIsCompleted(x),
     }));
   }
 
