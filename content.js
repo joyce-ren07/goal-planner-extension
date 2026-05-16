@@ -6385,7 +6385,16 @@
       if (rendered) return;
       return;
     }
-    teardownGpGdBlock();
+
+    const keep = __gpGdBlockEl;
+    if (
+      keep?.isConnected &&
+      gpGdIsGoalBlockVisible(keep) &&
+      (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length)
+    ) {
+      return;
+    }
+    if (!pinnedRaw.length) teardownGpGdBlock();
     if (hints.length) gpGdTrace('no unified session match', hints.slice(0, 3));
   }
 
