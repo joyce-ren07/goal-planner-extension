@@ -6781,6 +6781,13 @@
       return null;
     }
     const cardRoot = gpGdResolveInspectorCardRoot(shell, goal?.title);
+    if (
+      gpGdIsGoalPlannerExtensionSurface(cardRoot) ||
+      gpGdIsGoalPlannerExtensionSurface(shell)
+    ) {
+      gpGdTrace('abort render — extension chrome card');
+      return null;
+    }
     if (!(cardRoot instanceof HTMLElement) || gpGdIsWeekGridMountSurface(cardRoot)) {
       gpGdTrace('abort render — no narrow inspector card');
       gpGdDiag('inject: abort — card root missing or grid surface', {
