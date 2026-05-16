@@ -6466,67 +6466,23 @@
     const subtasks = gpGdSubtasksWithTitles(goal);
 
     const existing = __gpGdBlockEl;
-    const frontInspector = gpGdFindOpenInspectorNearClick(goal?.title) || gpGdFindFrontGoalInspector(goal?.title);
-    if (
-      existing?.isConnected &&
-      existing.dataset.gpGoalId === goalId &&
-      frontInspector instanceof HTMLElement &&
-      !gpGdComposedSubtreeContains(frontInspector, existing)
-    ) {
-      const { mountParent: mp, insertBefore: ib } = gpGdResolveGoalInjectionMount(frontInspector);
-      let moved = false;
-      if (mp instanceof HTMLElement && mp.isConnected) {
-        try {
-          if (ib instanceof HTMLElement && gpGdComposedSubtreeContains(mp, ib)) {
-            mp.insertBefore(existing, ib);
-          } else {
-            mp.appendChild(existing);
-          }
-          gpGdReparentBlockIntoScrollColumn(existing, frontInspector);
-          gpGdRefreshDetailSubtasks(existing, hit);
-          gpGdEnsureDetailDelegates(existing, hit);
-          __gpGdBlockEl = existing;
-          _gpGdHydrateQuietUntil = Date.now() + 4000;
-          moved = gpGdIsGoalBlockVisible(existing);
-        } catch (_) {
-          moved = false;
-        }
-      }
-      if (moved) {
-        gpGdTrace('reparented block into front inspector', goalId);
-        return existing;
-      }
-      gpGdTrace('block in stale inspector clone — remounting', goalId);
-      teardownGpGdBlock();
-    } else if (
-      existing?.isConnected &&
-      existing.dataset.gpGoalId === goalId &&
-      dialogShell instanceof HTMLElement &&
-      gpGdComposedSubtreeContains(dialogShell, existing)
-    ) {
-      gpGdReparentBlockIntoScrollColumn(existing, dialogShell);
-      if (gpGdIsGoalBlockVisible(existing) && gpGdBlockInFrontInspector(existing, goal?.title)) {
-        gpGdRefreshDetailSubtasks(existing, hit);
-        gpGdEnsureDetailDelegates(existing, hit);
-        _gpGdHydrateQuietUntil = Date.now() + 4000;
-        _gpGdRemountCount = 0;
-        gpGdMarkDetailScanActive(12000);
-        return existing;
-      }
-      const remountKey = goalId + '|' + token;
-      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
-        gpGdTrace('remount capped — keep last block', goalId);
-        gpGdRefreshDetailSubtasks(existing, hit);
-        gpGdEnsureDetailDelegates(existing, hit);
-        return existing;
-      }
-      _gpGdRemountGoalKey = remountKey;
-      _gpGdRemountCount += 1;
-      gpGdTrace('remount (block not visible)', goalId);
-      teardownGpGdBlock();
-    } else {
-      teardownGpGdBlock();
+    const frontInspector =
+      gpGdFindOpenInspectorNearClick(goal?.title) ||
+      gpGdFindFrontGoalInspector(goal?.title) ||
+      (dialogShell instanceof HTMLElement ? dialogShell : null);
+    if (existing?.isConnected && existing.dataset.gpGoalId === goalId) {
+      const shell =
+        frontInspector instanceof HTMLElement ? frontInspector : dialogShell;
+      if (shell instanceof HTMLElement) gpGdStabilizeBlockPlacement(existing, shell);
+      gpGdRefreshDetailSubtasks(existing, hit);
+      gpGdEnsureDetailDelegates(existing, hit);
+      __gpGdBlockEl = existing;
+      _gpGdHydrateQuietUntil = Date.now() + 6000;
+      _gpGdRemountCount = 0;
+      gpGdMarkDetailScanActive(12000);
+      return existing;
     }
+    if (existing?.isConnected) teardownGpGdBlock();
     gpGdTrace('render start', token, goalId);
 
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
