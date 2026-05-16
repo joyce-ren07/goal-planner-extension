@@ -6886,7 +6886,10 @@
 
     __gpGdBlockEl = wrap;
     gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sess.completed), cardRoot);
-    if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
+    if (dialogShell instanceof HTMLElement) {
+      gpGdAlignMarkFooterToCard(dialogShell);
+      gpGdEnsureDialogRepairObserver(dialogShell);
+    }
     gpGdEnsureDetailDelegates(wrap, hit);
     const ok = placed;
     if (ok) {
