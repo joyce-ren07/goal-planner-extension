@@ -5108,51 +5108,267 @@
     return _gpGdPrefetch;
   }
 
-  function gpGdStopInspectorPinWatch() {
-    if (_gpGdPinWatchMo) {
-      try {
-        _gpGdPinWatchMo.disconnect();
-      } catch (_) {
-        /* ignore */
-      }
+  let _gpGdWaitPoll = 0;
+  let _gpGdWaitGen = 0;
+
+  function gpGdStopWaitForInspector() {
+    if (_gpGdWaitPoll) {
+      window.clearInterval(_gpGdWaitPoll);
+      _gpGdWaitPoll = 0;
     }
-    _gpGdPinWatchMo = null;
-    window.clearTimeout(_gpGdPinWatchDebounce);
-    _gpGdPinWatchDebounce = 0;
   }
 
-  /** While a goal chip open is pending, hydrate as soon as GCal mounts the inspector DOM. */
-  function gpGdStartInspectorPinWatch() {
-    gpGdStopInspectorPinWatch();
-    const until = Date.now() + 4500;
-    _gpGdPinWatchMo = new MutationObserver(() => {
-      if (Date.now() > until) {
-        gpGdStopInspectorPinWatch();
-        return;
+  function gpGdStopInspectorPinWatch() {
+    gpGdStopWaitForInspector();
+  }
+
+  function gpGdIsGoalDetailUiTarget(el) {
+    if (!(el instanceof Element)) return false;
+    return !!el.closest(
+      '#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback, #gp-gcal-detail-goal-extension'
+    );
+  }
+
+  function gpGdIsGoalCheckboxTarget(el) {
+    if (!(el instanceof Element)) return false;
+    return !!el.closest('[data-gp-checkbox], .ext-check-circle, [data-gp-sub-ring], [data-gp-detail-act]');
+  }
+
+  /** Primary: calEventIds / planner event id. Secondary: decorated chip or 🎯 in block text. */
+  function gpGdMatchGoalRowForEventContainer(eventRoot, goals) {
+    if (!(eventRoot instanceof Element) || !Array.isArray(goals)) return null;
+    const domEid = eventRoot.getAttribute('data-eventid')?.trim() || '';
+    if (domEid) {
+      const plannerId = resolvePlannerEventIdForChip(domEid, goals);
+      const gid = legacyGoalIdForPlannerEventCandidates(goals, domEid, plannerId);
+      if (gid) {
+        const row = goals.find((g) => String(g.id) === String(gid));
+        if (row) return { goalRow: row, domEventId: domEid, plannerEventId: plannerId || domEid };
       }
-      if (!gpGdShouldRunDetailScan()) {
-        gpGdStopInspectorPinWatch();
-        return;
+      for (const g of goals) {
+        const hit = (g.calEventIds || []).some(
+          (id) =>
+            id &&
+            (gpChipDoneKeyMatchesCalEventId(String(id), domEid) ||
+              gpChipDoneMirrorStrictPair(String(id), domEid))
+        );
+        if (hit) return { goalRow: g, domEventId: domEid, plannerEventId: plannerId || domEid };
       }
-      if (__gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl)) {
-        gpGdStopInspectorPinWatch();
-        return;
-      }
-      window.clearTimeout(_gpGdPinWatchDebounce);
-      _gpGdPinWatchDebounce = window.setTimeout(() => {
-        gpGdRunDetailHydratePass();
-      }, 10);
-    });
-    try {
-      _gpGdPinWatchMo.observe(document.documentElement || document.body, {
-        subtree: true,
-        childList: true,
-        attributes: true,
-        attributeFilter: ['aria-hidden', 'aria-modal', 'role', 'hidden'],
-      });
-    } catch (_) {
-      gpGdStopInspectorPinWatch();
     }
+    const chip = eventRoot.querySelector('[data-eventchip]');
+    if (chip instanceof HTMLElement) {
+      if (chip.dataset.gpGoalId) {
+        const row = goals.find((g) => String(g.id) === String(chip.dataset.gpGoalId));
+        if (row) {
+          return {
+            goalRow: row,
+            domEventId: domEid,
+            plannerEventId:
+              chip.dataset.gpCalEventId ||
+              chip.dataset.gpChipKey ||
+              resolvePlannerEventIdForChip(domEid, goals) ||
+              domEid,
+          };
+        }
+      }
+      if (gpGdChipLooksLikeGoalSession(chip)) {
+        const row = findLegacyGoalForGoalChip(chip, goals);
+        if (row) {
+          return {
+            goalRow: row,
+            domEventId: domEid,
+            plannerEventId: resolvePlannerEventIdForChip(domEid, goals) || domEid,
+          };
+        }
+      }
+    }
+    const blob = String(eventRoot.textContent || '');
+    if (blob.includes('🎯')) {
+      const row = goals.find((g) => {
+        const t = String(g.title || '').trim();
+        return t && blob.includes(t);
+      });
+      if (row) {
+        return {
+          goalRow: row,
+          domEventId: domEid,
+          plannerEventId: resolvePlannerEventIdForChip(domEid, goals) || domEid,
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {MouseEvent} e
+   * @returns {Promise<{ goalRow: object, domEventId: string, plannerEventId: string, title: string, chip: HTMLElement | null } | null>}
+   */
+  async function gpGdClassifyCalendarGoalClick(e) {
+    const target = e.target;
+    if (!(target instanceof Element)) return null;
+    if (gpGdIsGoalDetailUiTarget(target) || gpGdIsGoalCheckboxTarget(target)) return null;
+
+    const path =
+      typeof e.composedPath === 'function' ? e.composedPath() : [target];
+    let eventRoot = null;
+    let chip = null;
+    for (const n of path) {
+      if (!(n instanceof Element)) continue;
+      if (!eventRoot) {
+        const er = n.closest('[data-eventid]');
+        if (er instanceof HTMLElement) eventRoot = er;
+      }
+      if (!chip) {
+        const ch =
+          n.matches?.('[data-eventchip]') ? n : n.closest?.('[data-eventchip]');
+        if (ch instanceof HTMLElement) chip = ch;
+      }
+    }
+    if (!eventRoot && chip) eventRoot = chip.closest('[data-eventid]');
+    if (!(eventRoot instanceof HTMLElement)) return null;
+
+    gpGdPrefetchDetailData();
+    const pref = await gpGdReadPrefetch();
+    const goals = pref.goals || (await getGoals());
+    const matched = gpGdMatchGoalRowForEventContainer(eventRoot, goals);
+    if (!matched?.goalRow) return null;
+
+    return {
+      goalRow: matched.goalRow,
+      domEventId: matched.domEventId || '',
+      plannerEventId: matched.plannerEventId || matched.domEventId || '',
+      title: String(matched.goalRow.title || '').trim(),
+      chip: chip instanceof HTMLElement ? chip : null,
+    };
+  }
+
+  function gpGdPinFromClickContext(ctx, e, chip) {
+    _gpGdRemountCount = 0;
+    _gpGdRemountGoalKey = '';
+    _gpGdHydrateQuietUntil = 0;
+    gpGdMarkDetailScanActive(15000);
+    if (chip instanceof HTMLElement) {
+      gpGdPinSessionHintsFromChip(chip);
+    } else {
+      const seen = new Set();
+      /** @type {string[]} */
+      const hints = [];
+      const add = (raw) => {
+        const s = raw == null || raw === '' ? '' : String(raw).trim();
+        if (!s || seen.has(s)) return;
+        seen.add(s);
+        hints.push(s);
+      };
+      add(ctx.domEventId);
+      add(ctx.plannerEventId);
+      _gpGdPinnedGoalId = String(ctx.goalRow.id);
+      _gpGdPinnedSlotIdx = -1;
+      _gpGdPinnedHints = hints;
+      _gpGdPinnedAt = Date.now();
+    }
+    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      _gpGdAnchorX = e.clientX;
+      _gpGdAnchorY = e.clientY;
+    } else if (chip instanceof HTMLElement) {
+      const r = chip.getBoundingClientRect();
+      _gpGdAnchorX = r.left + r.width / 2;
+      _gpGdAnchorY = r.top + r.height / 2;
+    }
+  }
+
+  function gpGdRestoreDimmedInspectorShell(shell) {
+    if (!(shell instanceof HTMLElement)) return;
+    if (shell.dataset.gpGdDimPending === '1') {
+      shell.style.transition = 'opacity 0.15s ease';
+      shell.style.opacity = '1';
+      delete shell.dataset.gpGdDimPending;
+    }
+  }
+
+  function gpGdPopupTitleMatchesGoal(popup, goalTitle) {
+    const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
+    const popupText = String(popup?.innerText || popup?.textContent || '').replace(/\s+/g, ' ');
+    if (!needle) return popupText.includes('🎯');
+    const short = needle.slice(0, Math.min(needle.length, 32));
+    return popupText.includes(short) || popupText.includes('🎯');
+  }
+
+  /** Poll until GCal mounts the native inspector, then inject (dim → hydrate → fade in). */
+  async function gpGdWaitForInspectorAndInject(ctx) {
+    gpGdStopWaitForInspector();
+    const gen = ++_gpGdWaitGen;
+    const goalTitle = ctx.title;
+    const MAX_WAIT = 3000;
+    const STEP = 50;
+    let elapsed = 0;
+    /** @type {HTMLElement | null} */
+    let dimShell = null;
+
+    const attempt = async () => {
+      if (gen !== _gpGdWaitGen) return false;
+
+      let popup =
+        gpGdFindEventInspectorShell(goalTitle) ||
+        gpGdFindInspectorFromClickAnchor() ||
+        gpGdEnumerateNativeEventDetailHosts()[0] ||
+        null;
+
+      if (!(popup instanceof HTMLElement)) return false;
+      if (!gpGdPopupTitleMatchesGoal(popup, goalTitle)) return false;
+
+      if (
+        __gpGdBlockEl?.isConnected &&
+        gpGdIsGoalBlockVisible(__gpGdBlockEl) &&
+        gpGdComposedSubtreeContains(popup, __gpGdBlockEl)
+      ) {
+        gpGdRestoreDimmedInspectorShell(dimShell);
+        return true;
+      }
+
+      if (!dimShell) {
+        dimShell = gpGdFindEventDetailCardRoot(popup) || popup;
+        dimShell.dataset.gpGdDimPending = '1';
+        dimShell.style.opacity = '0';
+      }
+
+      await gpGdHydrateMountedDetailDecoration();
+
+      if (gen !== _gpGdWaitGen) return false;
+      if (__gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl)) {
+        gpGdRestoreDimmedInspectorShell(dimShell);
+        return true;
+      }
+      return false;
+    };
+
+    if (await attempt()) return;
+
+    _gpGdWaitPoll = window.setInterval(() => {
+      void (async () => {
+        elapsed += STEP;
+        const ok = await attempt();
+        if (ok || elapsed >= MAX_WAIT) {
+          if (!ok) gpGdRestoreDimmedInspectorShell(dimShell);
+          gpGdStopWaitForInspector();
+        }
+      })();
+    }, STEP);
+  }
+
+  function gpGdOnDelegatedGoalCalendarClick(e) {
+    if (e.button !== 0 || e.defaultPrevented) return;
+    void (async () => {
+      try {
+        const ctx = await gpGdClassifyCalendarGoalClick(e);
+        if (!ctx) return;
+        gpGdTrace('delegated goal click', ctx.title, ctx.domEventId);
+        const chip = ctx.chip || gpGdResolveGoalChipFromEvent(e);
+        gpGdPinFromClickContext(ctx, e, chip);
+        await gpGdWaitForInspectorAndInject(ctx);
+      } catch (err) {
+        gpGdTrace('delegated click failed', err);
+      }
+    })();
   }
 
   function gpGdRunDetailHydratePass() {
