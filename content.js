@@ -5412,9 +5412,9 @@
   }
 
   /** True when the block sits inside the white event card, not in the wide overlay gutter. */
-  function gpGdIsGoalBlockWellPlaced(wrap, dialogShell) {
+  function gpGdIsGoalBlockWellPlaced(wrap, dialogShell, requirePainted) {
     if (!gpGdIsGoalBlockVisible(wrap) || !(dialogShell instanceof HTMLElement)) return false;
-    if (!gpGdIsGoalBlockPainted(wrap)) return false;
+    if (requirePainted !== false && !gpGdIsGoalBlockPainted(wrap)) return false;
     const card = gpGdFindEventDetailCardRoot(dialogShell);
     if (!(card instanceof HTMLElement)) return false;
     const wr = wrap.getBoundingClientRect();
