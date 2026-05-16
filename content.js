@@ -4954,6 +4954,7 @@
   }
 
   function gpGdOnUserOpenedGoalSession(e) {
+    if (!_gpCalInspectDetailObserversInstalled) setupGpCalGoalDetailEnrichment();
     const chip = gpGdResolveGoalChipFromEvent(e);
     if (!chip) return;
     gpGdPinSessionHintsFromChip(chip);
