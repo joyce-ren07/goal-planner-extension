@@ -1590,6 +1590,8 @@
   filter: brightness(0.96);
 }
 
+#gp-gcal-detail-mark-footer .gp-gd-mark-complete--done,
+#gp-gcal-detail-mark-footer .gp-gd-mark-complete:disabled,
 #gp-gcal-detail-goal-extension .gp-gd-mark-complete--done,
 #gp-gcal-detail-goal-extension .gp-gd-mark-complete:disabled {
   opacity: 0.55;
