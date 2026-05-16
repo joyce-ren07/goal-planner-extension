@@ -1233,8 +1233,7 @@
   border-left: 4px solid #d3564b;
 }
 
-[data-eventid].gp-goal-event.ext-goal-event-done [data-eventchip]:not(:has(.ext-goal-root))::after,
-[data-eventchip].ext-goal-completed:not(:has(.ext-goal-root))::after {
+[data-eventid].gp-goal-event.ext-goal-event-done [data-eventchip]:not(:has(.ext-goal-root))::after {
   background: #ffe5e2;
   border-left-color: #e79992;
 }
