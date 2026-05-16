@@ -4721,6 +4721,131 @@
     return out;
   }
 
+  /** Strip Google-native “Take meeting notes” / “Start a new document” rows — Goal block replaces that affordance. */
+  function gpGdStripNativeMeetingNotes(dialogHost) {
+    if (!(dialogHost instanceof HTMLElement)) return;
+    for (let pass = 0; pass < 8; pass++) {
+      /** @type {HTMLElement | null} */
+      let victim = null;
+      for (const node of dialogHost.querySelectorAll('*')) {
+        const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!t || t.length > 220) continue;
+        if (!/take meeting notes|start a new document/i.test(t)) continue;
+        victim = gpGdElevateToMetadataRow(dialogHost, node);
+        break;
+      }
+      if (!(victim instanceof HTMLElement)) break;
+      victim.remove();
+    }
+  }
+
+  /** Climb to a flex/grid “row” container so we remove the whole native row, not a leaf span. */
+  function gpGdElevateToMetadataRow(dialogHost, node) {
+    let cur = /** @type {HTMLElement | null} */ (node instanceof HTMLElement ? node : node.parentElement);
+    for (let d = 0; d < 12 && cur && cur !== dialogHost; d++) {
+      const st = window.getComputedStyle(cur);
+      if ((st.display === 'flex' || st.display === 'grid') && cur.children.length >= 1) return cur;
+      cur = cur.parentElement;
+    }
+    return node instanceof HTMLElement ? node : null;
+  }
+
+  /** Prefer the scrollable metadata column inside the inspector (not the dialog chrome). */
+  function gpGdPickGoalDetailMountParent(dialogHost) {
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestExtra = 0;
+    for (const el of dialogHost.querySelectorAll('*')) {
+      if (!(el instanceof HTMLElement)) continue;
+      const extra = el.scrollHeight - el.clientHeight;
+      if (extra <= 24 || el.clientHeight < 72) continue;
+      if (extra > bestExtra) {
+        bestExtra = extra;
+        best = el;
+      }
+    }
+    return /** @type {HTMLElement} */ (best || dialogHost);
+  }
+
+  function gpGdFindFirstMetadataRowMatching(dialogHost, re) {
+    for (const node of dialogHost.querySelectorAll('*')) {
+      const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!t || t.length > 220) continue;
+      if (!re.test(t)) continue;
+      const row = gpGdElevateToMetadataRow(dialogHost, node);
+      return row instanceof HTMLElement ? row : null;
+    }
+    return null;
+  }
+
+  /**
+   * Insert goal rows before Calendar / Guests / Visibility style native rows when possible.
+   * @returns {{ mountParent: HTMLElement, insertBefore: HTMLElement | null }}
+   */
+  function gpGdResolveGoalInjectionMount(dialogHost) {
+    gpGdStripNativeMeetingNotes(dialogHost);
+    /** @type {HTMLElement | null} */
+    let before =
+      gpGdFindFirstMetadataRowMatching(dialogHost, /^\s*calendar\b/i) ||
+      gpGdFindFirstMetadataRowMatching(dialogHost, /\bcalendar\b.*\(/i) ||
+      gpGdFindFirstMetadataRowMatching(dialogHost, /\bguests?\b/i) ||
+      gpGdFindFirstMetadataRowMatching(dialogHost, /\bvisibility\b/i);
+    /** @type {HTMLElement} */
+    const mountParent =
+      before?.parentElement instanceof HTMLElement
+        ? before.parentElement
+        : gpGdPickGoalDetailMountParent(dialogHost);
+    const insertBefore =
+      before instanceof HTMLElement && mountParent.contains(before) ? before : null;
+    return { mountParent, insertBefore };
+  }
+
+  function gpGdParseSvg(markup) {
+    try {
+      const doc = new DOMParser().parseFromString(markup.trim(), 'image/svg+xml');
+      /** @type {unknown} */
+      const root = doc.documentElement;
+      return root instanceof SVGSVGElement ? root : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /** @param {SVGSVGElement | null} checkInner */
+  function gpGdApplySubtaskRingVisual(ring, checkInner, completed) {
+    if (!(ring instanceof HTMLButtonElement)) return;
+    if (completed) {
+      ring.style.background = '#039be5';
+      ring.style.borderColor = '#039be5';
+      if (checkInner) checkInner.style.opacity = '1';
+    } else {
+      ring.style.background = 'transparent';
+      ring.style.borderColor = '#5f6368';
+      if (checkInner) checkInner.style.opacity = '0';
+    }
+    ring.setAttribute('aria-checked', completed ? 'true' : 'false');
+  }
+
+  /** @type {WeakMap<HTMLElement, MutationObserver>} */
+  const _gpGdDialogRepairObservers = typeof WeakMap === 'undefined' ? null : new WeakMap();
+
+  /** Re-run hydration when GCal’s React layer drops our sentinel node. */
+  function gpGdEnsureDialogRepairObserver(dialogShell) {
+    if (!_gpGdDialogRepairObservers || !(dialogShell instanceof HTMLElement)) return;
+    if (_gpGdDialogRepairObservers.has(dialogShell)) return;
+    let deb = 0;
+    const mo = new MutationObserver(() => {
+      if (!document.documentElement.contains(dialogShell)) return;
+      window.clearTimeout(deb);
+      deb = window.setTimeout(() => {
+        gpGdStripNativeMeetingNotes(dialogShell);
+        if (!dialogShell.querySelector('[data-goals-injected="true"]')) scheduleGpGdDialogScan();
+      }, 45);
+    });
+    mo.observe(dialogShell, { childList: true, subtree: true });
+    _gpGdDialogRepairObservers.set(dialogShell, mo);
+  }
+
   /** Whether a goal subtask row is completed (supports legacy `done`). */
   function gpSubtaskIsCompleted(st) {
     return !!(st && (st.completed || st.done));
