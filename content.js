@@ -1528,7 +1528,7 @@
     document.getElementById('gp-sidebar-btn').classList.add('active');
     setCalendarPushed(true);
     requestAnimationFrame(() => setCalendarPushed(true));
-    scheduleGhostPreviewRefreshDebounced();
+    if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
   }
   function closePanel() {
     document.getElementById('gp-panel').classList.remove('open');
