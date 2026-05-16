@@ -5109,10 +5109,10 @@
     for (const n of path) {
       if (!(n instanceof Element)) continue;
       const dialog = n.closest('[role="dialog"], [role="alertdialog"]');
-      if (dialog instanceof HTMLElement && gpGdIsGoalPlannerInspector(dialog) && gpGdIsElementVisuallyExposed(dialog)) {
+      if (dialog instanceof HTMLElement && gpGdInspectorShellMatchesGoal(dialog, '')) {
         return dialog;
       }
-      if (n instanceof HTMLElement && gpGdInspectorHasCloseControl(n) && gpGdIsGoalPlannerInspector(n)) {
+      if (n instanceof HTMLElement && gpGdInspectorHasCloseControl(n) && gpGdInspectorShellMatchesGoal(n, '')) {
         return n;
       }
     }
