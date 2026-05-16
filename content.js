@@ -7503,7 +7503,9 @@
       }
     }
 
-    let natives = gpEnumerateNativeEventDetailHosts();
+    let natives = gpEnumerateNativeEventDetailHosts().filter((h) =>
+      gpGdIsValidNativeEventInspectorHost(h)
+    );
     const nativesDiscovered = natives.slice();
     const html = document.documentElement;
     const pinnedRaw = gpGdConsumePinnedSessionHints();
