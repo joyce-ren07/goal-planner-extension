@@ -7064,46 +7064,14 @@
 
     wrap.appendChild(stCol);
 
-    const tryMount = (parent, beforeNode) => {
-      if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
-      if (!gpGdIsElementVisuallyExposed(parent)) return false;
-      if (gpGdIsInvalidDetailMountParent(parent, cardRoot)) return false;
-      gpGdDiag('Inserting into:', {
-        tag: parent.tagName,
-        id: parent.id,
-        className: String(parent.className || '').slice(0, 80),
-        role: parent.getAttribute('role'),
-        rect: parent.getBoundingClientRect(),
-        onScreen: gpGdInspectorHostIsOnScreen(parent) || gpGdInspectorHostIsOnScreen(shell),
-      });
-      try {
-        if (
-          beforeNode instanceof HTMLElement &&
-          gpGdComposedSubtreeContains(parent, beforeNode)
-        ) {
-          parent.insertBefore(wrap, beforeNode);
-        } else {
-          parent.appendChild(wrap);
-        }
-        return true;
-      } catch (_) {
-        return false;
-      }
-    };
-
-    const finalizePlacement = () => gpGdForceMountIntoCard(wrap, cardRoot, insertBefore);
-
-    if (!tryMount(mountParent, insertBefore) && !tryMount(cardRoot, insertBefore)) {
-      tryMount(cardRoot, null);
-    }
-    if (!finalizePlacement()) {
+    if (!gpGdInsertDetailNodeInCard(wrap, cardRoot, insertBefore, true)) {
+      gpGdTrace('abort render — card insert failed');
       try {
         wrap.remove();
       } catch (_) {
         /* ignore */
       }
-      tryMount(cardRoot, insertBefore);
-      finalizePlacement();
+      return null;
     }
 
     const placed =
