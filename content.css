@@ -1335,9 +1335,12 @@
   margin: 0;
   padding: 0;
   border: none;
-  background: transparent;
+  background: #fff;
   box-shadow: none;
   border-radius: 0;
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
 }
 
 #gp-gcal-detail-goal-extension .gp-gd-nat-row {
