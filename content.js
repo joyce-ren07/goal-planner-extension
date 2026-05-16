@@ -1388,6 +1388,12 @@
   function openPanel() {
     closeGCalNativeSidebar();
     cachedCalendarMainEl = null; // re-probe in case GCal re-rendered since last open
+    if (!state.editingGoalId) {
+      _gpGdPinnedHints = [];
+      _gpGdPinnedAt = 0;
+      _gpGdPinnedGoalId = '';
+      _gpGdPinnedSlotIdx = -1;
+    }
 
     // Snap panel position to live GCal layout before the CSS transition fires
     const panel = document.getElementById('gp-panel');
