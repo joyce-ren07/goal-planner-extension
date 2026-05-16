@@ -6600,9 +6600,7 @@
     const shell =
       gpGdFindOpenInspectorNearClick(goal?.title) ||
       gpGdFindEventInspectorShell(goal?.title) ||
-      (dialogShell instanceof HTMLElement && gpGdIsEventDetailPopupHost(dialogShell)
-        ? dialogShell
-        : null) ||
+      resolvedShell ||
       /** @type {HTMLElement} */ (document.body);
     if (!shell || gpGdIsCalendarGridContainer(shell) || !gpGdIsEventDetailPopupHost(shell)) {
       gpGdTrace('abort render — no event detail popup near click');
