@@ -80,29 +80,87 @@
     return _gridMetricsCache;
   }
 
+  /** Remove ghost host/root and undo optional `position:relative` we applied to GCal scroll shell. */
+  function tearDownGpGhostPreviewHostLayers() {
+    const host = document.getElementById('gp-ghost-preview-host');
+    if (host) {
+      const p = host.parentElement;
+      host.remove();
+      if (_gpGhostScrollPositionFixEl && _gpGhostScrollPositionFixEl === p) {
+        _gpGhostScrollPositionFixEl.style.removeProperty('position');
+      }
+      _gpGhostScrollPositionFixEl = null;
+      return;
+    }
+    const orphanRoot = document.getElementById('gp-ghost-preview-root');
+    if (orphanRoot) orphanRoot.remove();
+    if (_gpGhostScrollPositionFixEl) {
+      _gpGhostScrollPositionFixEl.style.removeProperty('position');
+      _gpGhostScrollPositionFixEl = null;
+    }
+  }
+
   /**
-   * Clipped to the main calendar scroll viewport only (not page-level fullscreen) so previews
-   * never paint over weekday/timezone/chrome above the timed grid — same bbox GCal uses for the scrollport.
+   * Mount previews inside GCal's scroll container so they inherit native scroll composition (no follower sync).
+   * Host is position:absolute so it does not reflow sibling grid nodes; overlay root spans scrollWidth×scrollHeight in content coords.
    */
   function syncGpGhostPreviewRootToScrollGrid(scrollCont) {
-    const r = scrollCont.getBoundingClientRect();
+    let host = document.getElementById('gp-ghost-preview-host');
+    if (host && host.parentElement !== scrollCont) {
+      tearDownGpGhostPreviewHostLayers();
+      host = null;
+    }
+
     let root = document.getElementById('gp-ghost-preview-root');
+    if (root && !root.closest('#gp-ghost-preview-host')) {
+      root.remove();
+      root = null;
+    }
+
+    if (!host) {
+      const cs = getComputedStyle(scrollCont);
+      if (cs.position === 'static') {
+        scrollCont.style.position = 'relative';
+        _gpGhostScrollPositionFixEl = scrollCont;
+      }
+      host = document.createElement('div');
+      host.id = 'gp-ghost-preview-host';
+      host.setAttribute('aria-hidden', 'true');
+      host.style.cssText = [
+        'position:absolute',
+        'left:0',
+        'top:0',
+        'width:0',
+        'height:0',
+        'overflow:visible',
+        'pointer-events:none',
+        'z-index:6',
+        'margin:0',
+        'padding:0',
+        'border:0',
+      ].join(';');
+      scrollCont.appendChild(host);
+    }
+
     if (!root) {
       root = document.createElement('div');
       root.id = 'gp-ghost-preview-root';
       root.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(root);
+      host.appendChild(root);
     }
+
+    const sw = scrollCont.scrollWidth;
+    const sh = scrollCont.scrollHeight;
     root.style.cssText = [
-      'position:fixed',
+      'position:absolute',
       'box-sizing:border-box',
-      `top:${r.top}px`,
-      `left:${r.left}px`,
-      `width:${r.width}px`,
-      `height:${r.height}px`,
+      'left:0',
+      'top:0',
+      `width:${sw}px`,
+      `height:${sh}px`,
       'overflow:hidden',
       'pointer-events:none',
-      'z-index:6',
+      'z-index:1',
       'contain:layout style',
     ].join(';');
     return root;
