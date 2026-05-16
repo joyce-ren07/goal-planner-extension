@@ -8596,7 +8596,7 @@
 
   function scheduleGoalEventDecoration() {
     if (_gpDecorateTimer) clearTimeout(_gpDecorateTimer);
-    _gpDecorateTimer = setTimeout(processGoalChips, 450);
+    _gpDecorateTimer = setTimeout(processGoalChips, 120);
   }
 
   // Watch for new chips added by GCal and re-process; disconnect all observers for removed chips
