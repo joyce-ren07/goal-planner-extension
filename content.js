@@ -5649,6 +5649,7 @@
 
     gpGdWalkComposedElements(html, (el) => {
       if (!(el instanceof HTMLElement)) return;
+      if (gpGdIsExtensionUiSurface(el) || gpGdIsLeftCalendarDrawerSurface(el)) return;
       const isDialog =
         el.matches('[role="dialog"], [role="alertdialog"]') || el.getAttribute('aria-modal') === 'true';
       if (!isDialog && !gpGdInspectorHasCloseControl(el)) return;
