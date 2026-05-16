@@ -6462,6 +6462,24 @@
 
   /** Core mount pass — derives event key from inspector shell only to index unified Goal rows. All fields render from GoalPlannerUnifiedState snapshots. */
 
+  function gpGdFindInspectorFromClickAnchor() {
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    if (ax == null || ay == null || !Number.isFinite(ax) || !Number.isFinite(ay)) return null;
+    try {
+      for (const el of document.elementsFromPoint(ax, ay)) {
+        if (!(el instanceof Element)) continue;
+        const d =
+          el.closest('[role="dialog"], [role="alertdialog"]') ||
+          (el.getAttribute('aria-modal') === 'true' ? el : null);
+        if (d instanceof HTMLElement && gpGdIsElementVisuallyExposed(d)) return d;
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return null;
+  }
+
   async function gpGdHydrateMountedDetailDecoration() {
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.loadUnifiedState) {
@@ -6469,17 +6487,25 @@
       return;
     }
 
-    let unified;
-    try {
-      unified = await Model.loadUnifiedState();
-    } catch (_) {
-      teardownGpGdBlock();
-      return;
+    const pref = await gpGdReadPrefetch();
+    let unified = pref.unified;
+    if (!unified) {
+      try {
+        unified = await Model.loadUnifiedState();
+      } catch (_) {
+        teardownGpGdBlock();
+        return;
+      }
     }
 
     let natives = gpEnumerateNativeEventDetailHosts();
     const html = document.documentElement;
     const pinnedRaw = gpGdConsumePinnedSessionHints();
+
+    if (!natives.length && pinnedRaw.length) {
+      const anchored = gpGdFindInspectorFromClickAnchor();
+      if (anchored) natives = [anchored];
+    }
 
     if (!natives.length && html instanceof HTMLElement && pinnedRaw.length) {
       natives = gpGdCollectAnnotatedInspectorPanels(html);
