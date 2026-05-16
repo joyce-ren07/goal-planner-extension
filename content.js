@@ -4788,12 +4788,27 @@
   }
 
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
+  function gpGdAttemptUnifiedEchoHydrate() {
+    _gpGdDetailRefreshTimer = 0;
+    const ext = __gpGdBlockEl;
+    if (
+      ext &&
+      ext.isConnected &&
+      typeof ext.matches === 'function' &&
+      ext.matches(':focus-within') &&
+      ext.querySelector('.gp-gd-subtasks.gp-gd-subtasks--editing')
+    ) {
+      _gpGdDetailRefreshTimer = setTimeout(() => {
+        gpGdAttemptUnifiedEchoHydrate();
+      }, 220);
+      return;
+    }
+    void gpGdHydrateMountedDetailDecoration();
+  }
+
   function scheduleGpGdFromUnifiedEcho() {
     if (_gpGdDetailRefreshTimer) clearTimeout(_gpGdDetailRefreshTimer);
-    _gpGdDetailRefreshTimer = setTimeout(() => {
-      _gpGdDetailRefreshTimer = 0;
-      void gpGdHydrateMountedDetailDecoration();
-    }, 96);
+    _gpGdDetailRefreshTimer = setTimeout(gpGdAttemptUnifiedEchoHydrate, 96);
   }
 
   /** Find decorated chip matching a planner event id variant (Calendar API ↔ DOM divergence). */
