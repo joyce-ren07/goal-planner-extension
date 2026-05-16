@@ -5375,6 +5375,8 @@
       window.clearTimeout(deb);
       deb = window.setTimeout(() => {
         gpGdStripNativeMeetingNotes(dialogShell);
+        const ext = __gpGdBlockEl;
+        if (gpGdIsGoalBlockWellPlaced(ext, dialogShell)) return;
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
       }, 45);
     });
