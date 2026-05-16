@@ -93,7 +93,7 @@
         id: id,
         title: typeof o.title === 'string' ? o.title : String(o.title || ''),
         /** Canonical goal-level checklist flag (legacy keys: `done`, `completed`) */
-        completed: !!(o.completed || o.done),
+        completed: o.completed === true || o.done === true,
       });
     }
     return out;
