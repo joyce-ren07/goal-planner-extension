@@ -379,7 +379,8 @@
     const days = Array.isArray(r.days) ? r.days : [];
     const dayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-    const cols = findDayColumnPositions();
+    const scrollGhost = findCalendarScrollContainer();
+    const cols = filterGhostPreviewDayColumns(scrollGhost, findDayColumnPositions());
     if (!cols.length) return [];
 
     const [hour, minRaw] = (r.time || '09:00').split(':').map(Number);
