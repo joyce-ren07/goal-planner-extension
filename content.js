@@ -6388,15 +6388,11 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          gpGdAlignInjectedBlockToCard(ext, dialogShell);
-          gpGdAlignMarkFooterToCard(dialogShell);
-          if (gpGdIsGoalBlockVisible(ext)) {
-            _gpGdHydrateQuietUntil = Date.now() + 6000;
-            return;
-          }
+          gpGdStabilizeMountedDetailBlock(ext, dialogShell, null);
+          return;
         }
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
-      }, 220);
+      }, 480);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
