@@ -5619,6 +5619,7 @@
 
   function gpGdScoreInspectorCandidate(el, goalTitle, ax, ay) {
     if (!gpGdIsElementVisuallyExposed(el)) return -1;
+    if (gpGdIsExtensionUiSurface(el) || gpGdIsLeftCalendarDrawerSurface(el)) return -1;
     if (gpGdIsWeekGridMountSurface(el)) return -1;
     const r = el.getBoundingClientRect();
     if (r.width < 200 || r.height < 100) return -1;
