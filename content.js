@@ -6789,7 +6789,8 @@
     ) {
       return;
     }
-    if (!pinnedRaw.length) teardownGpGdBlock();
+    if (!pinnedRaw.length && !gpGdIsGoalPlannerInspectorStillOpen()) teardownGpGdBlock();
+    else if (pinnedRaw.length || gpGdIsGoalPlannerInspectorStillOpen()) scheduleGpGdDialogScan();
     if (hints.length) gpGdTrace('no unified session match', hints.slice(0, 3));
   }
 
