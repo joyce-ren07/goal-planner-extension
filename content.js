@@ -4995,11 +4995,17 @@
    * @param {HTMLElement} wrapHost
    */
   function gpGdWireDetailDelegates(wrapHost, hit) {
+    wrapHost.querySelector('[data-gp-detail-act="sub-add"]')?.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
     wrapHost.querySelector('[data-gp-detail-act="sub-add"]')?.addEventListener('click', () => {
       gpGdShowTaskCompose(wrapHost, true);
     });
 
     const tailHit = wrapHost.querySelector('[data-gp-detail-act="sub-tail"]');
+    tailHit?.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
     tailHit?.addEventListener('click', () => {
       gpGdShowTaskCompose(wrapHost, true);
     });
