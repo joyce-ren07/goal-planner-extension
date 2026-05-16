@@ -6787,6 +6787,7 @@
       });
 
       const obs = new MutationObserver(() => {
+        gpGdDiag('MO: document childList mutation');
         if (!gpGdShouldRunDetailScan()) return;
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && Date.now() < _gpGdHydrateQuietUntil && gpGdIsGoalBlockVisible(ext)) {
@@ -6795,7 +6796,10 @@
         window.clearTimeout(_gpGdDomObsDebounce);
         const delay =
           __gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl) ? 200 : 35;
-        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), delay);
+        _gpGdDomObsDebounce = window.setTimeout(() => {
+          gpGdDiag('MO: scheduling hydrate scan after', delay, 'ms');
+          scheduleGpGdDialogScan();
+        }, delay);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
