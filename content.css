@@ -1585,6 +1585,7 @@
   text-align: center;
 }
 
+#gp-gcal-detail-mark-footer .gp-gd-mark-complete:hover:not(:disabled),
 #gp-gcal-detail-goal-extension .gp-gd-mark-complete:hover:not(:disabled) {
   filter: brightness(0.96);
 }
