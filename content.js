@@ -8696,16 +8696,10 @@
     if (!ids.length) return '';
     const startIso = gpResolveSessionStartIsoFromChip(chip);
     if (!startIso) return '';
-    const scheduleSlot = gpResolveSlotIndexByScheduleAnchors(
-      {
-        calEventIds: ids,
-        sessionAnchors: (goal?.sessionAnchors || []).length
-          ? goal.sessionAnchors
-          : ids.map((id) => ({ eventId: id, isoStart: '' })),
-      },
-      startIso
-    );
-    if (scheduleSlot >= 0 && ids[scheduleSlot]) return String(ids[scheduleSlot]);
+    if (goal?.sessionAnchors?.length) {
+      const scheduleSlot = gpResolveSlotIndexByScheduleAnchors(goal, startIso);
+      if (scheduleSlot >= 0 && ids[scheduleSlot]) return String(ids[scheduleSlot]);
+    }
     const target = Date.parse(startIso);
     if (!Number.isFinite(target)) return '';
     const Model = globalThis.GoalPlannerModel;
