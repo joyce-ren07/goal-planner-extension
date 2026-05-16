@@ -5434,20 +5434,6 @@
     return [..._gpGdPinnedHints];
   }
 
-  function scheduleGpGdInspectorOpenBurst() {
-    const gen = ++_gpGdOpenBurstGen;
-    gpGdMarkDetailScanActive(15000);
-    const run = () => {
-      if (gen !== _gpGdOpenBurstGen) return;
-      gpGdRunDetailHydratePass();
-    };
-    run();
-    requestAnimationFrame(run);
-    for (const ms of [16, 40, 80, 150, 280, 500, 900, 1400]) {
-      window.setTimeout(run, ms);
-    }
-  }
-
   function gpEnumerateNativeEventDetailHosts() {
     const seenNodes = new Set();
     const out = [];
