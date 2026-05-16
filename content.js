@@ -4900,112 +4900,49 @@
     wrap.dataset.gpGoalId = String(goal?.id ?? '');
     wrap.dataset.gpSessionEventId = String(sess?.eventId ?? '');
 
-    const { total: totalResolved, done: doneCount, pct: pctDisplayed } =
-      gpResolveUnifiedTotalsForDetail(goal);
-
-    /** Title — strip leading 🎯 to avoid duplicating emoji already present on native banner. */
-    const titleTxt = escapeHtmlGp(String(goal.title || '').replace(/^\s*🎯\s*/u, '').trim() || 'Goal');
-
-    const schedLine = escapeHtmlGp(
-      goal.scheduleLabel || (goal.recurrence ? 'Repeating sessions' : 'Schedule')
-    );
-
-    const sessionsSorted = [...(goal.sessions || [])].sort((sa, sb) => {
-      const ta = Date.parse(sa.startTime);
-      const tb = Date.parse(sb.startTime);
-      if (Number.isFinite(ta) && Number.isFinite(tb)) return ta - tb;
-      if (sa.eventId === sess.eventId) return -1;
-      if (sb.eventId === sess.eventId) return 1;
-      return 0;
-    });
-
-    const sessionRowsHtml = sessionsSorted
-      .map((rs) => {
-        const highlight = rs.eventId === sess.eventId;
-        const line = gpDetailComposeSessionScheduleLineUnified(goal, rs);
-        const lineDisp = escapeHtmlGp(line || 'Time pending sync');
-        const stCl = rs.completed ? 'completed' : 'upcoming';
-        return `
-          <li class="gp-gd-session-row gp-gd-session-row--${stCl}${highlight ? ' gp-gd-session-row--focused' : ''}">
-            <div class="gp-gd-session-line">${lineDisp}</div>
-            <button type="button" class="gp-gd-mini-btn gp-gd-toggle-session"${
-              rs.eventId
-                ? ` data-gp-detail-toggle-session="1" data-session-event="${escapeHtmlGp(String(rs.eventId))}"`
-                : ' disabled=""'
-            }>${escapeHtmlGp(rs.completed ? 'Completed' : 'Mark complete')}</button>
-          </li>`;
-      })
-      .join('');
+    const sessDone = !!sess.completed;
 
     const subtasks = Array.isArray(goal.subtasks)
       ? goal.subtasks.filter((st) => st && String(st.title || '').trim().length > 0)
       : [];
 
-    const subtasksListItems = subtasks
+    const subtasksRows = subtasks
       .map((t) => {
-        const idAttr = escapeHtmlGp(String(t.id));
+        const idRaw = escapeHtmlGp(String(t.id));
         const titleEsc = escapeHtmlGp(String(t.title || ''));
         const co = gpSubtaskIsCompleted(t);
-        return `<li class="gp-gd-task-item" data-gp-sub-id="${idAttr}">
-          <div class="gp-gd-task-view">
-            <label class="gp-gd-task-row gp-gcal-task-match">
-              <input type="checkbox" class="gp-gd-task-cb" data-gp-sub-toggle="${idAttr}" ${
-          co ? 'checked' : ''
-        }/>
-              <span class="gp-gd-task-text${co ? ' gp-gd-task-text--completed' : ''}">${titleEsc}</span>
-            </label>
-          </div>
-          <div class="gp-gd-task-edit" hidden>
-            <div class="gp-gd-task-edit-inner">
-              <input type="checkbox" class="gp-gd-task-cb-edit" data-gp-sub-edit-cb="${idAttr}" aria-label="Completed" ${
-          co ? 'checked' : ''
-        }/>
-              <input type="text" class="gp-gd-task-title-input" data-gp-sub-edit-title="${idAttr}" value="${titleEsc}" spellcheck="true" maxlength="400" autocomplete="off" />
-              <button type="button" class="gp-gd-task-del" data-gp-sub-delete="${idAttr}" aria-label="Remove task">&nbsp;</button>
-            </div>
-          </div>
+        return `<li class="gp-gd-st-item" data-gp-sub-id="${idRaw}">
+          <button type="button" class="gp-gd-st-ring${co ? ' gp-gd-st-ring--on' : ''}" role="checkbox" aria-checked="${
+          co ? 'true' : 'false'
+        }" data-gp-sub-ring="${idRaw}" aria-label="Task complete">${GP_GD_ST_CHECKMARK_SVG}</button>
+          <span class="gp-gd-st-txt${co ? ' gp-gd-st-txt--done' : ''}">${titleEsc}</span>
         </li>`;
       })
       .join('');
 
+    const markLbl = sessDone ? 'Completed' : 'Mark completed';
+
     wrap.innerHTML = `
-      <div class="gp-gd-hr" role="presentation"></div>
-      <header class="gp-gd-heading">
-        <span class="gp-gd-chip">Goal Planner</span>
-        <button type="button" class="gp-gd-mini-btn-inline" title="Rename goal" aria-label="Rename goal title" data-gp-detail-act="title-edit">⋯</button>
-      </header>
-      <div class="gp-gd-metrics">
-        <div class="gp-gd-metrics-title">${titleTxt}</div>
-        <div class="gp-gd-metrics-rows">
-          <span><strong>${totalResolved}</strong> sessions total</span>
-          <span class="gp-gd-dot">•</span>
-          <span><strong>${doneCount}</strong> completed</span>
-          <span class="gp-gd-dot">•</span>
-          <span><strong>${gpGdClampPct(pctDisplayed)}%</strong> progress</span>
+      <div class="gp-gd-nat-row">
+        <div class="gp-gd-nat-ic" aria-hidden="true">
+          <span class="material-symbols-outlined gp-gd-ms-20">target</span>
+        </div>
+        <div class="gp-gd-nat-txt gp-gd-nat-muted">My goals</div>
+      </div>
+      <div class="gp-gd-nat-row gp-gd-nat-row--valign-top">
+        <div class="gp-gd-nat-ic gp-gd-nat-ic--top" aria-hidden="true">
+          <span class="material-symbols-outlined gp-gd-ms-20">density_small</span>
+        </div>
+        <div class="gp-gd-nat-grow">
+          <ul class="gp-gd-st-list" role="list">${subtasksRows}</ul>
+          <button type="button" class="gp-gd-st-add-btn" data-gp-detail-act="sub-add">Add a task</button>
+          <div class="gp-gd-st-compose" hidden>
+            <input type="text" class="gp-gd-st-new-inp" maxlength="400" autocomplete="off" aria-label="New task title" />
+          </div>
+          <div class="gp-gd-st-tail-after" role="presentation" tabindex="0" data-gp-detail-act="sub-tail" aria-label="Add a task"></div>
         </div>
       </div>
-      <section class="gp-gd-schedule" aria-label="Recurrence">${schedLine}</section>
-      <section class="gp-gd-session-list-wrap" aria-label="Linked Calendar sessions">
-        <div class="gp-gd-session-list-caption">Sessions (calendar-linked)</div>
-        <ul class="gp-gd-session-list">${sessionRowsHtml || '<li class="gp-gd-session-row">No session rows synced yet.</li>'}</ul>
-      </section>
-      <section class="gp-gd-subtasks" aria-label="Subtasks">
-        <div class="gp-gd-subtasks-head">
-          <span class="gp-gd-subtasks-cap">Subtasks</span>
-          <span class="gp-gd-subtasks-actions">
-            <button type="button" class="gp-gd-subtasks-act" data-gp-detail-act="subtasks-enter-edit">Edit</button>
-            <button type="button" class="gp-gd-subtasks-act" hidden data-gp-detail-act="subtasks-exit-edit">Done</button>
-          </span>
-        </div>
-        <ul class="gp-gd-tasklist" role="list">${subtasksListItems}</ul>
-        <p class="gp-gd-subtasks-empty"${subtasks.length ? ' hidden' : ''}>No tasks yet.</p>
-        <div class="gp-gd-subtasks-add-slot" hidden>
-          <input type="text" class="gp-gd-task-input-new" placeholder="New task" aria-label="New task title" maxlength="400" autocomplete="off" />
-        </div>
-      </section>
-      <footer class="gp-gd-actions">
-        <button type="button" class="gp-gd-major-btn gp-gd-major-btn-secondary" data-gp-detail-act="schedule-edit">Adjust schedule…</button>
-      </footer>
+      <button type="button" class="gp-gd-mark-complete${sessDone ? ' gp-gd-mark-complete--done' : ''}" data-gp-detail-act="mark-session-complete"${sessDone ? ' disabled' : ''}>${escapeHtmlGp(markLbl)}</button>
     `;
 
     mountHost.appendChild(wrap);
