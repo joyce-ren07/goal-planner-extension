@@ -6967,13 +6967,20 @@
     });
 
     const existingEarly = __gpGdBlockEl;
-    if (
-      existingEarly?.isConnected &&
-      existingEarly?.dataset?.gpGoalId &&
-      (gpGdIsGoalBlockVisible(existingEarly) || gpGdIsGoalBlockPainted(existingEarly)) &&
-      (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector())
-    ) {
-      return;
+    if (existingEarly?.isConnected && existingEarly?.dataset?.gpGoalId) {
+      const cardForAlign = gpGdResolveInspectorCardRoot(host, '');
+      if (cardForAlign instanceof HTMLElement) {
+        if (!gpGdIsGoalBlockPainted(existingEarly)) {
+          gpGdForceMountIntoCard(existingEarly, cardForAlign, null);
+        }
+        gpGdAlignInjectedBlockToCard(existingEarly, host);
+      }
+      if (
+        (gpGdIsGoalBlockVisible(existingEarly) || gpGdIsGoalBlockPainted(existingEarly)) &&
+        (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector())
+      ) {
+        return;
+      }
     }
 
     const legacyGoals = pref.goals || (await getGoals());
