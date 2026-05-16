@@ -723,8 +723,6 @@
       if (s) bySlot.set(s, child);
     }
 
-    const scrollSlots = [];
-
     layouts.forEach((L) => {
       let ghost = bySlot.get(L.key);
       const created = !ghost;
