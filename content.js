@@ -5466,10 +5466,11 @@
 
   function gpGdScoreInspectorCandidate(el, goalTitle, ax, ay) {
     if (!gpGdIsElementVisuallyExposed(el)) return -1;
-    if (gpGdIsInvalidDetailMountTarget(el)) return -1;
+    if (gpGdIsWeekGridMountSurface(el)) return -1;
     const r = el.getBoundingClientRect();
-    if (r.width < 240 || r.height < 130) return -1;
+    if (r.width < 200 || r.height < 100) return -1;
     let score = Math.min(r.width, 640) * Math.min(r.height, 720);
+    if (r.width > gpGdMaxInspectorCardWidth()) score *= 0.04;
     if (gpGdIsCalendarGridContainer(el)) score *= 0.02;
     if (gpGdInspectorHasCloseControl(el)) score *= 2.5;
     const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
