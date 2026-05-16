@@ -5405,9 +5405,9 @@
       if (!el.isConnected) continue;
       if (seenNodes.has(el)) continue;
       seenNodes.add(el);
-      out.push(el);
+      if (gpGdIsValidEventDetailInspectorShell(el)) out.push(el);
     }
-    return out;
+    return out.filter((el) => gpGdIsValidEventDetailInspectorShell(el));
   }
 
   /** Strip native metadata rows replaced or superseded by the Goal Planner detail block. */
