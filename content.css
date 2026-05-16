@@ -1049,12 +1049,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   .goal-ghost-event {
-    animation: none;
+    transition: none;
     opacity: 0.9;
-    transform: none !important;
   }
   .goal-ghost-event[data-gp-ghost-ephemeral='true'] {
     opacity: 0.84;
+  }
+  .goal-ghost-event.gp-ghost-new-mount {
+    opacity: 1;
   }
   .goal-ghost-event.gp-ghost-tip-active::after {
     animation: none;
