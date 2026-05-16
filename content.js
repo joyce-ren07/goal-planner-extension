@@ -4375,7 +4375,7 @@
        */
       cancelDebouncedGhostPreviewAndRemoveLayers();
 
-      const token = await getAuthToken();
+      let token = await getAuthToken(true);
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
       // Delete the old calendar events when editing
@@ -4388,6 +4388,28 @@
       }
 
       const r = state.recurrence;
+
+      async function postCalendarEvent(eventBody) {
+        let resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventBody),
+        });
+        if (resp.status === 401) {
+          token = await getAuthTokenFresh();
+          resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(eventBody),
+          });
+        }
+        const data = await resp.json();
+        if (!resp.ok) {
+          console.error('GoalPlanner: Calendar event create failed', data);
+          throw new Error(data?.error?.message || `Calendar API error (${resp.status})`);
+        }
+        return data;
+      }
 
       // One recurring master per suggestion slot; GCal expands instances across future weeks.
       const eventIds = [];
@@ -4402,16 +4424,7 @@
         const rrules = buildRecurrenceRrulesForSession(r, s.isoStart);
         if (rrules.length) eventBody.recurrence = rrules;
 
-        const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(eventBody),
-        });
-        const data = await resp.json();
-        if (!resp.ok) {
-          console.error('GoalPlanner: Calendar event create failed', data);
-          throw new Error(data?.error?.message || 'Calendar API error');
-        }
+        const data = await postCalendarEvent(eventBody);
         if (data.id) eventIds.push(data.id);
       }
       const dayNames = { SU:'Sun', MO:'Mon', TU:'Tue', WE:'Wed', TH:'Thu', FR:'Fri', SA:'Sat' };
