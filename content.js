@@ -5031,9 +5031,99 @@
     return false;
   }
 
-  function gpGdDetailBlockReady() {
+  function gpGdNormalizeTitleHint(s) {
+    return String(s || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function gpGdExtractGoalTitleFromInspector(shell) {
+    if (!(shell instanceof HTMLElement)) return '';
+    const t = String(shell.innerText || '');
+    let m = /Goal Planner session for:\s*"([^"]+)"/i.exec(t);
+    if (m?.[1]) return m[1].trim();
+    m = /🎯\s*([^\n\r]+)/.exec(t);
+    return m?.[1] ? m[1].trim() : '';
+  }
+
+  function gpGdIsGoalPlannerInspector(shell) {
+    if (!(shell instanceof HTMLElement)) return false;
+    const t = String(shell.innerText || '');
+    return /Goal Planner session for:/i.test(t) || t.includes('🎯');
+  }
+
+  function gpGdFindGoalInspectorFromEvent(e) {
+    const path =
+      e && typeof e.composedPath === 'function'
+        ? e.composedPath()
+        : [e?.target].filter(Boolean);
+    for (const n of path) {
+      if (!(n instanceof Element)) continue;
+      const dialog = n.closest('[role="dialog"], [role="alertdialog"]');
+      if (dialog instanceof HTMLElement && gpGdIsGoalPlannerInspector(dialog) && gpGdIsElementVisuallyExposed(dialog)) {
+        return dialog;
+      }
+      if (n instanceof HTMLElement && gpGdInspectorHasCloseControl(n) && gpGdIsGoalPlannerInspector(n)) {
+        return n;
+      }
+    }
+    if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
+      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+        if (!(el instanceof Element)) continue;
+        const d = el.closest('[role="dialog"], [role="alertdialog"]');
+        if (d instanceof HTMLElement && gpGdIsGoalPlannerInspector(d) && gpGdIsElementVisuallyExposed(d)) {
+          return d;
+        }
+      }
+    }
+    return null;
+  }
+
+  function gpGdFindFrontGoalInspector(goalTitle) {
+    const scored = gpGdFindEventInspectorShell(goalTitle);
+    if (scored instanceof HTMLElement && gpGdIsElementVisuallyExposed(scored)) return scored;
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    if (ax != null && ay != null) {
+      for (const el of document.elementsFromPoint(ax, ay)) {
+        if (!(el instanceof Element)) continue;
+        const d = el.closest('[role="dialog"], [role="alertdialog"]');
+        if (d instanceof HTMLElement && gpGdIsGoalPlannerInspector(d) && gpGdIsElementVisuallyExposed(d)) {
+          return d;
+        }
+      }
+    }
+    return null;
+  }
+
+  function gpGdBlockInFrontInspector(wrap, goalTitle) {
+    if (!(wrap instanceof HTMLElement) || !wrap.isConnected) return false;
+    const front = gpGdFindFrontGoalInspector(goalTitle);
+    if (!front) return gpGdIsGoalBlockVisible(wrap);
+    return gpGdComposedSubtreeContains(front, wrap);
+  }
+
+  function gpGdDetailBlockReady(goalTitle) {
     const ext = __gpGdBlockEl;
-    return !!(ext?.isConnected && gpGdIsGoalBlockVisible(ext));
+    if (!ext?.isConnected || !gpGdIsGoalBlockVisible(ext)) return false;
+    const title = goalTitle || ext.dataset.gpGoalTitle || _gpGdPinnedTitleHint || '';
+    return gpGdBlockInFrontInspector(ext, title);
+  }
+
+  async function gpGdLoadUnifiedCached() {
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.loadUnifiedState) return null;
+    if (_gpGdUnifiedCache && Date.now() - _gpGdUnifiedCacheAt < 900) return _gpGdUnifiedCache;
+    const u = await Model.loadUnifiedState();
+    _gpGdUnifiedCache = u;
+    _gpGdUnifiedCacheAt = Date.now();
+    return u;
+  }
+
+  function gpGdInvalidateUnifiedCache() {
+    _gpGdUnifiedCache = null;
+    _gpGdUnifiedCacheAt = 0;
   }
 
   function gpGdStopInspectorOpenWatch() {
