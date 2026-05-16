@@ -4629,6 +4629,25 @@
       if (d2 && d2.goal) return d2;
     }
 
+    if (/^[A-Za-z0-9+/=_-]+$/.test(domHint) && domHint.length > 20) {
+      try {
+        const b64 = atob(domHint.replace(/-/g, '+').replace(/_/g, '/'));
+        const d3 = Model.findSessionByEventId(state, b64);
+        if (d3 && d3.goal) return d3;
+        for (let gi = 0; gi < state.goals.length; gi++) {
+          const g = state.goals[gi];
+          for (let si = 0; si < (g.sessions || []).length; si++) {
+            const s = g.sessions[si];
+            if (s?.eventId && b64.includes(String(s.eventId))) {
+              return { goal: g, session: s, gIdx: gi, sIdx: si };
+            }
+          }
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
     for (let gi = 0; gi < state.goals.length; gi++) {
       const g = state.goals[gi];
       const list = g.sessions || [];
