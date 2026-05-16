@@ -5065,7 +5065,6 @@
   let _gpGdPinnedAt = 0;
   let _gpGdPinnedGoalId = '';
   let _gpGdPinnedSlotIdx = -1;
-  let _gpGdOpenBurstGen = 0;
   let _gpGdAnchorX = /** @type {number | null} */ (null);
   let _gpGdAnchorY = /** @type {number | null} */ (null);
   let _gpGdRemountCount = 0;
