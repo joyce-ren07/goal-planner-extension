@@ -5270,6 +5270,13 @@
   /** Style + rare re-insert before native rows — never append to scroll-column end (causes overflow/flicker). */
   function gpGdStabilizeBlockPlacement(wrap, dialogShell) {
     if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    if (gpGdIsGCalLeftSidebarRegion(dialogShell) || !gpGdIsEventDetailPopupHost(dialogShell)) {
+      const fixed =
+        gpGdFindOpenInspectorNearClick(wrap.dataset.gpGoalTitle || '') ||
+        gpGdFindEventInspectorShell(wrap.dataset.gpGoalTitle || '');
+      if (fixed instanceof HTMLElement && gpGdIsEventDetailPopupHost(fixed)) dialogShell = fixed;
+      else return false;
+    }
     const card = gpGdFindEventDetailCardRoot(dialogShell);
     if (!(card instanceof HTMLElement)) return false;
 
