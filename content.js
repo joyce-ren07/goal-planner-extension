@@ -7809,6 +7809,13 @@
         const delay =
           __gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl) ? 200 : 35;
         _gpGdDomObsDebounce = window.setTimeout(() => {
+          if (
+            __gpGdBlockEl?.isConnected &&
+            (gpGdIsGoalBlockVisible(__gpGdBlockEl) || gpGdIsGoalBlockPainted(__gpGdBlockEl)) &&
+            Date.now() < _gpGdHydrateQuietUntil
+          ) {
+            return;
+          }
           gpGdDiag('MO: scheduling hydrate scan after', delay, 'ms');
           scheduleGpGdDialogScan();
         }, delay);
