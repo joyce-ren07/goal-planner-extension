@@ -5389,6 +5389,7 @@
       if (rr.width < 200 || rr.height < 160) continue;
       if (rr.width > gpGdMaxInspectorCardWidth()) continue;
       if (el.querySelectorAll('[data-eventchip]').length >= 6) continue;
+      if (!gpGdIsValidEventDetailInspectorShell(el)) continue;
       if (!seenNodes.has(el)) {
         seenNodes.add(el);
         out.push(el);
@@ -5400,6 +5401,7 @@
       if (!(el instanceof HTMLElement)) continue;
       if (!el.isConnected) continue;
       if (seenNodes.has(el)) continue;
+      if (!gpGdIsValidEventDetailInspectorShell(el)) continue;
       seenNodes.add(el);
       out.push(el);
     }
