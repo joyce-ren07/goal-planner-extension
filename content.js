@@ -6923,6 +6923,13 @@
             out.push(s);
           }
         }
+        for (const d of g?.calEventDomIds || []) {
+          const s = d == null || d === '' ? '' : String(d).trim();
+          if (s && !seen.has(s)) {
+            seen.add(s);
+            out.push(s);
+          }
+        }
       }
       return out;
     })();
