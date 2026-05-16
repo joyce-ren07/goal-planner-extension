@@ -5937,6 +5937,9 @@
   /** Physically mount inside the white inspector card (margin shifts are not enough on wide grid parents). */
   function gpGdForceMountIntoCard(wrap, cardRoot, insertBefore) {
     if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
+    if (gpGdIsGoalPlannerExtensionSurface(cardRoot) || gpGdIsGoalPlannerExtensionSurface(wrap.parentElement)) {
+      return false;
+    }
     if (gpGdIsWeekGridMountSurface(cardRoot)) return false;
     const cr = cardRoot.getBoundingClientRect();
     if (cr.width < 200) return false;
