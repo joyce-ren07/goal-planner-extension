@@ -48,6 +48,8 @@
   let _gpGhostScrollPositionFixEl = null;
   /** Stable grid scroll parent while create-flow preview is active (GCal reflow swaps shells). */
   let _gpGhostScrollContPinned = /** @type {HTMLElement | null} */ (null);
+  /** Scroll shell that successfully hosted a preview paint — avoids reparent/tear-down churn. */
+  let _gpGhostLockedScrollCont = /** @type {HTMLElement | null} */ (null);
   let _gpGhostPreviewRecoveryMo = /** @type {MutationObserver | null} */ (null);
   let _gpGhostPreviewRecoveryDebounce = 0;
   let _gpGhostCueRaf = 0;
