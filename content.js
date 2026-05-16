@@ -4878,9 +4878,20 @@
       if (seen.has(el)) continue;
       seen.add(el);
       out.push(el);
-      if (out.length >= 5) break;
+      if (out.length >= 8) break;
     }
-    return out;
+
+    /** Drop viewport-wide wrappers when a narrower annotated child exists (prevents gutter mount). */
+    return out.filter((el) => {
+      const rw = el.getBoundingClientRect().width;
+      if (rw <= 760) return true;
+      for (const inner of out) {
+        if (inner === el) continue;
+        if (!gpGdComposedSubtreeContains(el, inner)) continue;
+        if (inner.getBoundingClientRect().width < rw * 0.82) return false;
+      }
+      return true;
+    });
   }
 
   /** Event-id hints from the goal chip the user just opened (DOM id often ≠ API id until flex match). */
