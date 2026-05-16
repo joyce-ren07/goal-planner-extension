@@ -5972,6 +5972,51 @@
     return found;
   }
 
+  /** Bottom-most “Mark completed” row in the inspector card (skips header toolbar matches). */
+  function gpGdFindNativeMarkCompletedFooterRow(cardRoot) {
+    if (!(cardRoot instanceof HTMLElement)) return null;
+    const cardR = cardRoot.getBoundingClientRect();
+    if (cardR.height < 80) return null;
+    const minTop = cardR.top + cardR.height * 0.42;
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestTop = -1;
+    gpGdWalkComposedElements(cardRoot, (node) => {
+      if (!(node instanceof HTMLElement)) return;
+      if (node.closest('#gp-gcal-detail-mark-footer, [data-gp-mark-footer]')) return;
+      const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!t || t.length > 80) return;
+      if (!/\bmark\s+(?:as\s+)?completed\b/i.test(t)) return;
+      const row = gpGdElevateToMetadataRow(cardRoot, node);
+      if (!(row instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(row)) return;
+      if (row.closest('#gp-gcal-detail-mark-footer, [data-gp-mark-footer]')) return;
+      const r = row.getBoundingClientRect();
+      if (r.top < minTop) return;
+      if (r.top >= bestTop) {
+        bestTop = r.top;
+        best = row;
+      }
+    });
+    return best;
+  }
+
+  /** Hide native header/footer “Mark completed” affordances (not our injected footer). */
+  function gpGdHideNativeMarkCompletedAffordances(cardRoot) {
+    if (!(cardRoot instanceof HTMLElement)) return;
+    gpGdWalkComposedElements(cardRoot, (node) => {
+      if (!(node instanceof HTMLElement)) return;
+      if (node.closest('#gp-gcal-detail-mark-footer, [data-gp-mark-footer]')) return;
+      const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!t || t.length > 80) return;
+      if (!/\bmark\s+(?:as\s+)?completed\b/i.test(t)) return;
+      const row = gpGdElevateToMetadataRow(cardRoot, node);
+      if (!(row instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(row)) return;
+      if (row.closest('#gp-gcal-detail-mark-footer, [data-gp-mark-footer]')) return;
+      row.setAttribute('data-gp-native-mark-hidden', '1');
+      row.style.setProperty('display', 'none', 'important');
+    });
+  }
+
   /** Native GCal event inspector white card (not the full-viewport overlay wrapper). */
   function gpGdFindNativeGcalPopupCard(dialogHost) {
     if (!(dialogHost instanceof HTMLElement)) return null;
