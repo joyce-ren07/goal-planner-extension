@@ -8471,92 +8471,29 @@
     }
   }
 
-  const GP_PRIME_SHELL_STYLE =
-    'position:absolute;inset:0;z-index:10;box-sizing:border-box;display:block;' +
-    'overflow:hidden;pointer-events:none;background:#ffd7d3;border:none;' +
-    'border-left:4px solid #d3564b;border-radius:inherit;opacity:1;';
-
-  function chipLooksLikeGoalSession(chip) {
-    if (!(chip instanceof HTMLElement) || !chip.matches?.('[data-eventchip]')) return false;
-    if (String(chip.textContent || '').includes('🎯')) return true;
-    const ec = chip.closest('[data-eventid]');
-    if (!ec) return false;
-    const blob = [
-      ec.getAttribute('aria-label'),
-      ec.getAttribute('data-tooltip'),
-      ec.getAttribute('title'),
-    ]
-      .filter(Boolean)
-      .join(' ');
-    return blob.includes('🎯');
-  }
-
   function isGoalCalendarChip(el) {
-    return chipLooksLikeGoalSession(el);
+    return (
+      el instanceof HTMLElement &&
+      el.matches?.('[data-eventchip]') &&
+      String(el.textContent || '').includes('🎯')
+    );
   }
 
-  /** Inline + attribute hide — takes effect in the same turn as GCal's DOM insert. */
-  function suppressNativeGoalChipPaint(chip) {
-    chip.dataset.gpGoalPending = '1';
-    chip.classList.add('ext-goal-chip');
-    const eid = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
-    if (eid && !chip.dataset.gpChipKey) chip.dataset.gpChipKey = eid;
-    if (_gpChipDoneCache && chip.dataset.gpChipKey) {
-      chip.classList.toggle('ext-goal-completed', !!_gpChipDoneCache[chip.dataset.gpChipKey]);
-    }
-    for (const child of chip.children) {
-      if (!(child instanceof HTMLElement)) continue;
-      if (child.classList.contains('ext-goal-root')) continue;
-      child.style.setProperty('visibility', 'hidden', 'important');
-      child.style.setProperty('opacity', '0', 'important');
-      child.style.setProperty('pointer-events', 'none', 'important');
-    }
-  }
-
-  function clearGoalChipPendingState(chip) {
-    if (!(chip instanceof HTMLElement)) return;
-    delete chip.dataset.gpGoalPending;
-  }
-
-  /** Synchronous: hide native + solid overlay shell in the same task (no inter-frame flash). */
+  /** Synchronous: class + solid overlay shell so native GCal paint never shows between frames. */
   function primeGoalChipInstant(chip) {
-    if (!chipLooksLikeGoalSession(chip) || !chip.isConnected) return false;
-    if (chip.querySelector('.ext-goal-root')) {
-      suppressNativeGoalChipPaint(chip);
-      return true;
-    }
+    if (!isGoalCalendarChip(chip) || !chip.isConnected) return false;
+    chip.classList.add('ext-goal-chip');
+    if (chip.querySelector('.ext-goal-root')) return true;
     chip._gpDecorLock = true;
-    suppressNativeGoalChipPaint(chip);
-    const shell = document.createElement('div');
+    const shell = document.createElement('motion');
     shell.className = 'ext-goal-root ext-goal-root--prime';
     shell.setAttribute('aria-hidden', 'true');
-    shell.style.cssText = GP_PRIME_SHELL_STYLE;
     chip.appendChild(shell);
-    const ec = chip.closest('[data-eventid]');
-    const h = ec?.getBoundingClientRect?.().height;
-    if (h && h > 0) chip.style.height = h + 'px';
-    chip._gpDecorLock = false;
-    return true;
-  }
-
-  /** Earliest possible hook — runs at document_idle before full inject() finishes. */
-  function setupGoalChipFlashGuard() {
-    if (globalThis.__gpGoalChipFlashGuardMo) return;
-    const root = document.documentElement || document.body;
-    if (!root) return;
-    const sweep = () => {
-      root.querySelectorAll('[data-eventchip]').forEach((c) => primeGoalChipInstant(c));
-    };
-    sweep();
-    const mo = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === 'childList') {
-          forEachGoalChipInNodeList(m.addedNodes, (chip) => primeGoalChipInstant(chip));
-        }
-      }
+    requestAnimationFrame(() => {
+      boundChipHeight(chip);
+      chip._gpDecorLock = false;
     });
-    mo.observe(root, { childList: true, subtree: true, characterData: true });
-    globalThis.__gpGoalChipFlashGuardMo = mo;
+    return true;
   }
 
   function forEachGoalChipInNodeList(nodes, visit) {
