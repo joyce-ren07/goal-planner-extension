@@ -4756,8 +4756,12 @@
           !parent ||
           !gpGdComposedSubtreeContains(card, ext) ||
           !!(pr && cr.width >= 200 && pr.width > cr.width * 1.12);
-        if (needsReparent) gpGdForceMountIntoCard(ext, card, null);
-        else gpGdApplyCardContainmentStyles(ext, card);
+        if (needsReparent) {
+          gpGdSetDetailUiHidden(ext, true);
+          gpGdInsertDetailNodeInCard(ext, card, null, true);
+        } else {
+          gpGdApplyCardContainmentStyles(ext, card);
+        }
         if (!gpGdGetDetailMarkCompleteBtn()) {
           gpGdMountMarkCompleteFooter(
             gpGdBuildMarkCompleteButton(!!hit?.session?.completed),
