@@ -5608,6 +5608,7 @@
       }
     }
     if (__gpGdBlockEl?.isConnected) {
+      if (Date.now() < _gpGdHydrateQuietUntil) return;
       const shell =
         __gpGdBlockEl.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
         __gpGdBlockEl.parentElement;
