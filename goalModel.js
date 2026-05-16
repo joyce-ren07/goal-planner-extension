@@ -35,7 +35,9 @@
 
   /** @typedef {{ eventId: string, goalId: string, startTime: string, endTime: string, completed: boolean }} GoalSession */
 
-  /** @typedef {{ id: string, title: string, scheduleLabel?: string, recurrence: GoalRecurrence | null, endDate?: string, startDate?: string, created?: string, sessions: GoalSession[], totalSessions?: number, progressPct: number }} Goal */
+  /** @typedef {{ id: string, title: string, scheduleLabel?: string, recurrence: GoalRecurrence | null, endDate?: string, startDate?: string, created?: string, subtasks?: GoalSubtask[], sessions: GoalSession[], totalSessions?: number, progressPct: number }} Goal */
+
+  /** @typedef {{ id: string, title: string, completed: boolean }} GoalSubtask */
 
   /** @typedef {{ version: number, goals: Goal[] }} GoalPlannerUnifiedState */
 
