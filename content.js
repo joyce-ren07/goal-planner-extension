@@ -457,9 +457,51 @@
   function cancelDebouncedGhostPreviewAndRemoveLayers() {
     if (_ghostPrevDebounceT) {
       clearTimeout(_ghostPrevDebounceT);
-      _ghostPrevDebounceT = 0;
+      _ghostPrevDebounced_t = 0;
     }
     removeGhostEvents();
+  }
+
+  /**
+   * Native GCal hover tooltips attach to stacked event nodes; ghosts use pointer-events:none
+   * so delegated pointermove picks the topmost element only when our preview is unobstructed —
+   * then toggles `.gp-ghost-tip-active` for a CSS tooltip (“Planned”).
+   */
+  function initGhostPlannedHoverCue() {
+    if (initGhostPlannedHoverCue._wired) return;
+    initGhostPlannedHoverCue._wired = true;
+    document.addEventListener(
+      'pointermove',
+      (e) => {
+        const open = document.getElementById('gp-panel')?.classList.contains('open');
+        if (!open || !document.querySelector('.goal-ghost-event')) {
+          document.querySelectorAll('.goal-ghost-event.gp-ghost-tip-active').forEach((n) =>
+            n.classList.remove('gp-ghost-tip-active')
+          );
+          _gpGhostTipEl = null;
+          return;
+        }
+
+        if (_gpGhostCueRaf) cancelAnimationFrame(_gpGhostCueRaf);
+        _gpGhostCueRaf = requestAnimationFrame(() => {
+          _gpGhostCueRaf = 0;
+          let next = null;
+          try {
+            const hit = document.elementsFromPoint(e.clientX, e.clientY)[0];
+            if (hit?.classList?.contains('goal-ghost-event')) next = hit;
+          } catch (_) {
+            /* ignore */
+          }
+          const prev = _gpGhostTipEl;
+          if (next !== prev) {
+            prev?.classList?.remove?.('gp-ghost-tip-active');
+            next?.classList?.add?.('gp-ghost-tip-active');
+            _gpGhostTipEl = next;
+          }
+        });
+      },
+      { passive: true }
+    );
   }
 
   function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
