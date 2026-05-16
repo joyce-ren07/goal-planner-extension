@@ -5271,7 +5271,30 @@
     });
   }
 
+  /** True when a mutation record only touches goal-creation ghost preview layers. */
+  function gpGdMutationIsGhostPreviewOnly(record) {
+    const touchesGhost = (node) => {
+      if (!(node instanceof Element)) return false;
+      return (
+        node.id === 'gp-ghost-preview-host' ||
+        node.id === 'gp-ghost-preview-root' ||
+        node.classList?.contains('goal-ghost-event') ||
+        !!node.closest?.('#gp-ghost-preview-host')
+      );
+    };
+    if (record.target instanceof Element && touchesGhost(record.target)) return true;
+    for (const n of record.addedNodes) {
+      if (touchesGhost(n)) return true;
+    }
+    for (const n of record.removedNodes) {
+      if (touchesGhost(n)) return true;
+    }
+    return false;
+  }
+
   function gpGdShouldRunDetailScan() {
+    /** Goal-creation calendar preview must not compete with event-popup injection scans. */
+    if (isGhostCreationPreviewUiActive()) return false;
     if (__gpGdBlockEl?.isConnected) return true;
     if (Date.now() < _gpGdDetailScanActiveUntil) return true;
     if (Date.now() - _gpGdPinnedAt < 12000 && _gpGdPinnedHints.length) return true;
