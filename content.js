@@ -5898,16 +5898,6 @@
 
       if (containerH > 0) chip.style.height = containerH + 'px';
 
-      const metrics = getGridMetrics();
-      if (metrics && metrics.pxPerHour > 0) {
-        const rawMins = (containerH / metrics.pxPerHour) * 60;
-        const durationMins = Math.max(15, Math.round(rawMins / 15) * 15);
-        const timeEl = chip.querySelector('.ext-goal-time');
-        if (timeEl) {
-          timeEl.textContent = formatDuration(durationMins);
-          timeEl.style.display = containerH < 42 ? 'none' : 'block';
-        }
-      }
       syncExtGoalTimeFromContainer(chip);
       globalThis.GoalCalendarSync?.schedulePersistSessionGeometry?.(chip);
 
