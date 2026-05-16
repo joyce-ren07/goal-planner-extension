@@ -7554,7 +7554,13 @@
   }
 
   async function gpGdHydrateMountedDetailDecoration() {
-    gpGdPurgeDetailInjectionFromForbiddenSurfaces();
+    const extQuiet = __gpGdBlockEl;
+    if (
+      !(extQuiet?.isConnected) ||
+      Date.now() >= _gpGdHydrateQuietUntil - 500
+    ) {
+      gpGdPurgeDetailInjectionFromForbiddenSurfaces();
+    }
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.loadUnifiedState) {
       teardownGpGdBlock();
