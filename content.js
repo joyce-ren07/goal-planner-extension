@@ -5926,8 +5926,8 @@
     const ext = __gpGdBlockEl;
     if (
       ext?.isConnected &&
-      Date.now() < _gpGdHydrateQuietUntil &&
-      gpGdIsGoalBlockVisible(ext)
+      (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
+      (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
     ) {
       return;
     }
