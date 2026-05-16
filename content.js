@@ -6388,6 +6388,29 @@
       frontInspector instanceof HTMLElement &&
       !gpGdComposedSubtreeContains(frontInspector, existing)
     ) {
+      const { mountParent: mp, insertBefore: ib } = gpGdResolveGoalInjectionMount(frontInspector);
+      let moved = false;
+      if (mp instanceof HTMLElement && mp.isConnected) {
+        try {
+          if (ib instanceof HTMLElement && gpGdComposedSubtreeContains(mp, ib)) {
+            mp.insertBefore(existing, ib);
+          } else {
+            mp.appendChild(existing);
+          }
+          gpGdReparentBlockIntoScrollColumn(existing, frontInspector);
+          gpGdRefreshDetailSubtasks(existing, hit);
+          gpGdEnsureDetailDelegates(existing, hit);
+          __gpGdBlockEl = existing;
+          _gpGdHydrateQuietUntil = Date.now() + 4000;
+          moved = gpGdIsGoalBlockVisible(existing);
+        } catch (_) {
+          moved = false;
+        }
+      }
+      if (moved) {
+        gpGdTrace('reparented block into front inspector', goalId);
+        return existing;
+      }
       gpGdTrace('block in stale inspector clone — remounting', goalId);
       teardownGpGdBlock();
     } else if (
