@@ -8127,14 +8127,32 @@
 
   // Debounced scheduler — prevents thrashing on rapid DOM mutations
   let _gpDecorateTimer = null;
+  function mutationTouchesGoalChips(mutations) {
+    const scan = (nodes) => {
+      for (const node of nodes) {
+        if (node.nodeType !== 1) continue;
+        const el = /** @type {Element} */ (node);
+        if (el.matches?.('[data-eventchip]')) return true;
+        if (el.querySelector?.('[data-eventchip]')) return true;
+      }
+      return false;
+    };
+    for (const m of mutations) {
+      if (m.type !== 'childList') continue;
+      if (scan(m.addedNodes) || scan(m.removedNodes)) return true;
+    }
+    return false;
+  }
+
   function scheduleGoalEventDecoration() {
     if (_gpDecorateTimer) clearTimeout(_gpDecorateTimer);
-    _gpDecorateTimer = setTimeout(processGoalChips, 200);
+    _gpDecorateTimer = setTimeout(processGoalChips, 450);
   }
 
   // Watch for new chips added by GCal and re-process; disconnect all observers for removed chips
   function setupGoalEventObserver() {
     new MutationObserver((mutations) => {
+      if (!mutationTouchesGoalChips(mutations)) return;
       for (const m of mutations) {
         m.removedNodes.forEach(node => {
           if (node.nodeType !== 1) return;
