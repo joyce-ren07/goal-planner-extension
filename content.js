@@ -6626,7 +6626,11 @@
       gpGdCloseNativeEventPopover(wrapHost);
       return;
     }
-    const raw = wrapHost.dataset.gpSessionEventId ?? hit.session?.eventId ?? '';
+    const raw =
+      wrapHost.dataset.gpDomEventId ||
+      wrapHost.dataset.gpSessionEventId ||
+      hit.session?.eventId ||
+      '';
     const chip = gpFindChipForPlannerEventFlexible(String(raw));
     if (!chip) {
       alert('Could not locate this session on the grid — toggle completion directly on the calendar chip.');
