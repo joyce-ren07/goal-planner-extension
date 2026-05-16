@@ -659,20 +659,22 @@
   }
 
   function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
+    const previewUi = isGhostCreationPreviewUiActive();
     if (!sessions || !sessions.length) {
-      removeGhostEvents();
+      if (previewUi) clearGhostPreviewChipsOnly();
+      else removeGhostEvents();
       return false;
     }
 
     const scrollCont = findCalendarScrollContainer();
     if (!scrollCont) {
-      removeGhostEvents();
+      if (!previewUi) removeGhostEvents();
       return false;
     }
 
     const hourPositions = findHourAbsolutePositions(scrollCont);
     if (hourPositions.length < 2) {
-      removeGhostEvents();
+      if (!previewUi) removeGhostEvents();
       return false;
     }
 
@@ -681,7 +683,7 @@
     const last = hourPositions[hourPositions.length - 1];
     const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
     if (pxPerHour <= 0) {
-      removeGhostEvents();
+      if (!previewUi) removeGhostEvents();
       return false;
     }
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
