@@ -1569,7 +1569,7 @@
 #gp-gcal-detail-mark-footer {
   display: block;
   box-sizing: border-box;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   margin: 0;
   padding: 8px 16px 16px;

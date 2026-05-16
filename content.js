@@ -4743,67 +4743,13 @@
    * re-align and skip full hint scanning (prevents MO thrash + unrelated calendar-id MISS spam).
    * @returns {boolean} true when an existing mounted block was kept
    */
-  function gpGdStabilizeMountedDetailBlock(ext, dialogShell, hit) {
-    if (!(ext instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return;
-    _gpGdMutatingDetailUi = true;
-    try {
-      const card = gpGdResolveInspectorCardRoot(dialogShell, ext.dataset.gpGoalId || '');
-      if (card instanceof HTMLElement) {
-        const parent = ext.parentElement;
-        const cr = card.getBoundingClientRect();
-        const pr = parent?.getBoundingClientRect?.();
-        const needsReparent =
-          !parent ||
-          !gpGdComposedSubtreeContains(card, ext) ||
-          !!(pr && cr.width >= 200 && pr.width > cr.width * 1.12);
-        if (needsReparent) {
-          gpGdSetDetailUiHidden(ext, true);
-          gpGdInsertDetailNodeInCard(ext, card, null, true);
-        } else {
-          gpGdApplyCardContainmentStyles(ext, card);
-        }
-        if (!gpGdGetDetailMarkCompleteBtn()) {
-          gpGdMountMarkCompleteFooter(
-            gpGdBuildMarkCompleteButton(!!hit?.session?.completed),
-            card
-          );
-        } else {
-          gpGdSyncMarkCompleteButton(!!hit?.session?.completed);
-          const foot = __gpGdMarkFooterEl;
-          if (foot instanceof HTMLElement) {
-            const fpr = foot.parentElement?.getBoundingClientRect?.();
-            const footWide =
-              !gpGdComposedSubtreeContains(card, foot) ||
-              !!(fpr && cr.width >= 200 && fpr.width > cr.width * 1.12);
-            if (footWide) {
-              gpGdSetDetailUiHidden(foot, true);
-              gpGdInsertDetailNodeInCard(foot, card, null, true);
-            } else {
-              gpGdApplyCardContainmentStyles(foot, card);
-            }
-          }
-        }
-      }
-      if (hit?.goal) gpGdRefreshDetailSubtasks(ext, hit);
-      gpGdEnsureDetailDelegates(ext, hit || gpGdDetailHitFromWrap(ext));
-      _gpGdHydrateQuietUntil = Date.now() + 15000;
-      _gpGdRemountCount = 0;
-      gpGdMarkDetailScanActive(15000);
-      gpGdRevealOpenDetailUi();
-    } finally {
-      window.setTimeout(() => {
-        _gpGdMutatingDetailUi = false;
-      }, 100);
-    }
-  }
-
   function gpGdTryProtectMountedDetailBlock(host) {
     const ext = __gpGdBlockEl;
     if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
       return false;
     }
     if (!gpGdIsValidEventDetailInspectorShell(host)) {
-      if (Date.now() >= _gpGdHydrateQuietUntil) teardownGpGdBlock();
+      teardownGpGdBlock();
       return false;
     }
     const inHost =
@@ -4811,8 +4757,18 @@
       (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
     if (!inHost) return false;
 
-    gpGdStabilizeMountedDetailBlock(ext, host, gpGdDetailHitFromWrap(ext));
-    return true;
+    const card = gpGdResolveInspectorCardRoot(host, ext.dataset.gpGoalId || '');
+    if (card instanceof HTMLElement) {
+      gpGdForceMountIntoCard(ext, card, null);
+      gpGdAlignInjectedBlockToCard(ext, host);
+      gpGdAlignMarkFooterToCard(host);
+    }
+    if (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) {
+      _gpGdHydrateQuietUntil = Date.now() + 15000;
+      gpGdMarkDetailScanActive(15000);
+      return true;
+    }
+    return false;
   }
 
   /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
@@ -5252,23 +5208,10 @@
     }
   }
 
-  async function gpGdRunDetailHydratePass() {
-    if (_gpGdHydrateInFlight) {
-      _gpGdHydrateQueued = true;
-      return;
-    }
-    _gpGdHydrateInFlight = true;
-    try {
-      await gpGdHydrateMountedDetailDecoration();
-    } catch (err) {
+  function gpGdRunDetailHydratePass() {
+    void gpGdHydrateMountedDetailDecoration().catch((err) => {
       gpGdTrace('hydrate error', err);
-    } finally {
-      _gpGdHydrateInFlight = false;
-      if (_gpGdHydrateQueued) {
-        _gpGdHydrateQueued = false;
-        void gpGdRunDetailHydratePass();
-      }
-    }
+    });
   }
 
   function gpGdShouldRunDetailScan() {
@@ -5388,7 +5331,7 @@
     };
     run();
     requestAnimationFrame(run);
-    for (const ms of [120, 320]) {
+    for (const ms of [16, 40, 80, 150, 280, 500, 900, 1400]) {
       window.setTimeout(run, ms);
     }
   }
@@ -5652,7 +5595,6 @@
       }
     }
     if (__gpGdBlockEl?.isConnected) {
-      if (Date.now() < _gpGdHydrateQuietUntil) return;
       const shell =
         __gpGdBlockEl.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
         __gpGdBlockEl.parentElement;
@@ -6034,39 +5976,15 @@
     return pruned.length ? pruned : list;
   }
 
-  function gpGdComputeCardContentWidth(cardRoot) {
-    if (!(cardRoot instanceof HTMLElement)) return 0;
-    const cr = cardRoot.getBoundingClientRect();
-    if (cr.width < 200) return 0;
-    const inset = 16;
-    return Math.max(160, Math.round(cr.width - inset * 2));
-  }
-
-  /** Hide detail UI until it is mounted at final card width (prevents full-width flash). */
-  function gpGdSetDetailUiHidden(el, hidden) {
-    if (!(el instanceof HTMLElement)) return;
-    if (hidden) {
-      el.style.visibility = 'hidden';
-      el.style.opacity = '0';
-    } else {
-      el.style.visibility = 'visible';
-      el.style.opacity = '1';
-    }
-  }
-
-  function gpGdRevealOpenDetailUi() {
-    gpGdSetDetailUiHidden(__gpGdBlockEl, false);
-    gpGdSetDetailUiHidden(__gpGdMarkFooterEl, false);
-  }
-
   /** Stamp explicit width on the goal block so it cannot inherit a week-grid parent's 100% width. */
   function gpGdApplyCardContainmentStyles(wrap, cardRoot) {
     if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return;
-    const w = gpGdComputeCardContentWidth(cardRoot);
-    if (!w) return;
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200) return;
+    const inset = 16;
+    const w = Math.max(160, Math.round(cr.width - inset * 2));
     wrap.style.width = w + 'px';
-    wrap.style.maxWidth = w + 'px';
-    wrap.style.minWidth = '0';
+    wrap.style.maxWidth = '100%';
     wrap.style.boxSizing = 'border-box';
     wrap.style.overflow = 'hidden';
     wrap.style.marginLeft = '0';
@@ -6074,48 +5992,7 @@
     wrap.style.clear = 'both';
     wrap.style.position = 'relative';
     wrap.style.left = '';
-    wrap.style.right = '';
     wrap.style.transform = '';
-  }
-
-  /** True when block is in the inspector card (works while pre-reveal hidden). */
-  function gpGdIsGoalBlockMountedInCard(wrap, cardRoot, dialogShell) {
-    if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
-    if (!gpGdComposedSubtreeContains(cardRoot, wrap)) return false;
-    if (!(dialogShell instanceof HTMLElement) || !gpGdInspectorHostIsOnScreen(dialogShell)) {
-      return false;
-    }
-    const br = wrap.getBoundingClientRect();
-    const cr = cardRoot.getBoundingClientRect();
-    const w = br.width > 0 ? br.width : gpGdComputeCardContentWidth(cardRoot);
-    if (w < 40 || br.height < 12) return false;
-    if (cr.width < 200) return true;
-    return w <= cr.width * 1.2 + 24;
-  }
-
-  /** Insert only inside the inspector card at precomputed width (never a wide overlay parent). */
-  function gpGdInsertDetailNodeInCard(node, cardRoot, insertBefore, hiddenUntilReveal) {
-    if (!(node instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
-    gpGdApplyCardContainmentStyles(node, cardRoot);
-    if (hiddenUntilReveal) gpGdSetDetailUiHidden(node, true);
-    try {
-      if (
-        insertBefore instanceof HTMLElement &&
-        gpGdComposedSubtreeContains(cardRoot, insertBefore)
-      ) {
-        const rowParent = insertBefore.parentElement;
-        if (rowParent instanceof HTMLElement) {
-          rowParent.insertBefore(node, insertBefore);
-        } else {
-          cardRoot.appendChild(node);
-        }
-      } else {
-        cardRoot.appendChild(node);
-      }
-      return gpGdComposedSubtreeContains(cardRoot, node);
-    } catch (_) {
-      return false;
-    }
   }
 
   /** Physically mount inside the white inspector card (margin shifts are not enough on wide grid parents). */
@@ -6131,16 +6008,19 @@
     const outsideCard = !parent || !gpGdComposedSubtreeContains(cardRoot, wrap);
     const parentTooWide = !!(pr && pr.width > cr.width * 1.12);
 
-    if (!outsideCard && !parentTooWide) {
-      gpGdApplyCardContainmentStyles(wrap, cardRoot);
-      return (
-        gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false) ||
-        (gpGdIsGoalBlockVisible(wrap) && gpGdComposedSubtreeContains(cardRoot, wrap))
-      );
-    }
-
     if (outsideCard || parentTooWide) {
-      if (!gpGdInsertDetailNodeInCard(wrap, cardRoot, insertBefore, false)) return false;
+      try {
+        if (
+          insertBefore instanceof HTMLElement &&
+          gpGdComposedSubtreeContains(cardRoot, insertBefore)
+        ) {
+          cardRoot.insertBefore(wrap, insertBefore);
+        } else {
+          cardRoot.appendChild(wrap);
+        }
+      } catch (_) {
+        return false;
+      }
     }
 
     gpGdApplyCardContainmentStyles(wrap, cardRoot);
@@ -6454,24 +6334,21 @@
     let deb = 0;
     const mo = new MutationObserver(() => {
       if (!dialogShell.isConnected) return;
-      if (_gpGdMutatingDetailUi) return;
       gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
       window.clearTimeout(deb);
       deb = window.setTimeout(() => {
-        if (_gpGdMutatingDetailUi) return;
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          gpGdStabilizeMountedDetailBlock(ext, dialogShell, gpGdDetailHitFromWrap(ext));
-          return;
+          gpGdAlignInjectedBlockToCard(ext, dialogShell);
+          gpGdAlignMarkFooterToCard(dialogShell);
+          if (gpGdIsGoalBlockVisible(ext)) {
+            _gpGdHydrateQuietUntil = Date.now() + 6000;
+            return;
+          }
         }
-        if (
-          !gpGdDialogsHasInjectedAside(dialogShell) &&
-          Date.now() >= _gpGdHydrateQuietUntil
-        ) {
-          scheduleGpGdDialogScan();
-        }
-      }, 400);
+        if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
+      }, 220);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
@@ -6511,9 +6388,8 @@
   let _gpGdScanPending = false;
   let _gpGdDetailRefreshTimer = 0;
   let _gpGdHydrateQuietUntil = 0;
-  let _gpGdHydrateInFlight = false;
-  let _gpGdHydrateQueued = false;
-  let _gpGdMutatingDetailUi = false;
+  let _gpGdLastFullHydrateAt = 0;
+  let _gpGdLastAlignAt = 0;
 
   /** Last mounted extension node (detached automatically when inspector closes). */
   let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
@@ -6589,18 +6465,7 @@
       __gpGdBlockEl?.dataset.gpGoalId || ''
     );
     if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
-    const cr = card.getBoundingClientRect();
-    const pr = footer.parentElement?.getBoundingClientRect?.();
-    if (
-      gpGdComposedSubtreeContains(card, footer) &&
-      pr &&
-      cr.width >= 200 &&
-      pr.width <= cr.width * 1.12
-    ) {
-      gpGdApplyCardContainmentStyles(footer, card);
-      return true;
-    }
-    return gpGdInsertDetailNodeInCard(footer, card, null, true);
+    return gpGdForceMountIntoCard(footer, card, null);
   }
 
   /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
@@ -6618,16 +6483,20 @@
     footer.setAttribute('data-gp-mark-footer', '1');
     footer.style.cssText =
       'display:block !important;position:relative !important;box-sizing:border-box !important;' +
-      'margin:0 !important;padding:8px 16px 16px !important;border:0 !important;' +
-      'background:transparent !important;clear:both !important;left:0 !important;' +
-      'right:auto !important;transform:none !important;';
+      'width:100% !important;max-width:100% !important;margin:0 !important;' +
+      'padding:8px 16px 16px !important;border:0 !important;background:transparent !important;' +
+      'clear:both !important;left:0 !important;right:auto !important;transform:none !important;';
     footer.appendChild(markBtn);
-    gpGdHideNativeMarkCompletedAffordances(cardRoot);
 
     const nativeFooter = gpGdFindNativeMarkCompletedFooterRow(cardRoot);
-    const footerInsertBefore =
-      nativeFooter?.parentElement instanceof HTMLElement ? nativeFooter : null;
-    gpGdInsertDetailNodeInCard(footer, cardRoot, footerInsertBefore, true);
+    if (nativeFooter?.parentElement instanceof HTMLElement) {
+      nativeFooter.parentElement.insertBefore(footer, nativeFooter);
+    } else {
+      cardRoot.appendChild(footer);
+    }
+    gpGdHideNativeMarkCompletedAffordances(cardRoot);
+    gpGdForceMountIntoCard(footer, cardRoot, null);
+    gpGdApplyCardContainmentStyles(footer, cardRoot);
     __gpGdMarkFooterEl = footer;
     if (__gpGdBlockEl instanceof HTMLElement) {
       gpGdWireMarkCompleteButton(__gpGdBlockEl, null);
@@ -6673,48 +6542,20 @@
     });
   }
 
-  /** Light in-place refresh when the popup is already mounted (avoids full hydrate flicker). */
-  async function gpGdLightRefreshMountedDetail() {
-    const ext = __gpGdBlockEl;
-    if (!(ext instanceof HTMLElement) || !ext.isConnected) return;
-    if (
-      ext.matches?.(':focus-within') &&
-      ext.querySelector('[data-gp-st-compose]:not([hidden])')
-    ) {
-      return;
-    }
-    const shell =
-      ext.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
-      ext.parentElement;
-    if (!(shell instanceof HTMLElement) || !gpGdIsValidEventDetailInspectorShell(shell)) {
-      if (Date.now() >= _gpGdHydrateQuietUntil) teardownGpGdBlock();
-      return;
-    }
-    const Model = globalThis.GoalPlannerModel;
-    if (!Model?.loadUnifiedState) return;
-    let hit = null;
-    try {
-      const unified = await Model.loadUnifiedState();
-      const eid = String(ext.dataset.gpSessionEventId || '').trim();
-      if (eid) hit = gpFindUnifiedSessionForDomEventKey(unified, eid);
-      if (!hit?.goal?.id) {
-        hit = gpGdHitFromPinnedChip(unified, gpGdConsumePinnedSessionHints());
-      }
-      if (hit?.goal?.id) hit = await gpGdEnrichHitForDetail(hit);
-    } catch (_) {
-      return;
-    }
-    if (hit?.goal) {
-      gpGdStabilizeMountedDetailBlock(ext, shell, hit);
-    }
-  }
-
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
     const ext = __gpGdBlockEl;
-    if (ext?.isConnected) {
-      void gpGdLightRefreshMountedDetail();
+    if (
+      ext &&
+      ext.isConnected &&
+      typeof ext.matches === 'function' &&
+      ext.matches(':focus-within') &&
+      ext.querySelector('[data-gp-st-compose]:not([hidden])')
+    ) {
+      _gpGdDetailRefreshTimer = setTimeout(() => {
+        gpGdAttemptUnifiedEchoHydrate();
+      }, 220);
       return;
     }
     void gpGdHydrateMountedDetailDecoration();
@@ -6926,13 +6767,51 @@
       existing?.isConnected &&
       existing.dataset.gpGoalId === goalId &&
       dialogShell instanceof HTMLElement &&
-      gpGdComposedSubtreeContains(dialogShell, existing) &&
-      gpGdIsValidEventDetailInspectorShell(dialogShell)
+      gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
-      gpGdStabilizeMountedDetailBlock(existing, dialogShell, hit);
-      return existing;
+      gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      if (!gpGdIsGoalBlockVisible(existing)) {
+        gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      }
+      if (gpGdIsGoalBlockVisible(existing) || gpGdIsGoalBlockPainted(existing)) {
+        gpGdRefreshDetailSubtasks(existing, hit);
+        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
+        if (keepCard instanceof HTMLElement) {
+          if (!gpGdGetDetailMarkCompleteBtn()) {
+            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
+          } else {
+            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
+          }
+        }
+        gpGdEnsureDetailDelegates(existing, hit);
+        _gpGdHydrateQuietUntil = Date.now() + 12000;
+        _gpGdRemountCount = 0;
+        gpGdMarkDetailScanActive(12000);
+        return existing;
+      }
+      const remountKey = goalId + '|' + token;
+      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
+        gpGdTrace('remount capped — keep last block', goalId);
+        gpGdRefreshDetailSubtasks(existing, hit);
+        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
+        if (keepCard instanceof HTMLElement) {
+          if (!gpGdGetDetailMarkCompleteBtn()) {
+            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
+          } else {
+            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
+          }
+        }
+        gpGdEnsureDetailDelegates(existing, hit);
+        _gpGdHydrateQuietUntil = Date.now() + 12000;
+        return existing;
+      }
+      _gpGdRemountGoalKey = remountKey;
+      _gpGdRemountCount += 1;
+      gpGdTrace('remount (block not visible)', goalId);
+      teardownGpGdBlock();
+    } else {
+      teardownGpGdBlock();
     }
-    if (existing?.isConnected) teardownGpGdBlock();
     gpGdTrace('render start', token, goalId);
 
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
@@ -6973,14 +6852,11 @@
       });
       return null;
     }
-    const { insertBefore: slotInsertBefore } = gpGdResolveGoalInjectionMount(shell, goal?.title);
-    const insertBefore =
-      slotInsertBefore instanceof HTMLElement &&
-      gpGdComposedSubtreeContains(cardRoot, slotInsertBefore)
-        ? slotInsertBefore
-        : null;
-
-    const preflightW = gpGdComputeCardContentWidth(cardRoot);
+    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell, goal?.title);
+    if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) {
+      gpGdTrace('abort render — mount parent invalid');
+      return null;
+    }
 
     /** @type {HTMLElement} */
     const wrap = document.createElement('aside');
@@ -6993,13 +6869,9 @@
     wrap.dataset.gpSlotIdx =
       typeof hit?.sIdx === 'number' && hit.sIdx >= 0 ? String(hit.sIdx) : '';
     wrap.style.cssText =
-      'display:block !important;position:relative;z-index:5;box-sizing:border-box;' +
-      (preflightW
-        ? 'width:' + preflightW + 'px;max-width:' + preflightW + 'px;min-width:0;'
-        : 'width:0;max-width:100%;overflow:hidden;') +
-      'margin:0;padding:0 16px 12px;border:0;clear:both;overflow:hidden;' +
-      'visibility:hidden;opacity:0;background:transparent;box-shadow:none;' +
-      'font-family:\"Google Sans\",Roboto,sans-serif;-webkit-font-smoothing:antialiased;';
+      'display:block !important;position:relative;z-index:5;box-sizing:border-box;width:auto;max-width:100%;' +
+      'margin:0;padding:0 16px 12px;border:0;clear:both;overflow:hidden;opacity:1 !important;visibility:visible !important;' +
+      'background:transparent;box-shadow:none;font-family:\"Google Sans\",Roboto,sans-serif;-webkit-font-smoothing:antialiased;';
 
     const S_ROW =
       'display:flex;align-items:flex-start;gap:16px;padding:8px 0;margin:0;box-sizing:border-box;width:100%;';
@@ -7092,17 +6964,56 @@
 
     wrap.appendChild(stCol);
 
-    if (!gpGdInsertDetailNodeInCard(wrap, cardRoot, insertBefore, true)) {
-      gpGdTrace('abort render — card insert failed');
+    const tryMount = (parent, beforeNode) => {
+      if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
+      if (!gpGdIsElementVisuallyExposed(parent)) return false;
+      if (gpGdIsInvalidDetailMountParent(parent, cardRoot)) return false;
+      gpGdDiag('Inserting into:', {
+        tag: parent.tagName,
+        id: parent.id,
+        className: String(parent.className || '').slice(0, 80),
+        role: parent.getAttribute('role'),
+        rect: parent.getBoundingClientRect(),
+        onScreen: gpGdInspectorHostIsOnScreen(parent) || gpGdInspectorHostIsOnScreen(shell),
+      });
+      try {
+        if (
+          beforeNode instanceof HTMLElement &&
+          gpGdComposedSubtreeContains(parent, beforeNode)
+        ) {
+          parent.insertBefore(wrap, beforeNode);
+        } else {
+          parent.appendChild(wrap);
+        }
+        return true;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    const finalizePlacement = () => gpGdForceMountIntoCard(wrap, cardRoot, insertBefore);
+
+    if (!tryMount(mountParent, insertBefore) && !tryMount(cardRoot, insertBefore)) {
+      tryMount(cardRoot, null);
+    }
+    if (!finalizePlacement()) {
       try {
         wrap.remove();
       } catch (_) {
         /* ignore */
       }
-      return null;
+      tryMount(cardRoot, insertBefore);
+      finalizePlacement();
     }
 
-    const placed = gpGdIsGoalBlockMountedInCard(wrap, cardRoot, shell);
+    const placed =
+      gpGdIsGoalBlockPainted(wrap) ||
+      (gpGdIsGoalBlockWellPlaced(wrap, shell, false) &&
+        gpGdInspectorHostIsOnScreen(shell)) ||
+      (gpGdIsGoalBlockVisible(wrap) &&
+        gpGdComposedSubtreeContains(cardRoot, wrap) &&
+        gpGdInspectorHostIsOnScreen(shell) &&
+        wrap.getBoundingClientRect().width <= cardRoot.getBoundingClientRect().width * 1.2 + 24);
     if (!placed) {
       gpGdTrace('abort render — goal block still outside inspector card');
       gpGdDiag('inject: abort — misaligned after force mount', {
@@ -7119,10 +7030,10 @@
     __gpGdBlockEl = wrap;
     gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sess.completed), cardRoot);
     if (dialogShell instanceof HTMLElement) {
+      gpGdAlignMarkFooterToCard(dialogShell);
       gpGdEnsureDialogRepairObserver(dialogShell);
     }
     gpGdEnsureDetailDelegates(wrap, hit);
-    gpGdRevealOpenDetailUi();
     const ok = placed;
     if (ok) {
       _gpGdHydrateQuietUntil = Date.now() + 15000;
@@ -7783,12 +7694,19 @@
     if (keep?.isConnected) {
       for (const h of natives) {
         if (!gpGdComposedSubtreeContains(h, keep)) continue;
-        if (gpGdIsValidEventDetailInspectorShell(h)) {
-          gpGdStabilizeMountedDetailBlock(keep, h, gpGdDetailHitFromWrap(keep));
+        gpGdAlignInjectedBlockToCard(keep, h);
+        if (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep)) {
+          _gpGdHydrateQuietUntil = Date.now() + 12000;
+          gpGdMarkDetailScanActive(12000);
           return;
         }
       }
-      if (Date.now() < _gpGdHydrateQuietUntil) return;
+      if (
+        gpGdIsGoalBlockVisible(keep) &&
+        (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length || gpGdHasOpenEventInspector())
+      ) {
+        return;
+      }
     }
     if (!pinnedRaw.length && !gpGdHasOpenEventInspector()) teardownGpGdBlock();
     const salvaged =
@@ -7833,20 +7751,21 @@
       const obs = new MutationObserver(() => {
         gpGdDiag('MO: document childList mutation');
         if (!gpGdShouldRunDetailScan()) return;
-        if (_gpGdMutatingDetailUi || Date.now() < _gpGdHydrateQuietUntil) return;
         const ext = __gpGdBlockEl;
         if (
           ext?.isConnected &&
+          (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
           (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
         ) {
           return;
         }
         window.clearTimeout(_gpGdDomObsDebounce);
+        const delay =
+          __gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl) ? 200 : 35;
         _gpGdDomObsDebounce = window.setTimeout(() => {
-          if (_gpGdMutatingDetailUi || Date.now() < _gpGdHydrateQuietUntil) return;
-          gpGdDiag('MO: scheduling hydrate scan');
+          gpGdDiag('MO: scheduling hydrate scan after', delay, 'ms');
           scheduleGpGdDialogScan();
-        }, 280);
+        }, delay);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
