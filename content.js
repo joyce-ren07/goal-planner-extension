@@ -6379,7 +6379,7 @@
       );
       ring.style.cssText =
         'flex-shrink:0;width:18px;height:18px;margin:2px 0 0;padding:0;box-sizing:border-box;' +
-        'border-radius:999px;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
+        'border-radius:50%;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
         'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;';
       ring.addEventListener('mouseenter', () => {
         if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'rgba(95,99,104,0.1)';
