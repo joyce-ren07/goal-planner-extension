@@ -5672,6 +5672,26 @@
   const GP_TIME_RANGE_RE =
     /(\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM))/i;
 
+  /**
+   * When GCal has not yet republished aria/tooltip text, derive the same logical range
+   * GoalCalendarSync persists (geometry → ISO start/end) and format with locale DateTimeFormat.
+   */
+  function formatIsoRangeNativeStyle(isoStart, isoEnd) {
+    const s = new Date(isoStart);
+    const e = new Date(isoEnd);
+    if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime())) return '';
+    try {
+      const fmt = new Intl.DateTimeFormat(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${fmt.format(s)} – ${fmt.format(e)}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
   function extractTimeRangeLabelForGoalChip(chip) {
     if (!chip) return null;
     const ec = chip.closest('[data-eventid]');
