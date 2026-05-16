@@ -6214,8 +6214,40 @@
 
   /** Last mounted extension node (detached automatically when inspector closes). */
   let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
+  /** Mark completed footer — mounted at bottom of inspector card (native GCal slot). */
+  let __gpGdMarkFooterEl = /** @type {HTMLElement | null} */ (null);
+
+  function gpGdGetDetailMarkCompleteBtn() {
+    const fromFooter = __gpGdMarkFooterEl?.querySelector('[data-gp-detail-act="mark-session-complete"]');
+    if (fromFooter instanceof HTMLButtonElement) return fromFooter;
+    const fromWrap = __gpGdBlockEl?.querySelector('[data-gp-detail-act="mark-session-complete"]');
+    if (fromWrap instanceof HTMLButtonElement) return fromWrap;
+    return null;
+  }
+
+  function gpGdUnhideNativeMarkCompleted(cardRoot) {
+    if (!(cardRoot instanceof HTMLElement)) return;
+    gpGdWalkComposedElements(cardRoot, (node) => {
+      if (!(node instanceof HTMLElement)) return;
+      if (node.getAttribute('data-gp-native-mark-hidden') !== '1') return;
+      node.style.removeProperty('display');
+      node.removeAttribute('data-gp-native-mark-hidden');
+    });
+  }
+
+  function teardownGpGdMarkFooter() {
+    if (__gpGdMarkFooterEl?.isConnected) {
+      try {
+        __gpGdMarkFooterEl.remove();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    __gpGdMarkFooterEl = null;
+  }
 
   function teardownGpGdBlock() {
+    teardownGpGdMarkFooter();
     if (__gpGdBlockEl?.isConnected) {
       try {
         __gpGdBlockEl.remove();
@@ -6224,6 +6256,65 @@
       }
     }
     __gpGdBlockEl = null;
+  }
+
+  /** @param {boolean} sessDone */
+  function gpGdBuildMarkCompleteButton(sessDone) {
+    const markBtn = document.createElement('button');
+    markBtn.type = 'button';
+    markBtn.className = 'gp-gd-mark-complete';
+    markBtn.setAttribute('data-gp-detail-act', 'mark-session-complete');
+    markBtn.textContent = 'Mark completed';
+    markBtn.disabled = !!sessDone;
+    markBtn.style.cssText =
+      'display:block !important;width:100% !important;box-sizing:border-box !important;' +
+      'margin:0 !important;padding:10px 0 !important;border:none !important;' +
+      'border-radius:24px !important;background:#e8f0fe !important;color:#1a73e8 !important;' +
+      'font-family:\"Google Sans\",Roboto,sans-serif !important;font-size:14px !important;' +
+      'font-weight:600 !important;line-height:20px !important;text-align:center !important;' +
+      'cursor:' + (sessDone ? 'default' : 'pointer') + ' !important;' +
+      (sessDone ? 'opacity:0.55 !important;' : '');
+    return markBtn;
+  }
+
+  /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
+  function gpGdMountMarkCompleteFooter(markBtn, cardRoot) {
+    if (!(markBtn instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return null;
+    teardownGpGdMarkFooter();
+    gpGdUnhideNativeMarkCompleted(cardRoot);
+
+    const footer = document.createElement('motion');
+    footer.id = 'gp-gcal-detail-mark-footer';
+    footer.setAttribute('data-gp-mark-footer', '1');
+    footer.style.cssText =
+      'display:block !important;position:relative;box-sizing:border-box;width:100%;max-width:100%;' +
+      'margin:0;padding:8px 16px 16px;border:0;background:transparent;clear:both;';
+    footer.appendChild(markBtn);
+
+    const nativeRow = gpGdFindFirstMetadataRowMatching(
+      cardRoot,
+      /\bmark\s+(?:as\s+)?completed\b/i
+    );
+    if (nativeRow?.parentElement instanceof HTMLElement) {
+      nativeRow.setAttribute('data-gp-native-mark-hidden', '1');
+      nativeRow.style.setProperty('display', 'none', 'important');
+      nativeRow.parentElement.insertBefore(footer, nativeRow);
+    } else {
+      cardRoot.appendChild(footer);
+    }
+
+    gpGdApplyCardContainmentStyles(footer, cardRoot);
+    __gpGdMarkFooterEl = footer;
+    return footer;
+  }
+
+  /** @param {boolean} sessDone */
+  function gpGdSyncMarkCompleteButton(sessDone) {
+    const markBtn = gpGdGetDetailMarkCompleteBtn();
+    if (!(markBtn instanceof HTMLButtonElement)) return;
+    markBtn.disabled = !!sessDone;
+    markBtn.style.opacity = sessDone ? '0.55' : '1';
+    markBtn.style.cursor = sessDone ? 'default' : 'pointer';
   }
 
   function scheduleGpGdDialogScan() {
