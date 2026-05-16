@@ -8006,6 +8006,8 @@
       const done = !!isDone;
       chip.classList.remove('ext-goal-done');
       chip.classList.toggle('ext-goal-completed', done);
+      const ec = chip.closest('[data-eventid]');
+      if (ec instanceof HTMLElement) ec.classList.toggle('gp-goal-event-done', done);
       if (done) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
       const circle = chip.querySelector('.goal-checkbox') || chip.querySelector('.ext-check-circle');
