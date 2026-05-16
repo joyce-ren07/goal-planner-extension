@@ -6758,7 +6758,7 @@
     const keep = __gpGdBlockEl;
     if (
       keep?.isConnected &&
-      gpGdIsGoalBlockVisible(keep) &&
+      gpGdDetailBlockReady() &&
       (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length)
     ) {
       return;
