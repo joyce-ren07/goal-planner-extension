@@ -5408,7 +5408,7 @@
     return out;
   }
 
-  /** Strip Google-native “Take meeting notes” / “Start a new document” rows — Goal block replaces that affordance. */
+  /** Strip native metadata rows replaced or superseded by the Goal Planner detail block. */
   function gpGdStripNativeMeetingNotes(dialogHost) {
     if (!(dialogHost instanceof HTMLElement)) return;
     for (let pass = 0; pass < 8; pass++) {
@@ -5418,7 +5418,10 @@
         if (victim) return;
         const t = String(node.textContent || '').replace(/\s+/g, ' ').trim();
         if (!t || t.length > 220) return;
-        if (!/take meeting notes|start a new document/i.test(t)) return;
+        if (
+          !/take meeting notes|start a new document|goal planner session for/i.test(t)
+        )
+          return;
         victim = gpGdElevateToMetadataRow(dialogHost, node);
       });
       if (!(victim instanceof HTMLElement)) break;
