@@ -4701,8 +4701,8 @@
     if (GP_GOAL_DETAIL_TRACE) console.log('[gp-goal-detail]', ...args);
   }
 
-  /** Diagnostic logs for click → match → popup → inject (set false after fixing misses). */
-  const GP_GOAL_DETAIL_DIAG = true;
+  /** Diagnostic logs for click → match → popup → inject (flip true when debugging misses). */
+  const GP_GOAL_DETAIL_DIAG = false;
   function gpGdDiag(...args) {
     if (GP_GOAL_DETAIL_DIAG) console.log('[gp-goal-detail:diag]', ...args);
   }
