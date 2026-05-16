@@ -6140,18 +6140,7 @@
     }
 
     if (outsideCard || parentTooWide) {
-      try {
-        if (
-          insertBefore instanceof HTMLElement &&
-          gpGdComposedSubtreeContains(cardRoot, insertBefore)
-        ) {
-          cardRoot.insertBefore(wrap, insertBefore);
-        } else {
-          cardRoot.appendChild(wrap);
-        }
-      } catch (_) {
-        return false;
-      }
+      if (!gpGdInsertDetailNodeInCard(wrap, cardRoot, insertBefore, false)) return false;
     }
 
     gpGdApplyCardContainmentStyles(wrap, cardRoot);
