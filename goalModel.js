@@ -75,6 +75,28 @@
     return { version: MODEL_VERSION, goals: [] };
   }
 
+  /** Goal-level checklist — carried on unified Goal rows and mirrored from gp_goals[].subtasks. */
+  function cloneSubtasks(raw) {
+    if (!Array.isArray(raw)) return [];
+    var out = [];
+    for (var si = 0; si < raw.length; si++) {
+      var x = raw[si];
+      var o = typeof x === 'object' && x ? x : {};
+      var idRaw = o.id || o.uid;
+      var id =
+        idRaw !== undefined && idRaw !== null && idRaw !== ''
+          ? String(idRaw)
+          : 'sub_' + MODEL_VERSION + '_' + Math.random().toString(36).slice(2, 12);
+      out.push({
+        id: id,
+        title: typeof o.title === 'string' ? o.title : String(o.title || ''),
+        /** @note boolean `completed` tolerated from older drafts */
+        done: !!(o.done || o.completed),
+      });
+    }
+    return out;
+  }
+
   function clampPct(n) {
     if (typeof n !== 'number' || isNaN(n)) return 0;
     return Math.max(0, Math.min(100, Math.round(n)));
