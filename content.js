@@ -7394,6 +7394,30 @@
     }
     if (!plannerEventId) return false;
 
+    if (allowed.length > 1 && (slotIdx < 0 || slotIdx >= allowed.length)) {
+      const inspectorShell =
+        wrapHost?.isConnected &&
+        (wrapHost.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+          wrapHost.closest('[role="presentation"]'));
+      let chip = null;
+      for (const h of ctx.hints || []) {
+        chip = gpFindChipForPlannerEventFlexible(h);
+        if (chip) break;
+      }
+      const resolvedSlot = await gpResolveSlotIndexForSessionContext(goalRow, legacyGoals, {
+        slotIdx,
+        chip,
+        storageKey,
+        plannerEventId,
+        inspectorShell: inspectorShell instanceof HTMLElement ? inspectorShell : null,
+      });
+      if (resolvedSlot >= 0 && resolvedSlot < allowed.length) {
+        slotIdx = resolvedSlot;
+        plannerEventId = String(allowed[slotIdx]);
+        if (chip) chip.dataset.gpSlotIdx = String(slotIdx);
+      }
+    }
+
     const d = await new Promise((resolve) =>
       chrome.storage.local.get(['gp_chip_done', 'gp_goals', 'gp_goal_slot_done'], resolve)
     );
