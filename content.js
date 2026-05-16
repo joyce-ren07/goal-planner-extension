@@ -4977,88 +4977,232 @@
     }
   }
 
-  /** Tiny checkmark rendered inside filled task circle when complete. */
-  const GP_GD_ST_CHECKMARK_SVG =
-    '<svg class="gp-gd-st-check" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-    '<path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"' +
-    ' d="M20 6L9 17l-5-5"/></svg>';
-
-  /** @param {HTMLElement} wrapHost Detail extension root `#gp-gcal-detail-goal-extension`. */
+  /** @param {HTMLElement} wrapHost Detail extension root (inline-styled DOM; data-* hooks only). */
   function gpGdShowTaskCompose(wrapHost, show) {
-    const compose = wrapHost.querySelector('.gp-gd-st-compose');
+    const compose = wrapHost.querySelector('[data-gp-st-compose]');
     const addBtn = wrapHost.querySelector('[data-gp-detail-act="sub-add"]');
     if (!(compose instanceof HTMLElement)) return;
+    const inp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('[data-gp-st-new]'));
     if (show) {
       compose.removeAttribute('hidden');
-      if (addBtn instanceof HTMLElement) addBtn.setAttribute('hidden', '');
-      const inp = /** @type {HTMLInputElement | null} */ (compose.querySelector('.gp-gd-st-new-inp'));
+      addBtn instanceof HTMLElement && addBtn.setAttribute('hidden', '');
       requestAnimationFrame(() => inp?.focus());
     } else {
       compose.setAttribute('hidden', '');
-      if (addBtn instanceof HTMLElement) addBtn.removeAttribute('hidden');
-      const inp = /** @type {HTMLInputElement | null} */ (compose.querySelector('.gp-gd-st-new-inp'));
+      addBtn instanceof HTMLElement && addBtn.removeAttribute('hidden');
       if (inp) inp.value = '';
     }
   }
 
-  function gpGdRenderDetailBlock(hit, tokenHint, mountHost) {
+  /** Build goal-session enrichment as real DOM with inline styles (survives GCal stylesheet resets). */
+  function gpGdRenderDetailBlock(hit, tokenHint, dialogShell) {
+    console.log('POPUP RENDER HIT', tokenHint, hit?.goal?.id);
     const goal = hit.goal;
     const sess = hit.session;
 
     teardownGpGdBlock();
+
+    /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
+    if (dialogShell instanceof HTMLElement) {
+      for (const n of [...dialogShell.querySelectorAll('#gp-gcal-detail-goal-extension')]) {
+        try {
+          n.remove();
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(
+      dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body)
+    );
+
     /** @type {HTMLElement} */
     const wrap = document.createElement('aside');
     wrap.id = 'gp-gcal-detail-goal-extension';
-    wrap.className = 'gp-gcal-detail-goal-extension';
+    wrap.setAttribute('data-goals-injected', 'true');
     wrap.dataset.gpEventToken = String(tokenHint || '');
     wrap.dataset.gpGoalId = String(goal?.id ?? '');
     wrap.dataset.gpSessionEventId = String(sess?.eventId ?? '');
+    wrap.style.cssText =
+      'display:block;box-sizing:border-box;width:100%;max-width:100%;margin:0;padding:0;border:0;' +
+      'background:transparent;box-shadow:none;font-family:\"Google Sans\",Roboto,sans-serif;-webkit-font-smoothing:antialiased;';
 
-    const sessDone = !!sess.completed;
+    const S_ROW =
+      'display:flex;align-items:flex-start;gap:16px;padding:8px 0;margin:0;box-sizing:border-box;width:100%;';
+    const S_IC_COL =
+      'width:20px;flex:0 0 20px;display:flex;align-items:flex-start;justify-content:center;' +
+      'color:#5f6368;padding-top:2px;line-height:0;';
+    const S_TEXT_COL_MY = 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#3c4043;padding-top:2px;margin:0;';
+    const S_TEXT_COL_SIDE = 'flex:1;min-width:0;';
+
+    /** Row — My goals */
+    const rowMy = document.createElement('div');
+    rowMy.style.cssText = S_ROW;
+    const icMy = document.createElement('div');
+    icMy.setAttribute('aria-hidden', 'true');
+    icMy.style.cssText = S_IC_COL;
+    const starSvg = gpGdParseSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">' +
+        '<circle cx="12" cy="12" r="9" fill="none" stroke="#5f6368" stroke-width="2"/>' +
+        '<path fill="#5f6368" d="M12 7.35l1.15 3.32h3.71l-2.98 2.16 1.12 3.43L12 14.74 8 16.56l1.13-3.43-3-2.16h3.71L12 7.35z"/></svg>'
+    );
+    if (starSvg) icMy.appendChild(starSvg);
+    const lblMy = document.createElement('div');
+    lblMy.textContent = 'My goals';
+    lblMy.style.cssText = S_TEXT_COL_MY;
+    rowMy.appendChild(icMy);
+    rowMy.appendChild(lblMy);
+    wrap.appendChild(rowMy);
+
+    /** Row — Subtasks */
+    const rowSt = document.createElement('div');
+    rowSt.style.cssText = S_ROW;
+    const icSt = document.createElement('div');
+    icSt.setAttribute('aria-hidden', 'true');
+    icSt.style.cssText = S_IC_COL;
+    const hamSvg = gpGdParseSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">' +
+        '<path stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none" ' +
+        'd="M4 6h12M4 10h12M4 14h12"/></svg>'
+    );
+    if (hamSvg) icSt.appendChild(hamSvg);
+    const stCol = document.createElement('div');
+    stCol.style.cssText = S_TEXT_COL_SIDE;
+
+    const ul = document.createElement('ul');
+    ul.setAttribute('role', 'list');
+    ul.style.cssText = 'list-style:none;margin:0;padding:0;width:100%;';
 
     const subtasks = Array.isArray(goal.subtasks)
       ? goal.subtasks.filter((st) => st && String(st.title || '').trim().length > 0)
       : [];
 
-    const subtasksRows = subtasks
-      .map((t) => {
-        const idRaw = escapeHtmlGp(String(t.id));
-        const titleEsc = escapeHtmlGp(String(t.title || ''));
-        const co = gpSubtaskIsCompleted(t);
-        return `<li class="gp-gd-st-item" data-gp-sub-id="${idRaw}">
-          <button type="button" class="gp-gd-st-ring${co ? ' gp-gd-st-ring--on' : ''}" role="checkbox" aria-checked="${
-          co ? 'true' : 'false'
-        }" data-gp-sub-ring="${idRaw}" aria-label="Task complete">${GP_GD_ST_CHECKMARK_SVG}</button>
-          <span class="gp-gd-st-txt${co ? ' gp-gd-st-txt--done' : ''}">${titleEsc}</span>
-        </li>`;
-      })
-      .join('');
+    for (const st of subtasks) {
+      const co = gpSubtaskIsCompleted(st);
+      const li = document.createElement('li');
+      li.setAttribute('data-gp-st-item', '1');
+      li.setAttribute('data-gp-sub-id', String(st.id));
+      li.style.cssText =
+        'display:flex;align-items:flex-start;gap:12px;padding:4px 0;margin:0;' +
+        'box-sizing:border-box;width:100%;';
 
-    wrap.innerHTML = `
-      <div class="gp-gd-nat-row">
-        <div class="gp-gd-nat-ic" aria-hidden="true">
-          <span class="material-symbols-outlined gp-gd-ms-20">target</span>
-        </div>
-        <div class="gp-gd-nat-txt gp-gd-nat-muted">My goals</div>
-      </div>
-      <div class="gp-gd-nat-row">
-        <div class="gp-gd-nat-ic" aria-hidden="true">
-          <span class="material-symbols-outlined gp-gd-ms-20">segment</span>
-        </div>
-        <div class="gp-gd-nat-grow">
-          <ul class="gp-gd-st-list" role="list">${subtasksRows}</ul>
-          <button type="button" class="gp-gd-st-add-btn" data-gp-detail-act="sub-add">Add a task</button>
-          <div class="gp-gd-st-compose" hidden>
-            <input type="text" class="gp-gd-st-new-inp" maxlength="400" autocomplete="off" aria-label="New task title" />
-          </div>
-          <div class="gp-gd-st-tail-after" role="button" tabindex="0" data-gp-detail-act="sub-tail" aria-label="Add a task"></div>
-        </div>
-      </div>
-      <button type="button" class="gp-gd-mark-complete${sessDone ? ' gp-gd-mark-complete--done' : ''}" data-gp-detail-act="mark-session-complete"${sessDone ? ' disabled' : ''}>Mark completed</button>
-    `;
+      const ring = document.createElement('button');
+      ring.type = 'button';
+      ring.setAttribute('data-gp-sub-ring', String(st.id));
+      ring.setAttribute('role', 'checkbox');
+      ring.setAttribute(
+        'aria-label',
+        `${co ? 'Unmark' : 'Mark'} subtask "${String(st.title || '').slice(0, 80)}".`
+      );
+      ring.style.cssText =
+        'flex-shrink:0;width:18px;height:18px;margin:2px 0 0;padding:0;box-sizing:border-box;' +
+        'border-radius:999px;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
+        'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;';
+      ring.addEventListener('mouseenter', () => {
+        if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'rgba(95,99,104,0.1)';
+      });
+      ring.addEventListener('mouseleave', () => {
+        if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'transparent';
+      });
 
-    mountHost.appendChild(wrap);
+      const checkSvg =
+        gpGdParseSvg(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">' +
+            '<path fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ' +
+            'stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>'
+        );
+      if (checkSvg)
+        /** @type {SVGSVGElement} */ (checkSvg).style.cssText =
+          'display:block;width:12px;height:12px;opacity:0;pointer-events:none;';
+
+      ring.appendChild(checkSvg);
+      gpGdApplySubtaskRingVisual(
+        ring,
+        checkSvg instanceof SVGSVGElement ? checkSvg : null,
+        co
+      );
+
+      const lbl = document.createElement('span');
+      lbl.setAttribute('data-gp-st-label', '1');
+      lbl.textContent = String(st.title || '');
+      lbl.style.cssText = co
+        ? 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#9aa0a6;text-decoration:line-through;padding-top:1px;margin:0;'
+        : 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#3c4043;padding-top:1px;margin:0;';
+
+      li.appendChild(ring);
+      li.appendChild(lbl);
+      ul.appendChild(li);
+    }
+
+    stCol.appendChild(ul);
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.setAttribute('data-gp-detail-act', 'sub-add');
+    addBtn.textContent = 'Add a task';
+    addBtn.style.cssText =
+      'display:inline-block;margin:0;padding:6px 0 2px;border:none;background:none;cursor:pointer;' +
+      'font-family:inherit;font-size:14px;line-height:20px;font-weight:400;color:#1967d2;text-align:left;';
+
+    const compose = document.createElement('div');
+    compose.setAttribute('data-gp-st-compose', '');
+    compose.setAttribute('hidden', '');
+    compose.style.cssText = 'margin:2px 0 0;width:100%;box-sizing:border-box;';
+
+    const newIn = document.createElement('input');
+    newIn.type = 'text';
+    newIn.setAttribute('data-gp-st-new', '');
+    newIn.setAttribute('maxlength', '400');
+    newIn.setAttribute('autocomplete', 'off');
+    newIn.setAttribute('aria-label', 'New task title');
+    newIn.placeholder = ''; /* native GCal often uses empty cue */
+    newIn.style.cssText =
+      'display:block;width:100%;margin:0;padding:4px 0;border:none;' +
+      'border-bottom:1px solid rgba(95,99,104,0.25);outline:none;' +
+      'background:transparent;font-family:inherit;font-size:14px;line-height:20px;color:#3c4043;' +
+      'box-sizing:border-box;';
+    compose.appendChild(newIn);
+
+    const tail = document.createElement('div');
+    tail.setAttribute('role', 'button');
+    tail.setAttribute('tabindex', '0');
+    tail.setAttribute('data-gp-detail-act', 'sub-tail');
+    tail.setAttribute('aria-label', 'Add a task');
+    tail.style.cssText = 'min-height:14px;margin-top:2px;cursor:text;outline:none;width:100%;';
+
+    stCol.appendChild(addBtn);
+    stCol.appendChild(compose);
+    stCol.appendChild(tail);
+
+    rowSt.appendChild(icSt);
+    rowSt.appendChild(stCol);
+    wrap.appendChild(rowSt);
+
+    /** Mark completed */
+    const sessDone = !!sess.completed;
+    const markBtn = document.createElement('button');
+    markBtn.type = 'button';
+    markBtn.setAttribute('data-gp-detail-act', 'mark-session-complete');
+    markBtn.textContent = 'Mark completed';
+    markBtn.disabled = !!sessDone;
+    markBtn.style.cssText =
+      'display:block;width:100%;box-sizing:border-box;margin-top:10px;padding:11px 18px;' +
+      'border:none;border-radius:999px;background:#e8f0fe;color:#1967d2;' +
+      'font-family:inherit;font-size:14px;font-weight:600;line-height:20px;' +
+      'cursor:' + (sessDone ? 'default' : 'pointer') +
+      ';text-align:center;' +
+      (sessDone ? 'opacity:0.55;' : '');
+    wrap.appendChild(markBtn);
+
+    if (insertBefore && insertBefore.parentNode === mountParent) {
+      mountParent.insertBefore(wrap, insertBefore);
+    } else {
+      mountParent.appendChild(wrap);
+    }
+
     __gpGdBlockEl = wrap;
+    if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdWireDetailDelegates(wrap, hit);
 
     return wrap;
