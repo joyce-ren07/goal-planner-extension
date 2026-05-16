@@ -4677,6 +4677,34 @@
 
   /** @typedef {{ goal: object, session: object, gIdx: number, sIdx: number } | null} GpUnifiedGoalHit */
 
+  /** Resolve session from the chip the user clicked (avoids waiting on DOM event-id ↔ API id matching). */
+  function gpGdHitFromPinnedChip(unified, pinnedEventHints) {
+    const gid = _gpGdPinnedGoalId;
+    if (!gid || !unified?.goals) return null;
+    const gi = unified.goals.findIndex((g) => String(g.id) === String(gid));
+    if (gi < 0) return null;
+    const g = unified.goals[gi];
+    const sessions = g.sessions || [];
+    if (!sessions.length) return null;
+
+    const hints = Array.isArray(pinnedEventHints) ? pinnedEventHints : [];
+    for (const h of hints) {
+      const tight = globalThis.GoalPlannerModel?.findSessionByEventId?.(unified, h);
+      if (tight?.goal && String(tight.goal.id) === String(gid) && tight.session) {
+        return { goal: g, session: tight.session, gIdx: gi, sIdx: tight.sIdx ?? 0 };
+      }
+    }
+
+    let si = _gpGdPinnedSlotIdx;
+    if (si < 0 || si >= sessions.length) {
+      si = sessions.findIndex((s) => hints.some((h) => gpChipDoneKeyMatchesCalEventId(String(s?.eventId), h)));
+    }
+    if (si < 0) si = 0;
+    const sess = sessions[si];
+    if (!sess?.eventId) return null;
+    return { goal: g, session: sess, gIdx: gi, sIdx: si };
+  }
+
   /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
   function gpFindUnifiedSessionForDomEventKey(state, domHintRaw) {
     const Model = globalThis.GoalPlannerModel;
