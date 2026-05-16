@@ -5605,13 +5605,19 @@
       }
     });
 
-    if (best) return best;
+    if (best && gpGdIsValidNativeEventInspectorHost(best)) return best;
 
     if (ax != null && ay != null) {
       for (const el of document.elementsFromPoint(ax, ay)) {
         if (!(el instanceof Element)) continue;
+        if (gpGdIsGoalPlannerExtensionSurface(el)) continue;
         const d = el.closest('[role="dialog"], [role="alertdialog"]');
-        if (d instanceof HTMLElement && gpGdIsElementVisuallyExposed(d)) return d;
+        if (
+          d instanceof HTMLElement &&
+          gpGdIsElementVisuallyExposed(d) &&
+          gpGdIsValidNativeEventInspectorHost(d)
+        )
+          return d;
         let cur = el instanceof HTMLElement ? el : null;
         for (let d2 = 0; d2 < 14 && cur; d2++) {
           const rr = cur.getBoundingClientRect();
