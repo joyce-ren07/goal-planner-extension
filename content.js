@@ -6577,8 +6577,12 @@
 
     let unified;
     try {
-      unified = await Model.loadUnifiedState();
+      unified = await gpGdLoadUnifiedCached();
     } catch (_) {
+      teardownGpGdBlock();
+      return;
+    }
+    if (!unified) {
       teardownGpGdBlock();
       return;
     }
