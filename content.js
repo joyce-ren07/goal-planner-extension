@@ -6194,7 +6194,7 @@
     const subtasks = gpGdSubtasksWithTitles(goal);
 
     const existing = __gpGdBlockEl;
-    const frontInspector = gpGdFindFrontGoalInspector(goal?.title);
+    const frontInspector = gpGdFindOpenInspectorNearClick(goal?.title) || gpGdFindFrontGoalInspector(goal?.title);
     if (
       existing?.isConnected &&
       existing.dataset.gpGoalId === goalId &&
