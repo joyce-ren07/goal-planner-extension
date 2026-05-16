@@ -5396,9 +5396,21 @@
 
   /** Build goal-session enrichment as real DOM with inline styles (survives GCal stylesheet resets). */
   function gpGdRenderDetailBlock(hit, tokenHint, dialogShell) {
-    console.log('POPUP RENDER HIT', tokenHint, hit?.goal?.id);
     const goal = hit.goal;
     const sess = hit.session;
+    const goalId = String(goal?.id ?? '');
+    const token = String(tokenHint || '');
+
+    const existing = __gpGdBlockEl;
+    if (
+      existing?.isConnected &&
+      existing.dataset.gpGoalId === goalId &&
+      existing.dataset.gpEventToken === token &&
+      dialogShell instanceof HTMLElement &&
+      gpGdComposedSubtreeContains(dialogShell, existing)
+    ) {
+      return existing;
+    }
 
     teardownGpGdBlock();
 
