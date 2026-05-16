@@ -6246,6 +6246,7 @@
     }
 
     const shell =
+      gpGdFindOpenInspectorNearClick(goal?.title) ||
       gpGdFindEventInspectorShell(goal?.title) ||
       (dialogShell instanceof HTMLElement ? dialogShell : null) ||
       /** @type {HTMLElement} */ (document.body);
