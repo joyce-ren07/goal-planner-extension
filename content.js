@@ -5208,10 +5208,23 @@
     }
   }
 
-  function gpGdRunDetailHydratePass() {
-    void gpGdHydrateMountedDetailDecoration().catch((err) => {
+  async function gpGdRunDetailHydratePass() {
+    if (_gpGdHydrateInFlight) {
+      _gpGdHydrateQueued = true;
+      return;
+    }
+    _gpGdHydrateInFlight = true;
+    try {
+      await gpGdHydrateMountedDetailDecoration();
+    } catch (err) {
       gpGdTrace('hydrate error', err);
-    });
+    } finally {
+      _gpGdHydrateInFlight = false;
+      if (_gpGdHydrateQueued) {
+        _gpGdHydrateQueued = false;
+        void gpGdRunDetailHydratePass();
+      }
+    }
   }
 
   function gpGdShouldRunDetailScan() {
