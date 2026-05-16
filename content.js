@@ -6440,7 +6440,7 @@
 
     const tryMount = (parent, beforeNode) => {
       if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
-      console.log('Inserting into:', parent);
+      if (gpGdIsInvalidDetailMountTarget(parent)) return false;
       gpGdDiag('Inserting into:', {
         tag: parent.tagName,
         id: parent.id,
@@ -6463,31 +6463,29 @@
       }
     };
 
-    const placementOk = () => {
-      gpGdAlignInjectedBlockToCard(wrap, shell);
-      return gpGdIsGoalBlockWellPlaced(wrap, shell, false);
-    };
+    const finalizePlacement = () => gpGdForceMountIntoCard(wrap, cardRoot, insertBefore);
 
-    if (!tryMount(mountParent, insertBefore) && cardRoot instanceof HTMLElement) {
-      tryMount(cardRoot, null);
+    if (!tryMount(mountParent, insertBefore)) {
+      tryMount(cardRoot, insertBefore);
     }
-    if (!placementOk() && cardRoot instanceof HTMLElement) {
-      try {
-        wrap.remove();
-      } catch (_) {
-        /* ignore */
-      }
-      tryMount(cardRoot, null);
-      placementOk();
-    }
-    if (!gpGdIsGoalBlockPainted(wrap) && cardRoot instanceof HTMLElement) {
+    if (!finalizePlacement()) {
       try {
         wrap.remove();
       } catch (_) {
         /* ignore */
       }
       tryMount(cardRoot, insertBefore);
-      gpGdAlignInjectedBlockToCard(wrap, shell);
+      finalizePlacement();
+    }
+
+    if (!gpGdIsGoalBlockWellPlaced(wrap, shell, false)) {
+      gpGdTrace('abort render — goal block still outside inspector card');
+      gpGdDiag('inject: abort — misaligned after force mount', {
+        blockWidth: Math.round(wrap.getBoundingClientRect().width),
+        cardWidth: Math.round(cardRoot.getBoundingClientRect().width),
+      });
+      teardownGpGdBlock();
+      return null;
     }
 
     __gpGdBlockEl = wrap;
