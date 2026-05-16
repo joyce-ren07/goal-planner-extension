@@ -5789,25 +5789,27 @@
       tryMount(cardRoot, null);
     }
 
-    gpGdAlignInjectedBlockToCard(wrap, dialogShell instanceof HTMLElement ? dialogShell : null);
+    gpGdAlignInjectedBlockToCard(wrap, shell);
 
-    if (!gpGdIsGoalBlockVisible(wrap) && cardRoot instanceof HTMLElement) {
+    if (!gpGdIsGoalBlockWellPlaced(wrap, shell) && cardRoot instanceof HTMLElement) {
       try {
         wrap.remove();
       } catch (_) {
         /* ignore */
       }
-      tryMount(cardRoot, null);
-      gpGdAlignInjectedBlockToCard(wrap, dialogShell instanceof HTMLElement ? dialogShell : null);
+      const fallback = gpGdResolveGoalInjectionMount(cardRoot);
+      tryMount(fallback.mountParent, fallback.insertBefore);
+      gpGdAlignInjectedBlockToCard(wrap, shell);
     }
 
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdWireDetailDelegates(wrap, hit);
+    if (gpGdIsGoalBlockWellPlaced(wrap, shell)) _gpGdHydrateQuietUntil = Date.now() + 1800;
     gpGdTrace(
       'render done',
       goalId,
-      gpGdIsGoalBlockVisible(wrap) ? 'visible' : 'hidden',
+      gpGdIsGoalBlockWellPlaced(wrap, shell) ? 'placed' : 'misaligned',
       Math.round(wrap.getBoundingClientRect().width)
     );
 
