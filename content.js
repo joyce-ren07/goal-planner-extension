@@ -6689,15 +6689,20 @@
     }
 
     const placed =
-      gpGdIsGoalBlockWellPlaced(wrap, shell, false) ||
+      gpGdIsGoalBlockPainted(wrap) ||
+      (gpGdIsGoalBlockWellPlaced(wrap, shell, false) &&
+        gpGdInspectorHostIsOnScreen(shell)) ||
       (gpGdIsGoalBlockVisible(wrap) &&
         gpGdComposedSubtreeContains(cardRoot, wrap) &&
+        gpGdInspectorHostIsOnScreen(shell) &&
         wrap.getBoundingClientRect().width <= cardRoot.getBoundingClientRect().width * 1.2 + 24);
     if (!placed) {
       gpGdTrace('abort render — goal block still outside inspector card');
       gpGdDiag('inject: abort — misaligned after force mount', {
         blockWidth: Math.round(wrap.getBoundingClientRect().width),
         cardWidth: Math.round(cardRoot.getBoundingClientRect().width),
+        painted: gpGdIsGoalBlockPainted(wrap),
+        hostOnScreen: gpGdInspectorHostIsOnScreen(shell),
       });
       teardownGpGdBlock();
       return null;
@@ -6707,7 +6712,7 @@
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdEnsureDetailDelegates(wrap, hit);
-    const ok = gpGdIsGoalBlockVisible(wrap) || gpGdIsGoalBlockPainted(wrap);
+    const ok = placed;
     if (ok) {
       _gpGdHydrateQuietUntil = Date.now() + 12000;
       _gpGdRemountCount = 0;
@@ -6722,7 +6727,13 @@
       'h=' + Math.round(r.height),
       gpGdIsGoalBlockPainted(wrap) ? 'painted' : 'occluded'
     );
-    gpGdDiag('inject: done', { goalId, placed: ok });
+    gpGdDiag('inject: done', {
+      goalId,
+      placed: ok,
+      painted: gpGdIsGoalBlockPainted(wrap),
+      blockRect: { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top) },
+      mountClass: String(wrap.parentElement?.className || '').slice(0, 60),
+    });
 
     return wrap;
   }
