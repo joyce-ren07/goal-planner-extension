@@ -5344,7 +5344,7 @@
     };
     run();
     requestAnimationFrame(run);
-    for (const ms of [16, 40, 80, 150, 280, 500, 900, 1400]) {
+    for (const ms of [120, 320]) {
       window.setTimeout(run, ms);
     }
   }
