@@ -4744,17 +4744,20 @@
    * @returns {boolean} true when an existing mounted block was kept
    */
   function gpGdTryProtectMountedDetailBlock(host) {
+    gpGdTeardownOrphanedDetailUi();
     const ext = __gpGdBlockEl;
     if (!(ext instanceof HTMLElement) || !ext.isConnected || !(host instanceof HTMLElement)) {
       return false;
     }
+    if (!gpGdIsDetailUiInEventDialog(ext)) return false;
+    if (!gpGdIsQualifyingEventInspectorHost(host)) return false;
     const inHost =
       gpGdComposedSubtreeContains(host, ext) ||
       (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
     if (!inHost) return false;
 
     const card = gpGdResolveInspectorCardRoot(host, ext.dataset.gpGoalId || '');
-    if (card instanceof HTMLElement) {
+    if (card instanceof HTMLElement && gpGdRequireEventDialogAncestor(card)) {
       gpGdForceMountIntoCard(ext, card, null);
       gpGdAlignInjectedBlockToCard(ext, host);
       gpGdAlignMarkFooterToCard(host);
