@@ -289,6 +289,8 @@
     }
     document.querySelectorAll('body > .goal-ghost-event').forEach((el) => el.remove());
     tearDownGpGhostPreviewHostLayers();
+    releaseGhostPreviewScrollContainer();
+    ensureGhostPreviewRecoveryObserver();
   }
 
   /** In-memory preview only: never written to chrome.storage until confirmAddToCalendar succeeds. */
