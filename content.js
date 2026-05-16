@@ -4864,7 +4864,9 @@
         ? before.parentElement
         : gpGdPickGoalDetailMountParent(dialogHost);
     const insertBefore =
-      before instanceof HTMLElement && mountParent.contains(before) ? before : null;
+      before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before)
+        ? before
+        : null;
     return { mountParent, insertBefore };
   }
 
