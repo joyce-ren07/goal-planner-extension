@@ -8536,7 +8536,7 @@
         primeShell.removeAttribute('aria-hidden');
         const initialTime = goalData.time ? escHtml(goalData.time) : '';
         primeShell.innerHTML =
-          '<motion class="goal-checkbox ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
+          '<div class="goal-checkbox ext-check-circle" data-gp-checkbox="true" role="button" tabindex="-1" aria-label="Toggle goal session complete">' +
           (isDone ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE) + '</div>' +
           '<motion class="ext-goal-text-col">' +
             '<span class="ext-goal-badge">Goal</span>' +
