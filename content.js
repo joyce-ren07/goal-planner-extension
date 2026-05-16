@@ -6017,15 +6017,39 @@
     return pruned.length ? pruned : list;
   }
 
+  function gpGdComputeCardContentWidth(cardRoot) {
+    if (!(cardRoot instanceof HTMLElement)) return 0;
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200) return 0;
+    const inset = 16;
+    return Math.max(160, Math.round(cr.width - inset * 2));
+  }
+
+  /** Hide detail UI until it is mounted at final card width (prevents full-width flash). */
+  function gpGdSetDetailUiHidden(el, hidden) {
+    if (!(el instanceof HTMLElement)) return;
+    if (hidden) {
+      el.style.visibility = 'hidden';
+      el.style.opacity = '0';
+    } else {
+      el.style.visibility = 'visible';
+      el.style.opacity = '1';
+    }
+  }
+
+  function gpGdRevealOpenDetailUi() {
+    gpGdSetDetailUiHidden(__gpGdBlockEl, false);
+    gpGdSetDetailUiHidden(__gpGdMarkFooterEl, false);
+  }
+
   /** Stamp explicit width on the goal block so it cannot inherit a week-grid parent's 100% width. */
   function gpGdApplyCardContainmentStyles(wrap, cardRoot) {
     if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return;
-    const cr = cardRoot.getBoundingClientRect();
-    if (cr.width < 200) return;
-    const inset = 16;
-    const w = Math.max(160, Math.round(cr.width - inset * 2));
+    const w = gpGdComputeCardContentWidth(cardRoot);
+    if (!w) return;
     wrap.style.width = w + 'px';
-    wrap.style.maxWidth = '100%';
+    wrap.style.maxWidth = w + 'px';
+    wrap.style.minWidth = '0';
     wrap.style.boxSizing = 'border-box';
     wrap.style.overflow = 'hidden';
     wrap.style.marginLeft = '0';
@@ -6033,7 +6057,28 @@
     wrap.style.clear = 'both';
     wrap.style.position = 'relative';
     wrap.style.left = '';
+    wrap.style.right = '';
     wrap.style.transform = '';
+  }
+
+  /** Insert only inside the inspector card at precomputed width (never a wide overlay parent). */
+  function gpGdInsertDetailNodeInCard(node, cardRoot, insertBefore, hiddenUntilReveal) {
+    if (!(node instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
+    gpGdApplyCardContainmentStyles(node, cardRoot);
+    if (hiddenUntilReveal) gpGdSetDetailUiHidden(node, true);
+    try {
+      if (
+        insertBefore instanceof HTMLElement &&
+        gpGdComposedSubtreeContains(cardRoot, insertBefore)
+      ) {
+        cardRoot.insertBefore(node, insertBefore);
+      } else {
+        cardRoot.appendChild(node);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /** Physically mount inside the white inspector card (margin shifts are not enough on wide grid parents). */
