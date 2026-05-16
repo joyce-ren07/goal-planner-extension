@@ -7124,7 +7124,10 @@
       }
     }
     if (!pinnedRaw.length && !gpGdHasOpenEventInspector()) teardownGpGdBlock();
-    if (hints.length) {
+    const salvaged =
+      keep?.isConnected &&
+      (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep));
+    if (hints.length && !salvaged) {
       gpGdTrace('no unified session match', hints.slice(0, 3));
       gpGdDiag('inject: SKIP — no unified session for hints', hints.slice(0, 5));
     }
