@@ -4858,10 +4858,11 @@
       candidates.push(el);
     });
 
+    /** Prefer inner card-sized panels over viewport-wide wrappers. */
     candidates.sort((a, b) => {
       const ra = a.getBoundingClientRect();
       const rb = b.getBoundingClientRect();
-      return rb.width * rb.height - ra.width * ra.height;
+      return ra.width * ra.height - rb.width * rb.height;
     });
 
     const seen = new Set();
@@ -4869,7 +4870,12 @@
     for (const el of candidates) {
       let dominated = false;
       for (const kept of out) {
-        if (kept === el || gpGdComposedSubtreeContains(kept, el)) {
+        if (kept === el) {
+          dominated = true;
+          break;
+        }
+        /** Skip outer wrapper when we already kept a narrower descendant. */
+        if (gpGdComposedSubtreeContains(el, kept)) {
           dominated = true;
           break;
         }
