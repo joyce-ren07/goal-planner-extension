@@ -6054,15 +6054,12 @@
         '<path fill="#5f6368" d="M12 7.35l1.15 3.32h3.71l-2.98 2.16 1.12 3.43L12 14.74 8 16.56l1.13-3.43-3-2.16h3.71L12 7.35z"/></svg>'
     );
     if (starSvg) icMy.appendChild(starSvg);
-    const lblMy = document.createElement('div');
-    lblMy.textContent = 'My goals';
-    lblMy.style.cssText = S_TEXT_COL_MY;
-    rowMy.appendChild(icMy);
-    rowMy.appendChild(lblMy);
-    wrap.appendChild(rowMy);
-
-    /** Row — Subtasks */
-    const rowSt = document.createElement('div');
+    const lblMyWrap = document.createElement('div');
+    lblMyWrap.style.cssText = S_TEXT_COL_MY;
+    const lblMyHead = document.createElement('div');
+    lblMyHead.textContent = 'My goals';
+    lblMyHead.style.cssText = 'font-size:14px;line-height:20px;color:#3c4043;font-weight:500;margin:0;';
+    const lblMyTitle = document.createElement('motion');
     rowSt.style.cssText = S_ROW;
     const icSt = document.createElement('div');
     icSt.setAttribute('aria-hidden', 'true');
