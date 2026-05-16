@@ -5395,14 +5395,45 @@
     return Math.min(760, Math.max(320, window.innerWidth * 0.82));
   }
 
-  /** Reject week-grid surfaces and viewport-wide wrappers — detail UI must mount in a narrow inspector card only. */
+  /** True when the surface is the week grid, not a center/side event inspector popover. */
+  function gpGdIsWeekGridMountSurface(el) {
+    if (!(el instanceof HTMLElement)) return true;
+    if (gpGdIsCalendarGridContainer(el)) return true;
+    if (el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]')) return false;
+    const r = el.getBoundingClientRect();
+    if (el.querySelectorAll('[data-eventchip]').length >= 8 && r.width > 400) return true;
+    if (r.width > gpGdMaxInspectorCardWidth() && el.querySelectorAll('[data-eventid]').length >= 6) {
+      return true;
+    }
+    return false;
+  }
+
+  /** Reject week-grid surfaces; allow modal dialog shells (inner card resolved separately). */
   function gpGdIsInvalidDetailMountTarget(el) {
     if (!(el instanceof HTMLElement) || !el.isConnected) return true;
-    if (gpGdIsCalendarGridContainer(el)) return true;
+    if (gpGdIsWeekGridMountSurface(el)) return true;
     const r = el.getBoundingClientRect();
-    if (r.width > gpGdMaxInspectorCardWidth()) return true;
-    if (r.height < 72) return true;
-    if (el.querySelectorAll('[data-eventchip]').length >= 8 && r.width > 400) return true;
+    if (r.height < 48) return true;
+    const inDialog = !!el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]');
+    const maxW = inDialog ? Math.min(980, window.innerWidth * 0.96) : gpGdMaxInspectorCardWidth();
+    if (r.width > maxW) return true;
+    return false;
+  }
+
+  /** Mount parent must not be wider than the inspector card (prevents week-spanning inserts). */
+  function gpGdIsInvalidDetailMountParent(el, cardRoot) {
+    if (!(el instanceof HTMLElement) || !el.isConnected) return true;
+    if (gpGdIsWeekGridMountSurface(el)) return true;
+    const er = el.getBoundingClientRect();
+    if (er.height < 48) return true;
+    if (cardRoot instanceof HTMLElement) {
+      const cr = cardRoot.getBoundingClientRect();
+      if (cr.width >= 200 && er.width > Math.max(cr.width * 1.18, gpGdMaxInspectorCardWidth())) {
+        return true;
+      }
+    } else if (er.width > gpGdMaxInspectorCardWidth()) {
+      return true;
+    }
     return false;
   }
 
