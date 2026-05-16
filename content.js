@@ -457,7 +457,7 @@
   function cancelDebouncedGhostPreviewAndRemoveLayers() {
     if (_ghostPrevDebounceT) {
       clearTimeout(_ghostPrevDebounceT);
-      _ghostPrevDebounced_t = 0;
+      _ghostPrevDebounceT = 0;
     }
     removeGhostEvents();
   }
