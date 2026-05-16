@@ -1506,74 +1506,137 @@
     return '';
   }
 
-  function fitCreateTaskTimeInputWidth(el) {
-    if (!(el instanceof HTMLInputElement) || !el.isConnected) return;
-    let probe = document.getElementById('gp-ct-time-width-probe');
-    if (!probe) {
-      probe = document.createElement('span');
-      probe.id = 'gp-ct-time-width-probe';
-      probe.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(probe);
-    }
-    const cs = getComputedStyle(el);
-    probe.className = 'gp-ct-time-width-probe';
-    probe.style.cssText = [
-      'position:absolute',
-      'left:-9999px',
-      'top:0',
-      'visibility:hidden',
-      'pointer-events:none',
-      'white-space:pre',
-      'padding:0',
-      'margin:0',
-      'border:0',
-      `font-family:${cs.fontFamily}`,
-      `font-size:${cs.fontSize}`,
-      `font-weight:${cs.fontWeight}`,
-      `letter-spacing:${cs.letterSpacing}`,
-    ].join(';');
-    const raw = (el.value && el.value.trim()) ? el.value : (el.getAttribute('placeholder') || '0:00pm');
-    probe.textContent = raw || '\u00a0';
-    const textW = probe.getBoundingClientRect().width;
-    const pad = 14;
-    const w = Math.ceil(textW) + pad;
-    el.style.width = `${Math.max(44, Math.min(w, 132))}px`;
+  const CREATE_TASK_TIME_STEP_MIN = 15;
+
+  let gpCtTimePopField = null;
+
+  function nearestCreateTaskTimeHm(hm) {
+    const normalized = normalizeDueHm(hm);
+    if (!normalized) return '';
+    const [h, m] = normalized.split(':').map(Number);
+    let total = h * 60 + m;
+    total = Math.round(total / CREATE_TASK_TIME_STEP_MIN) * CREATE_TASK_TIME_STEP_MIN;
+    if (total >= 24 * 60) total = 24 * 60 - CREATE_TASK_TIME_STEP_MIN;
+    const rh = Math.floor(total / 60);
+    const rm = total % 60;
+    return `${String(rh).padStart(2, '0')}:${String(rm).padStart(2, '0')}`;
   }
 
-  function fitCreateTaskTimeInputsBoth() {
-    fitCreateTaskTimeInputWidth(document.getElementById('gp-ct-time-start'));
-    fitCreateTaskTimeInputWidth(document.getElementById('gp-ct-time-end'));
+  function getCreateTaskTimeHm(field) {
+    const id = field === 'end' ? 'gp-ct-time-end' : 'gp-ct-time-start';
+    return normalizeDueHm(document.getElementById(id)?.value || '');
+  }
+
+  function setCreateTaskTimeField(field, hm) {
+    const normalized = nearestCreateTaskTimeHm(hm) || normalizeDueHm(hm);
+    const valueEl = document.getElementById(field === 'end' ? 'gp-ct-time-end' : 'gp-ct-time-start');
+    const labelEl = document.getElementById(field === 'end' ? 'gp-ct-time-end-label' : 'gp-ct-time-start-label');
+    if (valueEl) valueEl.value = normalized;
+    if (labelEl) labelEl.textContent = formatTimeCompact12(normalized);
   }
 
   function setCreateTaskTimeFieldsFromHm(startHm, endHm) {
-    const si = document.getElementById('gp-ct-time-start');
-    const ei = document.getElementById('gp-ct-time-end');
-    const sh = normalizeDueHm(startHm) || '18:30';
-    const eh = normalizeDueHm(endHm) || '19:30';
-    if (si) {
-      si.value = formatTimeCompact12(sh);
-      si.classList.remove('gp-ct-time-txt--invalid');
-    }
-    if (ei) {
-      ei.value = formatTimeCompact12(eh);
-      ei.classList.remove('gp-ct-time-txt--invalid');
-    }
-    requestAnimationFrame(() => fitCreateTaskTimeInputsBoth());
+    setCreateTaskTimeField('start', nearestCreateTaskTimeHm(startHm) || '18:30');
+    setCreateTaskTimeField('end', nearestCreateTaskTimeHm(endHm) || '19:30');
   }
 
-  function normalizeCreateTaskTimeInputOnBlur(el) {
-    if (!(el instanceof HTMLInputElement)) return;
-    const hm = parseFlexibleTimeToHm(el.value);
-    if (hm) {
-      el.value = formatTimeCompact12(hm);
-      el.classList.remove('gp-ct-time-txt--invalid');
-    } else if (el.value.trim()) {
-      el.classList.add('gp-ct-time-txt--invalid');
-    } else {
-      el.value = '';
-      el.classList.remove('gp-ct-time-txt--invalid');
+  function ensureCreateTaskTimeList() {
+    const list = document.getElementById('gp-ct-time-list');
+    if (!list || list.dataset.gpBuilt) return;
+    const frag = document.createDocumentFragment();
+    for (let mins = 0; mins < 24 * 60; mins += CREATE_TASK_TIME_STEP_MIN) {
+      const h = Math.floor(mins / 60);
+      const min = mins % 60;
+      const hm = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'gp-ct-time-opt';
+      opt.dataset.hm = hm;
+      opt.setAttribute('role', 'option');
+      opt.textContent = formatTimeCompact12(hm);
+      frag.appendChild(opt);
     }
-    fitCreateTaskTimeInputWidth(el);
+    list.appendChild(frag);
+    list.dataset.gpBuilt = '1';
+  }
+
+  function closeCreateTaskTimePop() {
+    const pop = document.getElementById('gp-ct-time-pop');
+    if (pop) pop.hidden = true;
+    document.querySelectorAll('.gp-ct-time-btn.is-open').forEach((btn) => {
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+    gpCtTimePopField = null;
+  }
+
+  function positionCreateTaskTimePop() {
+    const pop = document.getElementById('gp-ct-time-pop');
+    const btn = gpCtTimePopField === 'end'
+      ? document.getElementById('gp-ct-time-end-btn')
+      : document.getElementById('gp-ct-time-start-btn');
+    if (!btn || !pop || pop.hidden) return;
+    const r = btn.getBoundingClientRect();
+    const w = pop.offsetWidth || 132;
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    const list = document.getElementById('gp-ct-time-list');
+    const listH = list ? Math.min(list.scrollHeight + 16, 280) : 240;
+    const spaceBelow = window.innerHeight - r.bottom - 8;
+    const spaceAbove = r.top - 8;
+    let top = r.bottom + 4;
+    if (spaceBelow < listH && spaceAbove > spaceBelow) {
+      top = Math.max(8, r.top - listH - 4);
+    }
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  }
+
+  function highlightCreateTaskTimePopSelection(hm) {
+    const list = document.getElementById('gp-ct-time-list');
+    if (!list) return;
+    list.querySelectorAll('.gp-ct-time-opt').forEach((opt) => {
+      const sel = opt.dataset.hm === hm;
+      opt.classList.toggle('is-selected', sel);
+      opt.setAttribute('aria-selected', sel ? 'true' : 'false');
+    });
+  }
+
+  function scrollCreateTaskTimePopToHm(hm) {
+    const list = document.getElementById('gp-ct-time-list');
+    if (!list) return;
+    const opt = list.querySelector(`.gp-ct-time-opt[data-hm="${hm}"]`);
+    if (!opt) return;
+    const targetTop = opt.offsetTop - (list.clientHeight - opt.offsetHeight) / 2;
+    list.scrollTop = Math.max(0, targetTop);
+  }
+
+  function openCreateTaskTimePop(field) {
+    closeCreateTaskCalendar();
+    closeCreateTaskTimePop();
+    ensureCreateTaskTimeList();
+    gpCtTimePopField = field;
+    const btn = document.getElementById(field === 'end' ? 'gp-ct-time-end-btn' : 'gp-ct-time-start-btn');
+    const pop = document.getElementById('gp-ct-time-pop');
+    const hm = getCreateTaskTimeHm(field) || (field === 'start' ? '18:30' : '19:30');
+    highlightCreateTaskTimePopSelection(hm);
+    if (pop) pop.hidden = false;
+    if (btn) {
+      btn.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+    requestAnimationFrame(() => {
+      positionCreateTaskTimePop();
+      scrollCreateTaskTimePopToHm(hm);
+    });
+  }
+
+  function toggleCreateTaskTimePop(field) {
+    const pop = document.getElementById('gp-ct-time-pop');
+    if (pop && !pop.hidden && gpCtTimePopField === field) {
+      closeCreateTaskTimePop();
+    } else {
+      openCreateTaskTimePop(field);
+    }
   }
 
   function formatKanbanDueWithTimes(isoDate, startHm, endHm) {
@@ -1586,7 +1649,11 @@
   }
 
   let gpCtCalViewMonth = null;
-
+  let gpMkDueCalViewMonth = null;
+  /** @type {{ anchor: HTMLElement, taskId: string } | null} */
+  let gpMkDueEditorTarget = null;
+  /** @type {{ dueDate: string, dueTimeStart: string, dueTimeEnd: string, allDay: boolean } | null} */
+  let gpMkDueEditorDraft = null;
   function getCreateTaskDueIso() {
     return document.getElementById('gp-ct-due-date')?.value || '';
   }
@@ -1596,6 +1663,19 @@
     if (inp) inp.value = iso || '';
     const label = document.getElementById('gp-ct-date-btn-label');
     if (label) label.textContent = formatCreateTaskDateLong(inp?.value || '');
+  }
+
+  function syncCreateTaskAllDayUi() {
+    const checked = Boolean(document.getElementById('gp-ct-allday')?.checked);
+    const cluster = document.querySelector('.gp-ct-date-cluster');
+    if (cluster) cluster.classList.toggle('is-all-day', checked);
+    if (checked) closeCreateTaskTimePop();
+  }
+
+  function resetCreateTaskAllDay() {
+    const cb = document.getElementById('gp-ct-allday');
+    if (cb) cb.checked = false;
+    syncCreateTaskAllDayUi();
   }
 
   function closeCreateTaskCalendar() {
@@ -1620,6 +1700,8 @@
   }
 
   function openCreateTaskCalendar() {
+    closeMkDueEditor();
+    closeCreateTaskTimePop();
     const pop = document.getElementById('gp-ct-cal-pop');
     const btn = document.getElementById('gp-ct-date-btn');
     const iso = getCreateTaskDueIso();
@@ -1686,6 +1768,705 @@
       b.dataset.iso = iso;
       grid.appendChild(b);
     }
+  }
+
+
+  function formatDueFromDraft(draft) {
+    if (!draft) return '';
+    if (draft.allDay) return formatKanbanDueLabel(draft.dueDate);
+    return formatKanbanDueWithTimes(draft.dueDate, draft.dueTimeStart, draft.dueTimeEnd);
+  }
+
+  function getActiveInlineSchedule() {
+    return gpMkDueEditorTarget?.scheduleEl || null;
+  }
+
+  function fillInlineTimeList(listEl) {
+    if (!listEl || listEl.dataset.gpBuilt) return;
+    const frag = document.createDocumentFragment();
+    for (let mins = 0; mins < 24 * 60; mins += CREATE_TASK_TIME_STEP_MIN) {
+      const h = Math.floor(mins / 60);
+      const min = mins % 60;
+      const hm = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+      const opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'gp-ct-time-opt';
+      opt.dataset.hm = hm;
+      opt.setAttribute('role', 'option');
+      opt.textContent = formatTimeCompact12(hm);
+      frag.appendChild(opt);
+    }
+    listEl.appendChild(frag);
+    listEl.dataset.gpBuilt = '1';
+  }
+
+
+  function formatInlineScheduleDateLabel(iso) {
+    return formatKanbanDueLabel(iso);
+  }
+
+  function formatInlineScheduleTimeLabel(draft) {
+    if (!draft || draft.allDay) return 'All day';
+    const a = formatTimeCompact12(normalizeDueHm(draft.dueTimeStart)) || '6:30pm';
+    const b = formatTimeCompact12(normalizeDueHm(draft.dueTimeEnd)) || '7:30pm';
+    return `${a}–${b}`;
+  }
+
+  function dueDraftFromTask(task) {
+    const hasTimes = Boolean(task?.dueTimeStart || task?.dueTimeEnd);
+    const dueDate = task?.dueDate
+      || formatDueDateIso(parseTaskDueDate(task?.due))
+      || formatDueDateIso(new Date());
+    return {
+      dueDate,
+      dueTimeStart: normalizeDueHm(task?.dueTimeStart) || '18:30',
+      dueTimeEnd: normalizeDueHm(task?.dueTimeEnd) || '19:30',
+      allDay: task?.allDay === true || !hasTimes,
+    };
+  }
+
+  function dueDraftFromHost(host) {
+    if (!host) return dueDraftFromTask(null);
+    const dueDate = host.dataset.dueDate
+      || formatDueDateIso(parseTaskDueDate(host.querySelector('.gp-inline-schedule-date-label')?.textContent))
+      || formatDueDateIso(new Date());
+    const dueTimeStart = normalizeDueHm(host.dataset.dueTimeStart || '');
+    const dueTimeEnd = normalizeDueHm(host.dataset.dueTimeEnd || '');
+    const hasTimes = Boolean(dueTimeStart || dueTimeEnd);
+    return {
+      dueDate,
+      dueTimeStart: dueTimeStart || '18:30',
+      dueTimeEnd: dueTimeEnd || '19:30',
+      allDay: host.dataset.allDay === 'true' || !hasTimes,
+    };
+  }
+
+  function syncScheduleElFromDraft(scheduleEl, draft) {
+    if (!scheduleEl || !draft) return;
+    const dateLabel = scheduleEl.querySelector('.gp-inline-schedule-date-label');
+    if (dateLabel) dateLabel.textContent = formatInlineScheduleDateLabel(draft.dueDate);
+    const timeLabel = scheduleEl.querySelector('.gp-inline-schedule-time-label');
+    if (timeLabel) timeLabel.textContent = formatInlineScheduleTimeLabel(draft);
+    const allday = scheduleEl.querySelector('.gp-inline-schedule-allday');
+    if (allday) allday.checked = Boolean(draft.allDay);
+    scheduleEl.classList.toggle('is-all-day', Boolean(draft.allDay));
+  }
+
+  function mountDueScheduleInAnchor(anchor, task, isSidebar) {
+    if (!anchor) return null;
+    let scheduleEl = anchor.querySelector('.gp-inline-schedule');
+    if (!scheduleEl) {
+      scheduleEl = createInlineScheduleEditor(isSidebar);
+      anchor.textContent = '';
+      anchor.classList.add('has-inline-schedule');
+      anchor.appendChild(scheduleEl);
+    } else if (isSidebar) {
+      scheduleEl.classList.add('gp-inline-schedule--sidebar');
+    }
+    syncScheduleElFromDraft(scheduleEl, dueDraftFromTask(task));
+    return scheduleEl;
+  }
+
+  function createInlineScheduleEditor(isSidebar) {
+    const wrap = document.createElement('div');
+    wrap.className = 'gp-inline-schedule';
+    if (isSidebar) wrap.classList.add('gp-inline-schedule--sidebar');
+
+    const links = document.createElement('div');
+    links.className = 'gp-inline-schedule-links';
+
+    const dateWrap = document.createElement('span');
+    dateWrap.className = 'gp-inline-schedule-date-wrap';
+    const dateLink = document.createElement('button');
+    dateLink.type = 'button';
+    dateLink.className = 'gp-inline-schedule-date-link';
+    dateLink.setAttribute('aria-expanded', 'false');
+    dateLink.setAttribute('aria-haspopup', 'dialog');
+    dateLink.setAttribute('aria-label', 'Due date');
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'gp-inline-schedule-date-label';
+    dateLink.appendChild(dateLabel);
+
+    const calPop = document.createElement('div');
+    calPop.className = 'gp-ct-cal-pop gp-inline-schedule-cal gp-inline-schedule-dropdown';
+    calPop.hidden = true;
+    const calHead = document.createElement('div');
+    calHead.className = 'gp-ct-cal-head';
+    const calMo = document.createElement('span');
+    calMo.className = 'gp-ct-cal-mo gp-inline-schedule-cal-month-label';
+    const calNav = document.createElement('div');
+    calNav.className = 'gp-ct-cal-nav';
+    const calPrev = document.createElement('button');
+    calPrev.type = 'button';
+    calPrev.className = 'gp-ct-cal-nav-btn gp-inline-schedule-cal-prev';
+    calPrev.setAttribute('aria-label', 'Previous month');
+    calPrev.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+    const calNext = document.createElement('button');
+    calNext.type = 'button';
+    calNext.className = 'gp-ct-cal-nav-btn gp-inline-schedule-cal-next';
+    calNext.setAttribute('aria-label', 'Next month');
+    calNext.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    calNav.appendChild(calPrev);
+    calNav.appendChild(calNext);
+    calHead.appendChild(calMo);
+    calHead.appendChild(calNav);
+    const weekdays = document.createElement('div');
+    weekdays.className = 'gp-ct-cal-weekdays';
+    weekdays.setAttribute('aria-hidden', 'true');
+    weekdays.innerHTML = '<span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>';
+    const grid = document.createElement('div');
+    grid.className = 'gp-ct-cal-grid gp-inline-schedule-cal-grid';
+    calPop.appendChild(calHead);
+    calPop.appendChild(weekdays);
+    calPop.appendChild(grid);
+    dateWrap.appendChild(dateLink);
+    dateWrap.appendChild(calPop);
+
+    const sep = document.createElement('span');
+    sep.className = 'gp-inline-schedule-sep';
+    sep.setAttribute('aria-hidden', 'true');
+    sep.textContent = isSidebar ? '' : ' ';
+
+    const timeWrap = document.createElement('span');
+    timeWrap.className = 'gp-inline-schedule-time-wrap';
+    const timeLink = document.createElement('button');
+    timeLink.type = 'button';
+    timeLink.className = 'gp-inline-schedule-time-link';
+    timeLink.setAttribute('aria-expanded', 'false');
+    timeLink.setAttribute('aria-haspopup', 'dialog');
+    timeLink.setAttribute('aria-label', 'Due time');
+    const timeLabel = document.createElement('span');
+    timeLabel.className = 'gp-inline-schedule-time-label';
+    timeLink.appendChild(timeLabel);
+
+    const timeDropdown = document.createElement('div');
+    timeDropdown.className = 'gp-inline-schedule-time-dropdown gp-inline-schedule-dropdown';
+    timeDropdown.hidden = true;
+    timeDropdown.setAttribute('role', 'dialog');
+    timeDropdown.setAttribute('aria-label', 'Choose time');
+
+    ['start', 'end'].forEach((field) => {
+      const section = document.createElement('div');
+      section.className = 'gp-inline-schedule-time-section';
+      const sectionLabel = document.createElement('span');
+      sectionLabel.className = 'gp-inline-schedule-time-section-label';
+      sectionLabel.textContent = field === 'start' ? 'Start' : 'End';
+      const list = document.createElement('div');
+      list.className = 'gp-ct-time-list gp-inline-schedule-time-list';
+      list.dataset.timeField = field;
+      list.setAttribute('role', 'listbox');
+      fillInlineTimeList(list);
+      section.appendChild(sectionLabel);
+      section.appendChild(list);
+      timeDropdown.appendChild(section);
+    });
+
+    const alldayLabel = document.createElement('label');
+    alldayLabel.className = 'gp-inline-schedule-allday-row';
+    const alldayCb = document.createElement('input');
+    alldayCb.type = 'checkbox';
+    alldayCb.className = 'gp-inline-schedule-allday';
+    const alldayText = document.createElement('span');
+    alldayText.textContent = 'All day';
+    alldayLabel.appendChild(alldayCb);
+    alldayLabel.appendChild(alldayText);
+    timeDropdown.appendChild(alldayLabel);
+
+    timeWrap.appendChild(timeLink);
+    timeWrap.appendChild(timeDropdown);
+
+    links.appendChild(dateWrap);
+    links.appendChild(sep);
+    links.appendChild(timeWrap);
+    wrap.appendChild(links);
+    return wrap;
+  }
+
+  function applyMkDueDropdownUi() {
+    const scheduleEl = getActiveInlineSchedule();
+    const target = gpMkDueEditorTarget;
+    if (!scheduleEl || !target) return;
+    const dateOpen = Boolean(target.dateDropdownOpen);
+    const timeOpen = Boolean(target.timeDropdownOpen);
+    const cal = scheduleEl.querySelector('.gp-inline-schedule-cal');
+    const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
+    const timeDropdown = scheduleEl.querySelector('.gp-inline-schedule-time-dropdown');
+    const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
+    if (cal) {
+      if (dateOpen) {
+        cal.hidden = false;
+        cal.removeAttribute('hidden');
+      } else {
+        cal.hidden = true;
+      }
+      cal.classList.toggle('is-open', dateOpen);
+    }
+    if (dateLink) {
+      dateLink.classList.toggle('is-open', dateOpen);
+      dateLink.setAttribute('aria-expanded', dateOpen ? 'true' : 'false');
+    }
+    if (timeDropdown) {
+      if (timeOpen) {
+        timeDropdown.hidden = false;
+        timeDropdown.removeAttribute('hidden');
+      } else {
+        timeDropdown.hidden = true;
+      }
+      timeDropdown.classList.toggle('is-open', timeOpen);
+    }
+    if (timeLink) {
+      timeLink.classList.toggle('is-open', timeOpen);
+      timeLink.setAttribute('aria-expanded', timeOpen ? 'true' : 'false');
+    }
+    scheduleEl.classList.toggle('is-date-dropdown-open', dateOpen);
+    scheduleEl.classList.toggle('is-time-dropdown-open', timeOpen);
+    const allDay = Boolean(gpMkDueEditorDraft?.allDay);
+    if (timeLink) timeLink.hidden = false;
+    scheduleEl.classList.toggle('is-all-day', allDay);
+  }
+
+  function closeInlineScheduleDropdowns(scheduleEl) {
+    if (gpMkDueEditorTarget) {
+      gpMkDueEditorTarget.dateDropdownOpen = false;
+      gpMkDueEditorTarget.timeDropdownOpen = false;
+    }
+    if (scheduleEl || getActiveInlineSchedule()) applyMkDueDropdownUi();
+  }
+
+  function closeMkDueEditor() {
+    const target = gpMkDueEditorTarget;
+    if (!target) return;
+    const { dueBtn, scheduleEl } = target;
+    closeInlineScheduleDropdowns(scheduleEl);
+    if (scheduleEl && gpMkDueEditorDraft) {
+      syncScheduleElFromDraft(scheduleEl, gpMkDueEditorDraft);
+    }
+    dueBtn?.classList.remove('is-schedule-active');
+    target.host?.classList.remove('is-schedule-open');
+    gpMkDueEditorTarget = null;
+    gpMkDueEditorDraft = null;
+  }
+
+  function getMkDueCalSelectedIso() {
+    if (gpMkDueEditorDraft?.dueDate) return gpMkDueEditorDraft.dueDate;
+    const host = gpMkDueEditorTarget?.host;
+    return host?.dataset.dueDate || '';
+  }
+
+  function syncMkDueEditorUi() {
+    const draft = gpMkDueEditorDraft;
+    const scheduleEl = getActiveInlineSchedule();
+    if (!draft || !scheduleEl) return;
+    syncScheduleElFromDraft(scheduleEl, draft);
+    applyMkDueDropdownUi();
+  }
+
+  function renderMkDueCalendar() {
+    const scheduleEl = getActiveInlineSchedule();
+    if (!scheduleEl) return;
+    const grid = scheduleEl.querySelector('.gp-inline-schedule-cal-grid');
+    const mo = scheduleEl.querySelector('.gp-inline-schedule-cal-month-label');
+    if (!grid || !mo) return;
+
+    const selIso = getMkDueCalSelectedIso();
+    const selected = parseDueDateIsoLocal(selIso);
+
+    const view = gpMkDueCalViewMonth && !Number.isNaN(gpMkDueCalViewMonth.getTime())
+      ? gpMkDueCalViewMonth
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    mo.textContent = view.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const y = view.getFullYear();
+    const m = view.getMonth();
+    const firstDow = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const prevTail = firstDow;
+    const prevMonthLast = new Date(y, m, 0).getDate();
+
+    grid.innerHTML = '';
+    const totalCells = Math.ceil((prevTail + daysInMonth) / 7) * 7;
+    for (let i = 0; i < totalCells; i += 1) {
+      const dayNum = i - prevTail + 1;
+      let cellDate;
+      let muted = false;
+      if (i < prevTail) {
+        cellDate = new Date(y, m - 1, prevMonthLast - prevTail + i + 1);
+        muted = true;
+      } else if (dayNum > daysInMonth) {
+        cellDate = new Date(y, m + 1, dayNum - daysInMonth);
+        muted = true;
+      } else {
+        cellDate = new Date(y, m, dayNum);
+      }
+
+      const iso = formatDueDateIso(cellDate);
+      const isSel = selected
+        && cellDate.getFullYear() === selected.getFullYear()
+        && cellDate.getMonth() === selected.getMonth()
+        && cellDate.getDate() === selected.getDate();
+
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gp-ct-cal-cell';
+      if (muted) b.classList.add('is-muted');
+      if (isSel) b.classList.add('is-selected');
+      b.textContent = String(cellDate.getDate());
+      b.dataset.iso = iso;
+      grid.appendChild(b);
+    }
+  }
+
+  function highlightMkDueTimeListSelection(scheduleEl, field, hm) {
+    const list = scheduleEl?.querySelector(`.gp-inline-schedule-time-list[data-time-field="${field}"]`);
+    if (!list) return;
+    list.querySelectorAll('.gp-ct-time-opt').forEach((opt) => {
+      const sel = opt.dataset.hm === hm;
+      opt.classList.toggle('is-selected', sel);
+      opt.setAttribute('aria-selected', sel ? 'true' : 'false');
+    });
+  }
+
+  function scrollMkDueTimeListToHm(scheduleEl, field, hm) {
+    const list = scheduleEl?.querySelector(`.gp-inline-schedule-time-list[data-time-field="${field}"]`);
+    if (!list) return;
+    const opt = list.querySelector(`.gp-ct-time-opt[data-hm="${hm}"]`);
+    if (!opt) return;
+    const targetTop = opt.offsetTop - (list.clientHeight - opt.offsetHeight) / 2;
+    list.scrollTop = Math.max(0, targetTop);
+  }
+
+  function scrollMkDueTimeListsToDraft() {
+    const scheduleEl = getActiveInlineSchedule();
+    const draft = gpMkDueEditorDraft;
+    if (!scheduleEl || !draft || draft.allDay) return;
+    const startHm = normalizeDueHm(draft.dueTimeStart) || '18:30';
+    const endHm = normalizeDueHm(draft.dueTimeEnd) || '19:30';
+    highlightMkDueTimeListSelection(scheduleEl, 'start', startHm);
+    highlightMkDueTimeListSelection(scheduleEl, 'end', endHm);
+    requestAnimationFrame(() => {
+      scrollMkDueTimeListToHm(scheduleEl, 'start', startHm);
+      scrollMkDueTimeListToHm(scheduleEl, 'end', endHm);
+    });
+  }
+
+  function openMkDueDateDropdown() {
+    const target = gpMkDueEditorTarget;
+    if (!target) return;
+    target.timeDropdownOpen = false;
+    const opening = !target.dateDropdownOpen;
+    target.dateDropdownOpen = opening;
+    if (opening) {
+      const iso = gpMkDueEditorDraft?.dueDate || '';
+      const base = parseDueDateIsoLocal(iso) || new Date();
+      gpMkDueCalViewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+      renderMkDueCalendar();
+    }
+    applyMkDueDropdownUi();
+  }
+
+  function openMkDueTimeDropdown() {
+    const target = gpMkDueEditorTarget;
+    if (!target) return;
+    target.dateDropdownOpen = false;
+    const opening = !target.timeDropdownOpen;
+    target.timeDropdownOpen = opening;
+    if (opening) scrollMkDueTimeListsToDraft();
+    applyMkDueDropdownUi();
+  }
+
+  function toggleMkDueDateDropdown() {
+    openMkDueDateDropdown();
+  }
+
+  function toggleMkDueTimeDropdown() {
+    openMkDueTimeDropdown();
+  }
+
+  function ensureMkDueEditorSync(anchor, taskId, scheduleEl) {
+    if (!anchor || !taskId) return false;
+    const host = anchor.closest('.mk-card, .gp-task-row');
+    if (!host) return false;
+    const sched = scheduleEl || anchor.querySelector('.gp-inline-schedule');
+    if (!sched) return false;
+    if (gpMkDueEditorTarget?.dueBtn !== anchor) {
+      closeMkDueEditor();
+      gpMkDueEditorTarget = {
+        host,
+        taskId,
+        dueBtn: anchor,
+        scheduleEl: sched,
+        dateDropdownOpen: false,
+        timeDropdownOpen: false,
+      };
+      gpMkDueEditorDraft = dueDraftFromHost(host);
+      anchor.classList.add('is-schedule-active');
+      host.classList.add('is-schedule-open');
+      syncMkDueEditorUi();
+    }
+    return true;
+  }
+
+  function setMkDueDateDropdownOpen(open) {
+    const target = gpMkDueEditorTarget;
+    if (!target) return;
+    target.timeDropdownOpen = false;
+    target.dateDropdownOpen = open;
+    if (open) {
+      const iso = gpMkDueEditorDraft?.dueDate || '';
+      const base = parseDueDateIsoLocal(iso) || new Date();
+      gpMkDueCalViewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+      renderMkDueCalendar();
+    }
+    applyMkDueDropdownUi();
+  }
+
+  function setMkDueTimeDropdownOpen(open) {
+    const target = gpMkDueEditorTarget;
+    if (!target) return;
+    target.dateDropdownOpen = false;
+    target.timeDropdownOpen = open;
+    if (open) scrollMkDueTimeListsToDraft();
+    applyMkDueDropdownUi();
+  }
+
+  async function commitMkDueEditorDraft() {
+    if (!gpMkDueEditorTarget || !gpMkDueEditorDraft) return;
+    const { taskId } = gpMkDueEditorTarget;
+    const draft = gpMkDueEditorDraft;
+    await updateKanbanTaskSchedule(taskId, {
+      dueDate: draft.dueDate,
+      dueTimeStart: draft.dueTimeStart,
+      dueTimeEnd: draft.dueTimeEnd,
+      allDay: draft.allDay,
+    });
+  }
+
+  async function updateKanbanTaskSchedule(taskId, schedule) {
+    if (!taskId || !schedule?.dueDate) return;
+    const state = await loadKanbanState();
+    const allDay = Boolean(schedule.allDay);
+    const dueDate = schedule.dueDate;
+    const dueTimeStart = allDay ? '' : normalizeDueHm(schedule.dueTimeStart);
+    const dueTimeEnd = allDay ? '' : normalizeDueHm(schedule.dueTimeEnd);
+    let found = false;
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      state.columns[id] = (state.columns[id] || []).map((card) => {
+        if (card.id !== taskId) return card;
+        found = true;
+        const due = allDay
+          ? formatKanbanDueLabel(dueDate)
+          : formatKanbanDueWithTimes(dueDate, dueTimeStart, dueTimeEnd);
+        const next = { ...card, dueDate, due };
+        if (allDay) {
+          next.allDay = true;
+          delete next.dueTimeStart;
+          delete next.dueTimeEnd;
+        } else {
+          delete next.allDay;
+          if (dueTimeStart) next.dueTimeStart = dueTimeStart;
+          else delete next.dueTimeStart;
+          if (dueTimeEnd) next.dueTimeEnd = dueTimeEnd;
+          else delete next.dueTimeEnd;
+        }
+        return next;
+      });
+    });
+    if (!found) return;
+    await saveKanbanState(state);
+  }
+
+  function wireMkDueEditorOnce() {
+    if (document.documentElement.dataset.gpMkDueEditorWired === 'true') return;
+    document.documentElement.dataset.gpMkDueEditorWired = 'true';
+
+    document.addEventListener('click', (e) => {
+      const scheduleEl = e.target.closest('.gp-inline-schedule');
+      if (!scheduleEl) return;
+
+      const dueBtn = scheduleEl.closest('.mk-card-due-btn, .gp-task-due-btn');
+      const host = dueBtn?.closest('.mk-card, .gp-task-row');
+      const taskId = host?.dataset.cardId || host?.dataset.taskId;
+      const onDateLink = e.target.closest('.gp-inline-schedule-date-link');
+      const onTimeLink = e.target.closest('.gp-inline-schedule-time-link');
+
+      if ((onDateLink || onTimeLink) && dueBtn && taskId) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!ensureMkDueEditorSync(dueBtn, taskId, scheduleEl)) return;
+        const target = gpMkDueEditorTarget;
+        if (!target) return;
+        if (onDateLink) {
+          openMkDueDateDropdown();
+        } else {
+          openMkDueTimeDropdown();
+        }
+        return;
+      }
+
+      if (scheduleEl !== gpMkDueEditorTarget?.scheduleEl) return;
+
+      if (e.target.closest('.gp-inline-schedule-cal-prev')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const v = gpMkDueCalViewMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        gpMkDueCalViewMonth = new Date(v.getFullYear(), v.getMonth() - 1, 1);
+        renderMkDueCalendar();
+        return;
+      }
+
+      if (e.target.closest('.gp-inline-schedule-cal-next')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const v = gpMkDueCalViewMonth || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        gpMkDueCalViewMonth = new Date(v.getFullYear(), v.getMonth() + 1, 1);
+        renderMkDueCalendar();
+        return;
+      }
+
+      const cell = e.target.closest('.gp-inline-schedule-cal-grid .gp-ct-cal-cell');
+      if (cell?.dataset?.iso && gpMkDueEditorDraft) {
+        e.preventDefault();
+        e.stopPropagation();
+        const iso = cell.dataset.iso;
+        const picked = parseDueDateIsoLocal(iso);
+        if (picked) {
+          gpMkDueCalViewMonth = new Date(picked.getFullYear(), picked.getMonth(), 1);
+        }
+        gpMkDueEditorDraft.dueDate = iso;
+        syncMkDueEditorUi();
+        renderMkDueCalendar();
+        if (gpMkDueEditorTarget) {
+          gpMkDueEditorTarget.dateDropdownOpen = false;
+          applyMkDueDropdownUi();
+        }
+        void commitMkDueEditorDraft();
+        return;
+      }
+
+      const opt = e.target.closest('.gp-inline-schedule-time-list .gp-ct-time-opt');
+      const timeList = opt?.closest('.gp-inline-schedule-time-list');
+      const timeField = timeList?.dataset?.timeField;
+      if (opt?.dataset?.hm && gpMkDueEditorDraft && timeField) {
+        e.preventDefault();
+        e.stopPropagation();
+        const hm = nearestCreateTaskTimeHm(opt.dataset.hm) || opt.dataset.hm;
+        if (timeField === 'end') {
+          gpMkDueEditorDraft.dueTimeEnd = hm;
+        } else {
+          gpMkDueEditorDraft.dueTimeStart = hm;
+        }
+        gpMkDueEditorDraft.allDay = false;
+        syncMkDueEditorUi();
+        highlightMkDueTimeListSelection(scheduleEl, timeField, hm);
+        void commitMkDueEditorDraft();
+      }
+    });
+
+    document.addEventListener('change', (e) => {
+      if (!e.target.classList?.contains('gp-inline-schedule-allday')) return;
+      if (e.target.closest('.gp-inline-schedule') !== gpMkDueEditorTarget?.scheduleEl) return;
+      if (!gpMkDueEditorDraft) return;
+      gpMkDueEditorDraft.allDay = Boolean(e.target.checked);
+      syncMkDueEditorUi();
+      void commitMkDueEditorDraft();
+    });
+  }
+
+  async function getKanbanTaskById(taskId) {
+    if (!taskId) return null;
+    const state = await loadKanbanState();
+    for (let i = 0; i < KANBAN_COLUMN_DEFS.length; i += 1) {
+      const colId = KANBAN_COLUMN_DEFS[i].id;
+      const card = (state.columns[colId] || []).find((c) => c.id === taskId);
+      if (card) return card;
+    }
+    return null;
+  }
+
+  async function updateKanbanTaskTitle(taskId, title) {
+    if (!taskId) return;
+    const trimmed = String(title || '').trim() || 'Untitled';
+    const state = await loadKanbanState();
+    let found = false;
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      state.columns[id] = (state.columns[id] || []).map((card) => {
+        if (card.id !== taskId) return card;
+        found = true;
+        return { ...card, title: trimmed };
+      });
+    });
+    if (!found) return;
+    await saveKanbanState(state);
+  }
+
+  function getTaskTitleInputValue(titleEl) {
+    if (!titleEl) return '';
+    if (titleEl instanceof HTMLInputElement) return titleEl.value;
+    return titleEl.textContent || '';
+  }
+
+  function getKanbanCardTitleValue(cardEl) {
+    return getTaskTitleInputValue(cardEl?.querySelector('.mk-card-title'));
+  }
+
+  function commitTaskTitleInput(input) {
+    const host = input.closest('.mk-card, .gp-task-row');
+    const taskId = host?.dataset.cardId || host?.dataset.taskId;
+    if (!taskId) return;
+    const next = input.value.trim() || 'Untitled';
+    input.value = next;
+    const prior = (input.dataset.editStartValue || '').trim();
+    if (next === prior) return;
+    void updateKanbanTaskTitle(taskId, next);
+  }
+
+  function isSidebarTitleEditActive() {
+    return Boolean(
+      document.querySelector('#gp-panel .gp-task-row.is-editing-title')
+      || document.querySelector('#gp-panel .gp-task-title:focus'),
+    );
+  }
+
+  function isMkDueEditorActive() {
+    return Boolean(gpMkDueEditorTarget?.host?.classList.contains('is-schedule-open'));
+  }
+
+  function bindSidebarTaskTitleInput(title, row) {
+    if (!title || !row || title.dataset.gpTitleBound === 'true') return;
+    title.dataset.gpTitleBound = 'true';
+
+    title.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+    });
+
+    title.addEventListener('mousedown', (event) => {
+      event.stopPropagation();
+    });
+
+    title.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    title.addEventListener('focus', () => {
+      row.classList.add('is-editing-title');
+      title.dataset.editStartValue = title.value;
+    });
+
+    title.addEventListener('blur', () => {
+      row.classList.remove('is-editing-title');
+      commitTaskTitleInput(title);
+    });
+
+    title.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        title.blur();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        title.value = title.dataset.editStartValue || title.value;
+        title.blur();
+      }
+    });
   }
 
   function getTaskDueDateFromCard(card) {
@@ -1860,6 +2641,15 @@
     } else if (dueDate) {
       row.dataset.dueDate = formatDueDateIso(dueDate);
     }
+    if (task.dueTimeStart) {
+      row.dataset.dueTimeStart = task.dueTimeStart;
+    }
+    if (task.dueTimeEnd) {
+      row.dataset.dueTimeEnd = task.dueTimeEnd;
+    }
+    if (task.allDay) {
+      row.dataset.allDay = 'true';
+    }
 
     const checkbox = document.createElement('button');
     checkbox.type = 'button';
@@ -1888,13 +2678,18 @@
     const text = document.createElement('div');
     text.className = 'gp-task-text';
 
-    const title = document.createElement('p');
+    const title = document.createElement('input');
+    title.type = 'text';
     title.className = 'gp-task-title';
-    title.textContent = task.title;
+    title.value = task.title;
+    title.setAttribute('aria-label', 'Task title');
+    title.spellcheck = true;
+    title.autocomplete = 'off';
+    bindSidebarTaskTitleInput(title, row);
 
-    const subtitle = document.createElement('p');
-    subtitle.className = 'gp-task-subtitle';
-    subtitle.textContent = task.due;
+    const subtitle = document.createElement('span');
+    subtitle.className = 'gp-task-subtitle gp-task-due-btn';
+    mountDueScheduleInAnchor(subtitle, task, true);
 
     text.appendChild(title);
     text.appendChild(subtitle);
@@ -1957,6 +2752,7 @@
   function renderSidebarTasks(panel, state) {
     const accordion = panel?.querySelector('#gp-tasks-accordion');
     if (!accordion) return;
+    if (isSidebarTitleEditActive() || isMkDueEditorActive()) return;
 
     const buckets = {
       today: [],
@@ -2003,7 +2799,7 @@
   function refreshLinkedTaskViews(state) {
     const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
     const panel = document.getElementById('gp-panel');
-    if (panel) {
+    if (panel && !isSidebarTitleEditActive() && !isMkDueEditorActive()) {
       renderSidebarTasks(panel, normalized);
     }
 
@@ -2083,6 +2879,15 @@
     if (task.dueDate) {
       card.dataset.dueDate = task.dueDate;
     }
+    if (task.dueTimeStart) {
+      card.dataset.dueTimeStart = task.dueTimeStart;
+    }
+    if (task.dueTimeEnd) {
+      card.dataset.dueTimeEnd = task.dueTimeEnd;
+    }
+    if (task.allDay) {
+      card.dataset.allDay = 'true';
+    }
     if (task.notes) {
       card.dataset.notes = task.notes;
     }
@@ -2090,12 +2895,19 @@
       card.dataset.subtasks = JSON.stringify(task.subtasks);
     }
 
+    const top = document.createElement('div');
+    top.className = 'mk-card-top';
+
     const header = document.createElement('div');
     header.className = 'mk-card-header';
 
-    const title = document.createElement('span');
+    const title = document.createElement('input');
+    title.type = 'text';
     title.className = 'mk-card-title';
-    title.textContent = task.title;
+    title.value = task.title;
+    title.setAttribute('aria-label', 'Task title');
+    title.spellcheck = true;
+    title.autocomplete = 'off';
 
     const starBtn = document.createElement('button');
     starBtn.type = 'button';
@@ -2109,9 +2921,12 @@
     header.appendChild(title);
     header.appendChild(starBtn);
 
-    const due = document.createElement('span');
-    due.className = 'mk-card-due';
-    due.textContent = task.due;
+    const due = document.createElement('div');
+    due.className = 'mk-card-due mk-card-due-btn';
+    mountDueScheduleInAnchor(due, task, false);
+
+    top.appendChild(header);
+    top.appendChild(due);
 
     const footer = document.createElement('div');
     footer.className = 'mk-card-footer';
@@ -2124,8 +2939,7 @@
     }
 
     footer.appendChild(chip);
-    card.appendChild(header);
-    card.appendChild(due);
+    card.appendChild(top);
     card.appendChild(footer);
 
     return card;
@@ -2161,8 +2975,11 @@
 
         columns[colId].push({
           id: cid,
-          title: cardEl.querySelector('.mk-card-title')?.textContent || 'Project Outline',
+          title: getKanbanCardTitleValue(cardEl) || 'Project Outline',
           dueDate: cardEl.dataset.dueDate || undefined,
+          dueTimeStart: cardEl.dataset.dueTimeStart || undefined,
+          dueTimeEnd: cardEl.dataset.dueTimeEnd || undefined,
+          allDay: cardEl.dataset.allDay === 'true',
           due: cardEl.querySelector('.mk-card-due')?.textContent || 'Due Thurs, May 21',
           chip: cardEl.querySelector('.mk-chip')?.textContent || 'PSYC101',
           chipColor: cardEl.dataset.chipColor || 'blue',
@@ -2344,7 +3161,6 @@
   let gpGlobalTaskModalsWired = false;
   let gpManageTagsDraft = null;
   let gpResumeCreateTaskLayerAfterTags = false;
-
   function getGlobalTaskModalsRoot() {
     return document.getElementById('gp-task-modals-root');
   }
@@ -2417,20 +3233,27 @@
               </div>
               <span class="gp-ct-time-dash" aria-hidden="true">—</span>
               <div class="gp-ct-time-slot">
-                <input type="text" class="gp-ct-time-txt" name="dueTimeStart" id="gp-ct-time-start" inputmode="text" autocomplete="off" spellcheck="false" placeholder="6:30pm" aria-label="Start time">
+                <input type="hidden" name="dueTimeStart" id="gp-ct-time-start" value="">
+                <button type="button" class="gp-ct-time-btn" id="gp-ct-time-start-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="Start time">
+                  <span id="gp-ct-time-start-label">6:30pm</span>
+                </button>
               </div>
               <div class="gp-ct-time-slot">
-                <input type="text" class="gp-ct-time-txt" name="dueTimeEnd" id="gp-ct-time-end" inputmode="text" autocomplete="off" spellcheck="false" placeholder="7:30pm" aria-label="End time">
+                <input type="hidden" name="dueTimeEnd" id="gp-ct-time-end" value="">
+                <button type="button" class="gp-ct-time-btn" id="gp-ct-time-end-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="End time">
+                  <span id="gp-ct-time-end-label">7:30pm</span>
+                </button>
+              </div>
+              <div id="gp-ct-time-pop" class="gp-ct-time-pop" hidden role="listbox" aria-label="Choose time">
+                <div id="gp-ct-time-list" class="gp-ct-time-list"></div>
               </div>
             </div>
-            <label class="gp-ct-repeat gp-ct-repeat--inline">
-              <span class="gp-ct-sublabel">Repeat</span>
-              <select class="gp-ct-select" name="repeat" aria-label="Repeat">
-                <option value="none" selected>Does not repeat</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
-            </label>
+            <div class="gp-ct-schedule-options">
+              <label class="gp-ct-allday" for="gp-ct-allday">
+                <input type="checkbox" class="gp-ct-allday-check" id="gp-ct-allday" name="allDay" value="1">
+                <span class="gp-ct-allday-label">All day</span>
+              </label>
+            </div>
           </div>
         </div>
         <div class="gp-ct-section gp-ct-section--tags" id="gp-ct-tag-section">
@@ -2467,15 +3290,19 @@
         </div>
         <div class="gp-ct-section">
           <div class="gp-ct-section-label">Subtasks</div>
-          <div id="gp-ct-subtasks" class="gp-ct-subtasks"></div>
-          <button type="button" class="gp-ct-text-btn" id="gp-ct-add-subtask">Add subtask</button>
-          <p class="gp-ct-hint">Subtasks sync across recurring sessions</p>
+          <div class="gp-ct-subtasks-wrap">
+            <div id="gp-ct-subtasks-first" class="gp-ct-subtasks gp-ct-subtasks--first"></div>
+            <div class="gp-ct-subtask gp-ct-subtask-add">
+              <span class="gp-ct-subtask-check-spacer" aria-hidden="true"></span>
+              <div class="gp-ct-subtask-add-stack">
+                <button type="button" class="gp-ct-text-btn gp-ct-add-subtask-btn" id="gp-ct-add-subtask">Add subtask</button>
+                <p class="gp-ct-hint">Subtasks are saved with the task</p>
+              </div>
+            </div>
+            <div id="gp-ct-subtasks-more" class="gp-ct-subtasks gp-ct-subtasks--more"></div>
+          </div>
         </div>
         <footer class="gp-ct-footer">
-          <div class="gp-ct-footer-left">
-            <span class="gp-ct-cal-dot" aria-hidden="true"></span>
-            <span class="gp-ct-cal-label">My Tasks</span>
-          </div>
           <div class="gp-ct-footer-right">
             <button type="button" class="gp-ct-btn gp-ct-btn--text" data-gp-ct-dismiss="true">Cancel</button>
             <button type="submit" class="gp-ct-btn gp-ct-btn--primary">Save</button>
@@ -2484,6 +3311,7 @@
       </form>
     </div>
   </div>
+
   <div id="gp-mt-layer" class="gp-mt-layer" hidden>
     <div class="gp-mt-scrim" data-gp-mt-dismiss="true"></div>
     <div class="gp-mt-dialog" role="dialog" aria-modal="true" aria-labelledby="gp-mt-title">
@@ -2499,6 +3327,7 @@
       </div>
     </div>
   </div>
+
 </div>`.trim();
   }
 
@@ -2543,8 +3372,7 @@
       const chipInput = document.getElementById('gp-ct-chip');
       if (chipInput) chipInput.value = '';
 
-      const subtasksEl = document.getElementById('gp-ct-subtasks');
-      if (subtasksEl) subtasksEl.innerHTML = '';
+      resetCreateTaskSubtasks();
 
       const newTagEl = document.getElementById('gp-ct-new-tag');
       if (newTagEl) newTagEl.hidden = true;
@@ -2571,15 +3399,12 @@
       setCreateTaskDueIso(due?.value || formatDueDateIso(new Date()));
 
       setCreateTaskTimeFieldsFromHm('18:30', '19:30');
+      resetCreateTaskAllDay();
       closeCreateTaskCalendar();
 
       root.hidden = false;
       layer.hidden = false;
       document.body.classList.add('gp-task-modals-open');
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => fitCreateTaskTimeInputsBoth());
-      });
 
       const kr = getActiveKanbanRoot();
       if (kr) kr.classList.add('is-modal-open');
@@ -2593,6 +3418,7 @@
   function closeGlobalCreateTaskModal() {
     closeGpCtSpectrumPop();
     closeCreateTaskCalendar();
+    closeCreateTaskTimePop();
     const root = getGlobalTaskModalsRoot();
     const layer = document.getElementById('gp-ct-layer');
     const mt = document.getElementById('gp-mt-layer');
@@ -2733,15 +3559,26 @@
     }
   }
 
-  function appendSubtaskRow(title = '', done = false) {
-    const host = document.getElementById('gp-ct-subtasks');
+  function resetCreateTaskSubtasks() {
+    const first = document.getElementById('gp-ct-subtasks-first');
+    const more = document.getElementById('gp-ct-subtasks-more');
+    if (first) {
+      first.innerHTML = '';
+      appendSubtaskRow('', false, { host: first, removable: false });
+    }
+    if (more) more.innerHTML = '';
+  }
+
+  function appendSubtaskRow(title = '', done = false, options = {}) {
+    const host = options.host || document.getElementById('gp-ct-subtasks-more');
     if (!host) return;
+    const removable = options.removable !== false;
     const row = document.createElement('div');
     row.className = 'gp-ct-subtask';
     row.innerHTML = `
       <input type="checkbox" class="gp-ct-subtask-check" ${done ? 'checked' : ''} aria-label="Done">
       <input type="text" class="gp-ct-subtask-input" placeholder="Subtask">
-      <button type="button" class="gp-ct-subtask-del" aria-label="Remove subtask">×</button>
+      ${removable ? '<button type="button" class="gp-ct-subtask-del" aria-label="Remove subtask">×</button>' : ''}
     `;
     const textInput = row.querySelector('.gp-ct-subtask-input');
     if (textInput) textInput.value = title;
@@ -2749,9 +3586,9 @@
   }
 
   function readSubtasksFromForm() {
-    const host = document.getElementById('gp-ct-subtasks');
-    if (!host) return [];
-    return [...host.querySelectorAll('.gp-ct-subtask')].map((row, i) => {
+    const wrap = document.querySelector('.gp-ct-subtasks-wrap');
+    if (!wrap) return [];
+    return [...wrap.querySelectorAll('.gp-ct-subtask')].map((row, i) => {
       const input = row.querySelector('.gp-ct-subtask-input');
       const check = row.querySelector('.gp-ct-subtask-check');
       const title = input?.value.trim() || '';
@@ -2768,20 +3605,15 @@
     const form = document.getElementById('gp-ct-form');
     if (!form) return;
 
-    const ts = document.getElementById('gp-ct-time-start');
-    const te = document.getElementById('gp-ct-time-end');
-    if (ts) normalizeCreateTaskTimeInputOnBlur(ts);
-    if (te) normalizeCreateTaskTimeInputOnBlur(te);
-    fitCreateTaskTimeInputsBoth();
-
     const title = form.querySelector('[name="title"]')?.value.trim();
     const dueDate = document.getElementById('gp-ct-due-date')?.value
       || form.querySelector('[name="dueDate"]')?.value;
-    const dueTimeStart = parseFlexibleTimeToHm(form.querySelector('[name="dueTimeStart"]')?.value || '');
-    const dueTimeEnd = parseFlexibleTimeToHm(form.querySelector('[name="dueTimeEnd"]')?.value || '');
+    const dueTimeStart = normalizeDueHm(form.querySelector('[name="dueTimeStart"]')?.value || '');
+    const dueTimeEnd = normalizeDueHm(form.querySelector('[name="dueTimeEnd"]')?.value || '');
     const chip = document.getElementById('gp-ct-chip')?.value?.trim() || (getDefaultTags()[0]?.label || 'PSYC101');
     const columnId = document.getElementById('gp-ct-column')?.value || 'todo';
     const notes = form.querySelector('[name="notes"]')?.value.trim() || '';
+    const allDay = Boolean(document.getElementById('gp-ct-allday')?.checked);
     const subtasks = readSubtasksFromForm();
 
     if (!title || !dueDate) return;
@@ -2797,15 +3629,21 @@
       id: `task-${Date.now()}`,
       title,
       dueDate,
-      due: formatKanbanDueWithTimes(dueDate, dueTimeStart, dueTimeEnd),
+      due: allDay
+        ? formatKanbanDueLabel(dueDate)
+        : formatKanbanDueWithTimes(dueDate, dueTimeStart, dueTimeEnd),
       chip,
       chipColor,
       starred: false,
       notes,
       subtasks,
     };
-    if (dueTimeStart) card.dueTimeStart = dueTimeStart;
-    if (dueTimeEnd) card.dueTimeEnd = dueTimeEnd;
+    if (allDay) {
+      card.allDay = true;
+    } else {
+      if (dueTimeStart) card.dueTimeStart = dueTimeStart;
+      if (dueTimeEnd) card.dueTimeEnd = dueTimeEnd;
+    }
     if (chipCustomHex) card.chipCustomHex = chipCustomHex;
 
     state.columns[columnId] = [...(state.columns[columnId] || []), card];
@@ -2920,6 +3758,7 @@
   function wireGlobalTaskModalsOnce() {
     if (gpGlobalTaskModalsWired) return;
     gpGlobalTaskModalsWired = true;
+    wireMkDueEditorOnce();
 
     document.addEventListener('click', (event) => {
       if (event.target.closest('[data-gp-ct-dismiss="true"]')) {
@@ -2961,6 +3800,7 @@
     document.getElementById('gp-ct-date-btn')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      closeCreateTaskTimePop();
       const pop = document.getElementById('gp-ct-cal-pop');
       if (pop && !pop.hidden) closeCreateTaskCalendar();
       else openCreateTaskCalendar();
@@ -2995,41 +3835,70 @@
       closeCreateTaskCalendar();
     });
 
-    document.getElementById('gp-ct-time-start')?.addEventListener('blur', (e) => {
-      normalizeCreateTaskTimeInputOnBlur(e.target);
+    ensureCreateTaskTimeList();
+
+    document.getElementById('gp-ct-time-start-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleCreateTaskTimePop('start');
     });
-    document.getElementById('gp-ct-time-end')?.addEventListener('blur', (e) => {
-      normalizeCreateTaskTimeInputOnBlur(e.target);
+
+    document.getElementById('gp-ct-time-end-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleCreateTaskTimePop('end');
     });
-    const onTimeFieldInput = (e) => {
-      const t = e.target;
-      if (t && t.classList && t.classList.contains('gp-ct-time-txt--invalid')) {
-        t.classList.remove('gp-ct-time-txt--invalid');
-      }
-      fitCreateTaskTimeInputWidth(t);
-    };
-    document.getElementById('gp-ct-time-start')?.addEventListener('input', onTimeFieldInput);
-    document.getElementById('gp-ct-time-end')?.addEventListener('input', onTimeFieldInput);
-    document.getElementById('gp-ct-time-start')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.target.blur();
-      }
+
+    document.getElementById('gp-ct-time-list')?.addEventListener('click', (e) => {
+      const opt = e.target.closest('.gp-ct-time-opt');
+      if (!opt?.dataset?.hm || !gpCtTimePopField) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setCreateTaskTimeField(gpCtTimePopField, opt.dataset.hm);
+      closeCreateTaskTimePop();
     });
-    document.getElementById('gp-ct-time-end')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.target.blur();
-      }
+
+    document.getElementById('gp-ct-allday')?.addEventListener('change', () => {
+      syncCreateTaskAllDayUi();
     });
 
     document.addEventListener(
       'pointerdown',
       (e) => {
-        const pop = document.getElementById('gp-ct-cal-pop');
-        if (!pop || pop.hidden) return;
-        if (e.target.closest('.gp-ct-date-anchor')) return;
-        closeCreateTaskCalendar();
+        const calPop = document.getElementById('gp-ct-cal-pop');
+        if (calPop && !calPop.hidden && !e.target.closest('.gp-ct-date-anchor')) {
+          closeCreateTaskCalendar();
+        }
+        if (e.target.closest(
+          '.gp-inline-schedule-date-link, .gp-inline-schedule-time-link, .gp-inline-schedule-dropdown',
+        )) {
+          return;
+        }
+        const mkTarget = gpMkDueEditorTarget;
+        const mkHost = mkTarget?.host;
+        const mkSchedule = mkTarget?.scheduleEl;
+        if (mkHost && mkSchedule) {
+          const inHost = mkHost.contains(e.target);
+          const inDueLine = e.target.closest('.mk-card-due-btn, .gp-task-due-btn');
+          const inDateZone = e.target.closest('.gp-inline-schedule-date-wrap');
+          const inTimeZone = e.target.closest('.gp-inline-schedule-time-wrap');
+          const inDropdown = e.target.closest('.gp-inline-schedule-dropdown');
+          if (!inHost) {
+            closeMkDueEditor();
+          } else if (inDueLine && (inDateZone || inTimeZone || inDropdown)) {
+            /* keep editor open while interacting with due line dropdowns */
+          } else if (inDueLine) {
+            closeInlineScheduleDropdowns(mkSchedule);
+          } else {
+            closeMkDueEditor();
+          }
+        }
+        const timePop = document.getElementById('gp-ct-time-pop');
+        if (timePop && !timePop.hidden
+          && !e.target.closest('.gp-ct-time-pop')
+          && !e.target.closest('.gp-ct-time-btn')) {
+          closeCreateTaskTimePop();
+        }
       },
       true,
     );
@@ -3037,6 +3906,8 @@
     window.addEventListener('resize', () => {
       const cal = document.getElementById('gp-ct-cal-pop');
       if (cal && !cal.hidden) positionCreateTaskCalendar();
+      const timePop = document.getElementById('gp-ct-time-pop');
+      if (timePop && !timePop.hidden) positionCreateTaskTimePop();
     });
 
     document.querySelector('.gp-ct-segmented')?.addEventListener('click', (e) => {
@@ -3098,23 +3969,23 @@
 
     document.getElementById('gp-ct-add-subtask')?.addEventListener('click', () => {
       appendSubtaskRow();
-      const host = document.getElementById('gp-ct-subtasks');
+      const host = document.getElementById('gp-ct-subtasks-more');
       host?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')?.focus();
     });
 
-    document.getElementById('gp-ct-subtasks')?.addEventListener('click', (e) => {
+    document.querySelector('.gp-ct-subtasks-wrap')?.addEventListener('click', (e) => {
       if (e.target.closest('.gp-ct-subtask-del')) {
         e.target.closest('.gp-ct-subtask')?.remove();
       }
     });
 
-    document.getElementById('gp-ct-subtasks')?.addEventListener('keydown', (e) => {
+    document.querySelector('.gp-ct-subtasks-wrap')?.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       const input = e.target.closest('.gp-ct-subtask-input');
       if (!input) return;
       e.preventDefault();
       appendSubtaskRow();
-      const host = document.getElementById('gp-ct-subtasks');
+      const host = document.getElementById('gp-ct-subtasks-more');
       host?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')?.focus();
     });
 
@@ -3245,6 +4116,17 @@
         e.preventDefault();
         return;
       }
+      if (gpMkDueEditorTarget?.scheduleEl) {
+        const { dateDropdownOpen, timeDropdownOpen, scheduleEl } = gpMkDueEditorTarget;
+        if (dateDropdownOpen || timeDropdownOpen) {
+          closeInlineScheduleDropdowns(scheduleEl);
+          e.preventDefault();
+          return;
+        }
+        closeMkDueEditor();
+        e.preventDefault();
+        return;
+      }
       if (document.getElementById('gp-mt-layer') && !document.getElementById('gp-mt-layer').hidden) {
         closeManageTagsModal();
         e.preventDefault();
@@ -3370,11 +4252,68 @@
     board.addEventListener('wheel', onKanbanBoardWheel, { passive: false });
   }
 
+  function wireTaskTitleEditing(root, { wiredFlag, inputSelector, hostSelector }) {
+    if (!root || root.dataset[wiredFlag] === 'true') return;
+    root.dataset[wiredFlag] = 'true';
+
+    root.addEventListener('pointerdown', (event) => {
+      if (event.target.closest(inputSelector)) {
+        event.stopPropagation();
+      }
+    }, true);
+
+    root.addEventListener('mousedown', (event) => {
+      const input = event.target.closest(inputSelector);
+      if (!input || !root.contains(input)) return;
+      event.stopPropagation();
+      if (document.activeElement !== input) {
+        input.focus({ preventScroll: true });
+        input.select();
+      }
+    }, true);
+
+    root.addEventListener('focusin', (event) => {
+      const input = event.target.closest(inputSelector);
+      if (!input || !root.contains(input)) return;
+      input.closest(hostSelector)?.classList.add('is-editing-title');
+      input.dataset.editStartValue = input.value;
+    });
+
+    root.addEventListener('focusout', (event) => {
+      const input = event.target.closest(inputSelector);
+      if (!input || !root.contains(input)) return;
+      input.closest(hostSelector)?.classList.remove('is-editing-title');
+      commitTaskTitleInput(input);
+    });
+
+    root.addEventListener('keydown', (event) => {
+      const input = event.target.closest(inputSelector);
+      if (!input || !root.contains(input)) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        input.blur();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        input.value = input.dataset.editStartValue || input.value;
+        input.blur();
+      }
+    });
+  }
+
+  function wireKanbanCardTitleEditing(root) {
+    wireTaskTitleEditing(root, {
+      wiredFlag: 'titleEditWired',
+      inputSelector: '.mk-card-title',
+      hostSelector: '.mk-card',
+    });
+  }
+
   function wireKanbanInteractions(root) {
     if (!root || root.dataset.interactionsWired === 'true') return;
     root.dataset.interactionsWired = 'true';
 
     wireKanbanBoardWheelScroll(root.querySelector('.mytasks-kanban__board'));
+    wireKanbanCardTitleEditing(root);
 
     root.addEventListener('click', (event) => {
       const starBtn = event.target.closest('.mk-star-btn');
@@ -3500,14 +4439,30 @@
     }
 
     function createDragClone(card, rect) {
+      const host = document.createElement('div');
+      host.className = 'mytasks-kanban mk-drag-clone-host';
+      host.setAttribute('aria-hidden', 'true');
+      host.style.width = `${rect.width}px`;
+
       const clone = card.cloneNode(true);
-      clone.classList.remove('is-dragging', 'is-drop-snap');
+      clone.classList.remove(
+        'is-dragging',
+        'is-drop-snap',
+        'is-editing-title',
+        'is-schedule-open',
+      );
       clone.classList.add('mk-drag-clone');
-      clone.style.width = `${rect.width}px`;
-      clone.style.left = `${rect.left}px`;
-      clone.style.top = `${rect.top}px`;
-      document.body.appendChild(clone);
-      return clone;
+      clone.querySelectorAll('.gp-inline-schedule-dropdown').forEach((el) => {
+        el.hidden = true;
+      });
+      clone.querySelectorAll('.gp-inline-schedule-date-link.is-open, .gp-inline-schedule-time-link.is-open')
+        .forEach((el) => el.classList.remove('is-open'));
+      clone.querySelectorAll('.mk-card-due-btn.is-schedule-active, .gp-task-due-btn.is-schedule-active')
+        .forEach((el) => el.classList.remove('is-schedule-active'));
+
+      host.appendChild(clone);
+      document.body.appendChild(host);
+      return host;
     }
 
     function updateDragClonePosition() {
@@ -3763,6 +4718,9 @@
       const card = event.target.closest('.mk-card');
       if (!card || !board.contains(card)) return;
       if (event.target.closest('.mk-star-btn')) return;
+      if (event.target.closest('.mk-card-due-btn')) return;
+      if (event.target.closest('.mk-card-title')) return;
+      if (card.classList.contains('is-editing-title')) return;
 
       pendingCard = card;
       activePointerId = event.pointerId;
@@ -4486,6 +5444,7 @@
     initTaskStatusMenus(panel);
     initTaskCompletion(panel.querySelector('#gp-tasks-accordion'));
     syncFolderCounts(panel.querySelector('#gp-tasks-accordion'));
+
   }
 
   function mountSidebar() {
