@@ -5351,6 +5351,7 @@
 
   function gpGdOnDelegatedGoalCalendarClick(e) {
     if (e.button !== 0 || e.defaultPrevented) return;
+    setupGpCalGoalDetailEnrichment();
     void (async () => {
       try {
         const ctx = await gpGdClassifyCalendarGoalClick(e);
