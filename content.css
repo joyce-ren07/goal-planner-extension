@@ -993,10 +993,65 @@
 }
 .goal-ghost-event-name {
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 12px; font-weight: 500;
-  color: rgba(211, 86, 75, 0.80);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  display: block; line-height: 1.3;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: normal;
+  -webkit-font-smoothing: antialiased;
+  color: rgba(211, 86, 75, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+@keyframes gp-ghost-enter-fade {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 0.92;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gp-ghost-enter-fade-ephemeral {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 0.88;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gp-ghost-tip-rise {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-ghost-event {
+    animation: none;
+    opacity: 0.9;
+    transform: none !important;
+  }
+  .goal-ghost-event[data-gp-ghost-ephemeral='true'] {
+    opacity: 0.84;
+  }
+  .goal-ghost-event.gp-ghost-tip-active::after {
+    animation: none;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* Skeleton loading cards */
