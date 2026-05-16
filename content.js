@@ -5162,8 +5162,45 @@
     _gpGdPinWatchDebounce = 0;
   }
 
+  /** Event popup shell only — excludes calendar grid / sidebar surfaces mistaken for inspectors. */
+  function gpGdRequireEventDialogAncestor(el) {
+    if (!(el instanceof HTMLElement) || !el.isConnected) return null;
+    const d = el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]');
+    if (!(d instanceof HTMLElement)) return null;
+    if (d.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols')) {
+      return null;
+    }
+    if (!gpGdIsElementVisuallyExposed(d)) return null;
+    if (gpGdIsCalendarGridContainer(d)) return null;
+    return d;
+  }
+
+  function gpGdIsQualifyingEventInspectorHost(host) {
+    if (!(host instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(host)) return false;
+    if (!gpGdRequireEventDialogAncestor(host)) return false;
+    if (gpGdIsWeekGridMountSurface(host)) return false;
+    const r = host.getBoundingClientRect();
+    if (r.width < 200 || r.height < 100) return false;
+    if (r.width > gpGdMaxInspectorCardWidth() * 1.05) return false;
+    return gpGdInspectorHasCloseControl(host) || host.matches('[role="dialog"], [role="alertdialog"]');
+  }
+
+  function gpGdIsDetailUiInEventDialog(el) {
+    return !!(el instanceof HTMLElement && el.isConnected && gpGdRequireEventDialogAncestor(el));
+  }
+
+  function gpGdTeardownOrphanedDetailUi() {
+    if (__gpGdBlockEl?.isConnected && !gpGdIsDetailUiInEventDialog(__gpGdBlockEl)) {
+      teardownGpGdBlock();
+      return;
+    }
+    if (__gpGdMarkFooterEl?.isConnected && !gpGdIsDetailUiInEventDialog(__gpGdMarkFooterEl)) {
+      teardownGpGdMarkFooter();
+    }
+  }
+
   function gpGdHasOpenEventInspector() {
-    return gpEnumerateNativeEventDetailHosts().some((h) => gpGdIsElementVisuallyExposed(h));
+    return gpEnumerateNativeEventDetailHosts().some((h) => gpGdIsQualifyingEventInspectorHost(h));
   }
 
   /** While a goal chip open is pending, hydrate as soon as GCal mounts the inspector DOM. */
