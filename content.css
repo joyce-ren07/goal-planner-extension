@@ -1204,12 +1204,18 @@
   isolation: isolate;
 }
 
+/* Keep GCal's native chip paint suppressed while our overlay owns the chip (avoids flash when GCal rewires DOM). */
+[data-eventchip].ext-goal-chip > :not(.ext-goal-root) {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Solid overlay; leading padding aligns checkbox row with native chip inset (after left accent).
    No full-card stroke — only GCal-style left accent bar (width/colors unchanged). */
 [data-eventchip].ext-goal-chip .ext-goal-root {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: 10;
   border-radius: inherit;
   box-sizing: border-box;
   display: flex;
