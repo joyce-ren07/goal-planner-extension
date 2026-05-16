@@ -6889,7 +6889,7 @@
 
   /** Mark current session completed (same path as decorated chip checkbox), then dismiss native detail UI. */
   async function gpGdMarkSessionDoneAndDismiss(wrapHost, hit) {
-    const btn = wrapHost.querySelector('[data-gp-detail-act="mark-session-complete"]');
+    const btn = gpGdGetDetailMarkCompleteBtn();
     if (!(btn instanceof HTMLButtonElement)) return;
     if (btn.disabled) {
       gpGdCloseNativeEventPopover(wrapHost);
