@@ -903,40 +903,37 @@
       }
     });
 
+    lockGhostPreviewScrollContainer(scrollCont);
+    ensureGhostPreviewRecoveryObserver();
     return true;
   }
 
   // ── Ghost events: render one ghost per suggestion onto the calendar grid ──
   function renderGhostEvents() {
     const previewActive = isGhostCreationPreviewUiActive();
-    ensureGhostPreviewRecoveryObserver();
+    if (!previewActive) {
+      releaseGhostPreviewScrollContainer();
+      ensureGhostPreviewRecoveryObserver();
+      if (deriveGhostSessionsForCreationPreviewLayer() === false) {
+        removeGhostEvents();
+      }
+      return;
+    }
 
     const layered = deriveGhostSessionsForCreationPreviewLayer();
-    if (layered === false) {
-      if (!previewActive) removeGhostEvents();
-      return;
-    }
+    if (layered === false) return;
+
     const sessions = layered?.sessions || [];
-    if (!sessions.length) {
-      if (
-        previewActive &&
-        document.querySelector('#gp-ghost-preview-root .goal-ghost-event')
-      ) {
-        return;
-      }
-      clearGhostPreviewChipsOnly();
-      return;
-    }
+    if (!sessions.length) return;
+
     const base = ghostCreationPreviewTitlePlain();
     const shortTitle = base.length > 22 ? `${base.slice(0, 21)}…` : base;
     const finalLabel = layered.markNonPersisted ? `Preview · ${shortTitle}` : shortTitle;
-    const painted = paintGhostSessionsOnGrid(sessions, finalLabel, {
-      markNonPersisted: !!layered.markNonPersisted,
-    });
     if (
-      !painted &&
-      previewActive &&
-      !document.querySelector('#gp-ghost-preview-root .goal-ghost-event')
+      !paintGhostSessionsOnGrid(sessions, finalLabel, {
+        markNonPersisted: !!layered.markNonPersisted,
+      }) &&
+      !document.querySelector('#gp-ghost-preview-host .goal-ghost-event')
     ) {
       window.setTimeout(() => {
         if (isGhostCreationPreviewUiActive()) scheduleGhostPreviewRefreshDebounced();
