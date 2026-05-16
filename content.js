@@ -6862,6 +6862,22 @@
       window.addEventListener('pointerdown', onGoalOpenGesture, true);
       window.addEventListener('click', onGoalOpenGesture, true);
 
+      document.addEventListener(
+        'focusout',
+        (e) => {
+          if (!gpGdShouldRunDetailScan() && !gpGdIsGoalPlannerInspectorStillOpen()) return;
+          const shell =
+            gpGdFindGoalInspectorFromEvent(e) || gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint);
+          if (!shell) return;
+          gpGdRefreshPinnedSessionLease();
+          window.setTimeout(() => {
+            gpGdSyncBlockElRef();
+            if (!gpGdDetailBlockReady()) scheduleGpGdDialogScan();
+          }, 90);
+        },
+        true
+      );
+
       scheduleGpGdDialogScan();
       scheduleGpGdFromUnifiedEcho();
       return true;
