@@ -438,6 +438,19 @@
     }, 48);
   }
 
+  /**
+   * Stop any pending ghost repaint (previously scheduled during create flow) and clear
+   * preview nodes. Does not touch `state.suggestions`/`state.recurrence` — callers that
+   * still need those for Calendar POST must retain them separately from `clearGoalCreationPreview`.
+   */
+  function cancelDebouncedGhostPreviewAndRemoveLayers() {
+    if (_ghostPrevDebounceT) {
+      clearTimeout(_ghostPrevDebounceT);
+      _ghostPrevDebounceT = 0;
+    }
+    removeGhostEvents();
+  }
+
   function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
     removeGhostEvents();
     if (!sessions || !sessions.length) return false;
