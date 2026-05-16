@@ -5956,31 +5956,9 @@
     gpGdAlignInjectedBlockToCard(wrap, dialogShell);
   }
 
-  /** Move goal block into the inspector scroll column so it does not paint over the grid. */
+  /** @deprecated Use gpGdStabilizeBlockPlacement — kept as alias for call sites. */
   function gpGdReparentBlockIntoScrollColumn(wrap, dialogShell) {
-    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
-    const card = gpGdFindEventDetailCardRoot(dialogShell);
-    if (!(card instanceof HTMLElement)) return false;
-    const scrollCol = gpGdFindInspectorScrollColumn(card);
-    if (!(scrollCol instanceof HTMLElement)) {
-      gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
-      return false;
-    }
-    const cardRect = card.getBoundingClientRect();
-    const wrapRect = wrap.getBoundingClientRect();
-    const insideScroll =
-      scrollCol === wrap.parentElement || gpGdComposedSubtreeContains(scrollCol, wrap);
-    const spillsBelow = wrapRect.bottom > cardRect.bottom - 10;
-    if (!insideScroll || spillsBelow) {
-      try {
-        scrollCol.appendChild(wrap);
-      } catch (_) {
-        gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
-        return false;
-      }
-    }
-    gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
-    return true;
+    return gpGdStabilizeBlockPlacement(wrap, dialogShell);
   }
 
   /** Prefer the scrollable metadata column inside the inspector card (not the dialog chrome). */
