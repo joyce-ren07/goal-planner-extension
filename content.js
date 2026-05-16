@@ -4754,21 +4754,45 @@
     }
     const inHost =
       gpGdComposedSubtreeContains(host, ext) ||
-      (gpGdInspectorHostIsOnScreen(host) && gpGdIsGoalBlockVisible(ext));
+      (gpGdInspectorHostIsOnScreen(host) &&
+        (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)));
     if (!inHost) return false;
 
-    const card = gpGdResolveInspectorCardRoot(host, ext.dataset.gpGoalId || '');
-    if (card instanceof HTMLElement) {
-      gpGdForceMountIntoCard(ext, card, null);
-      gpGdAlignInjectedBlockToCard(ext, host);
-      gpGdAlignMarkFooterToCard(host);
+    gpGdStabilizeMountedDetailBlock(ext, host, null);
+    gpGdMarkDetailScanActive(15000);
+    return true;
+  }
+
+  /** In-place refresh — never tear down a mounted block that is still in the open inspector. */
+  function gpGdStabilizeMountedDetailBlock(ext, dialogShell, hit) {
+    if (!(ext instanceof HTMLElement) || !ext.isConnected) return false;
+    if (dialogShell instanceof HTMLElement) {
+      gpGdAlignInjectedBlockToCard(ext, dialogShell);
+      gpGdAlignMarkFooterToCard(dialogShell);
     }
-    if (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) {
-      _gpGdHydrateQuietUntil = Date.now() + 15000;
-      gpGdMarkDetailScanActive(15000);
-      return true;
+    const sessDone =
+      hit?.session?.completed ??
+      !!gpGdGetDetailMarkCompleteBtn()?.disabled;
+    if (hit?.goal) {
+      gpGdRefreshDetailSubtasks(ext, hit);
     }
-    return false;
+    const card =
+      dialogShell instanceof HTMLElement
+        ? gpGdResolveInspectorCardRoot(dialogShell, ext.dataset.gpGoalId || '')
+        : null;
+    if (card instanceof HTMLElement && gpGdIsValidEventDetailCardRoot(card, dialogShell)) {
+      if (!gpGdGetDetailMarkCompleteBtn()) {
+        gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sessDone), card);
+        if (dialogShell instanceof HTMLElement) gpGdAlignMarkFooterToCard(dialogShell);
+      } else {
+        gpGdSyncMarkCompleteButton(!!sessDone);
+      }
+    }
+    if (hit) gpGdEnsureDetailDelegates(ext, hit);
+    else gpGdWireMarkCompleteButton(ext, null);
+    _gpGdHydrateQuietUntil = Date.now() + 15000;
+    _gpGdRemountCount = 0;
+    return true;
   }
 
   /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
