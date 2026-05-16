@@ -6746,7 +6746,10 @@
       return;
     }
     if (!pinnedRaw.length) teardownGpGdBlock();
-    if (hints.length) gpGdTrace('no unified session match', hints.slice(0, 3));
+    if (hints.length) {
+      gpGdTrace('no unified session match', hints.slice(0, 3));
+      gpGdDiag('inject: SKIP — no unified session for hints', hints.slice(0, 5));
+    }
   }
 
   /** Install observer + GoalPlannerUnifiedState listeners (subscriber + chrome.storage echo). Does not wire calendar-chip DOM mutation for goal field reads. */
