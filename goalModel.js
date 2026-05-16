@@ -375,6 +375,7 @@
         startDate: deriveGoalStartDateYmd(g),
         created: g.created,
         color: g.color || '',
+        subtasks: cloneSubtasks(g.subtasks != null ? g.subtasks : []),
         sessions: sessions,
         totalSessions: resolveGoalTotalSessions(g),
         progressPct: 0,
