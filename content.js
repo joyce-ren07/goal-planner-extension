@@ -6072,7 +6072,7 @@
     /** Row — Subtasks */
     const rowSt = document.createElement('div');
     rowSt.style.cssText = S_ROW;
-    const icSt = document.createElement('motion');
+    const icSt = document.createElement('div');
     icSt.setAttribute('aria-hidden', 'true');
     icSt.style.cssText = S_IC_COL;
     const hamSvg = gpGdParseSvg(
