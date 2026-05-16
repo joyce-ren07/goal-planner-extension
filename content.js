@@ -6698,6 +6698,14 @@
       return;
     }
 
+    gpGdRefreshPinnedSessionLease();
+
+    if (gpGdNativeInspectorEditingActive(host) && pinnedRaw.length && gpGdInspectorNeedsGoalBlock(host)) {
+      gpGdTrace('native field edit — defer re-mount');
+      window.setTimeout(() => scheduleGpGdDialogScan(), 160);
+      return;
+    }
+
     const existingEarly = __gpGdBlockEl;
     if (
       Date.now() < _gpGdHydrateQuietUntil &&
