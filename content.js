@@ -5520,6 +5520,22 @@
         if (!(el instanceof Element)) continue;
         const d = el.closest('[role="dialog"], [role="alertdialog"]');
         if (d instanceof HTMLElement && gpGdIsElementVisuallyExposed(d)) return d;
+        let cur = el instanceof HTMLElement ? el : null;
+        for (let d2 = 0; d2 < 14 && cur; d2++) {
+          const rr = cur.getBoundingClientRect();
+          if (
+            rr.width >= 220 &&
+            rr.width <= gpGdMaxInspectorCardWidth() &&
+            rr.height >= 100 &&
+            gpGdIsElementVisuallyExposed(cur) &&
+            (gpGdInspectorHasCloseControl(cur) || cur.closest('[role="dialog"], [role="alertdialog"]'))
+          ) {
+            const dlg = cur.closest('[role="dialog"], [role="alertdialog"]');
+            return dlg instanceof HTMLElement ? dlg : cur;
+          }
+          const p = gpGdComposableParentHTMLElement(cur);
+          cur = p instanceof HTMLElement ? p : null;
+        }
       }
     }
     return null;
