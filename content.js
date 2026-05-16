@@ -7794,21 +7794,20 @@
       const obs = new MutationObserver(() => {
         gpGdDiag('MO: document childList mutation');
         if (!gpGdShouldRunDetailScan()) return;
+        if (_gpGdMutatingDetailUi || Date.now() < _gpGdHydrateQuietUntil) return;
         const ext = __gpGdBlockEl;
         if (
           ext?.isConnected &&
-          (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
           (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
         ) {
           return;
         }
         window.clearTimeout(_gpGdDomObsDebounce);
-        const delay =
-          __gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl) ? 200 : 35;
         _gpGdDomObsDebounce = window.setTimeout(() => {
-          gpGdDiag('MO: scheduling hydrate scan after', delay, 'ms');
+          if (_gpGdMutatingDetailUi || Date.now() < _gpGdHydrateQuietUntil) return;
+          gpGdDiag('MO: scheduling hydrate scan');
           scheduleGpGdDialogScan();
-        }, delay);
+        }, 280);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
