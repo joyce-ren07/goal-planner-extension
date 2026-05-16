@@ -1197,6 +1197,48 @@
    .ext-goal-completed: background + left-accent color + title strikethrough ONLY.
 ───────────────────────────────────────── */
 
+/* ── Zero-JS frame: goal events identified by container label (chip text may arrive later). ── */
+[data-eventid].gp-goal-event [data-eventchip],
+[data-eventid][aria-label*="🎯"] [data-eventchip],
+[data-eventid][data-tooltip*="🎯"] [data-eventchip],
+[data-eventid][title*="🎯"] [data-eventchip] {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  isolation: isolate;
+}
+
+[data-eventid].gp-goal-event [data-eventchip] > :not(.ext-goal-root),
+[data-eventid][aria-label*="🎯"] [data-eventchip] > :not(.ext-goal-root),
+[data-eventid][data-tooltip*="🎯"] [data-eventchip] > :not(.ext-goal-root),
+[data-eventid][title*="🎯"] [data-eventchip] > :not(.ext-goal-root) {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Coral shell via CSS until JS mounts .ext-goal-root (same frame as native would paint). */
+[data-eventid].gp-goal-event [data-eventchip]:not(:has(.ext-goal-root))::after,
+[data-eventid][aria-label*="🎯"] [data-eventchip]:not(:has(.ext-goal-root))::after,
+[data-eventid][data-tooltip*="🎯"] [data-eventchip]:not(:has(.ext-goal-root))::after,
+[data-eventid][title*="🎯"] [data-eventchip]:not(:has(.ext-goal-root))::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  border-radius: inherit;
+  box-sizing: border-box;
+  pointer-events: none;
+  background: #ffd7d3;
+  border: none;
+  border-left: 4px solid #d3564b;
+}
+
+[data-eventid].gp-goal-event.ext-goal-event-done [data-eventchip]:not(:has(.ext-goal-root))::after,
+[data-eventchip].ext-goal-completed:not(:has(.ext-goal-root))::after {
+  background: #ffe5e2;
+  border-left-color: #e79992;
+}
+
 [data-eventchip].ext-goal-chip {
   width: 100% !important;
   box-sizing: border-box !important;

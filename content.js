@@ -9049,8 +9049,6 @@
     return false;
   }
 
-  let _gpDecorateRaf = 0;
-
   /** Next frame — used right after synchronous prime so full inject does not wait 120ms. */
   function scheduleGoalEventDecorationNow() {
     if (_gpDecorateTimer) {
