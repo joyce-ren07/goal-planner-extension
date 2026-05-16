@@ -643,12 +643,6 @@
       return false;
     }
 
-    if (_ghostScrollEl && _ghostScrollHandler) {
-      _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
-      _ghostScrollEl = null;
-      _ghostScrollHandler = null;
-    }
-
     const scrollCont = findCalendarScrollContainer();
     if (!scrollCont) {
       removeGhostEvents();
