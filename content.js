@@ -5912,6 +5912,15 @@
   function gpGdForceMountIntoCard(wrap, cardRoot, insertBefore) {
     if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
     if (gpGdIsWeekGridMountSurface(cardRoot)) return false;
+    const dialogRoot = gpGdRequireEventDialogAncestor(cardRoot);
+    if (!dialogRoot) {
+      try {
+        wrap.remove();
+      } catch (_) {
+        /* ignore */
+      }
+      return false;
+    }
     const cr = cardRoot.getBoundingClientRect();
     if (cr.width < 200) return false;
 
@@ -5919,8 +5928,9 @@
     const pr = parent?.getBoundingClientRect?.();
     const outsideCard = !parent || !gpGdComposedSubtreeContains(cardRoot, wrap);
     const parentTooWide = !!(pr && pr.width > cr.width * 1.12);
+    const outsideDialog = !gpGdRequireEventDialogAncestor(wrap);
 
-    if (outsideCard || parentTooWide) {
+    if (outsideCard || parentTooWide || outsideDialog) {
       try {
         if (
           insertBefore instanceof HTMLElement &&
@@ -5935,10 +5945,21 @@
       }
     }
 
+    if (!gpGdRequireEventDialogAncestor(wrap)) {
+      try {
+        wrap.remove();
+      } catch (_) {
+        /* ignore */
+      }
+      return false;
+    }
+
     gpGdApplyCardContainmentStyles(wrap, cardRoot);
     return (
-      gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false) ||
-      (gpGdIsGoalBlockVisible(wrap) && gpGdComposedSubtreeContains(cardRoot, wrap))
+      gpGdIsGoalBlockWellPlaced(wrap, dialogRoot, false) ||
+      (gpGdIsGoalBlockVisible(wrap) &&
+        gpGdComposedSubtreeContains(cardRoot, wrap) &&
+        gpGdIsDetailUiInEventDialog(wrap))
     );
   }
 
