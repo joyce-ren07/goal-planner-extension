@@ -6811,7 +6811,9 @@
         return;
       }
     }
-    void gpGdHydrateMountedDetailDecoration();
+    if (gpGdHasRecentGoalChipOpenIntent() || ext?.isConnected) {
+      void gpGdHydrateMountedDetailDecoration();
+    }
   }
 
   function scheduleGpGdFromUnifiedEcho() {
