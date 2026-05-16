@@ -5653,9 +5653,11 @@
       deb = window.setTimeout(() => {
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
-        if (gpGdIsGoalBlockWellPlaced(ext, dialogShell)) return;
+        if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
+          if (gpGdIsGoalBlockVisible(ext)) return;
+        }
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
-      }, 45);
+      }, 220);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
