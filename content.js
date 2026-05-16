@@ -5659,7 +5659,13 @@
       return;
     }
 
-    const natives = gpEnumerateNativeEventDetailHosts();
+    let natives = gpEnumerateNativeEventDetailHosts();
+    const html = document.documentElement;
+    const pinnedFirst = gpGdConsumePinnedSessionHints();
+
+  if (!natives.length && html instanceof HTMLElement && pinnedFirst.length) {
+      natives = gpGdCollectAnnotatedInspectorPanels(html);
+    }
 
     /** No native inspector chrome — teardown */
     if (!natives.length) {
@@ -5671,14 +5677,17 @@
 
     /** First dialog that yields a Planner hit wins (multi-open edge). */
     for (const host of natives) {
-      const hintsDom = gpCollectEventIdHintsFromRoot(host);
-      const hintDedup = new Set(hintsDom);
-      const hints = [...hintsDom];
-      for (const h of barHintsCached) {
-        if (hintDedup.has(h)) continue;
-        hintDedup.add(h);
-        hints.push(h);
-      }
+      const hintDedup = new Set();
+      const hints = [];
+      const pushHint = (h) => {
+        const s = h == null || h === '' ? '' : String(h).trim();
+        if (!s || hintDedup.has(s)) return;
+        hintDedup.add(s);
+        hints.push(s);
+      };
+      for (const h of pinnedFirst) pushHint(h);
+      for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
+      for (const h of barHintsCached) pushHint(h);
 
       for (let hi = 0; hi < hints.length; hi++) {
         const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
