@@ -5781,7 +5781,8 @@
     if (
       ext?.isConnected &&
       Date.now() < _gpGdHydrateQuietUntil &&
-      gpGdIsGoalBlockVisible(ext)
+      gpGdIsGoalBlockVisible(ext) &&
+      Date.now() > _gpGdInspectorOpenWatchUntil - 500
     ) {
       return;
     }
