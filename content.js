@@ -5661,9 +5661,9 @@
 
     let natives = gpEnumerateNativeEventDetailHosts();
     const html = document.documentElement;
-    const pinnedFirst = gpGdConsumePinnedSessionHints();
+    const pinnedRaw = gpGdConsumePinnedSessionHints();
 
-  if (!natives.length && html instanceof HTMLElement && pinnedFirst.length) {
+    if (!natives.length && html instanceof HTMLElement && pinnedRaw.length) {
       natives = gpGdCollectAnnotatedInspectorPanels(html);
     }
 
@@ -5672,6 +5672,25 @@
       teardownGpGdBlock();
       return;
     }
+
+    const legacyGoals = await getGoals();
+    const pinnedExpanded = (() => {
+      const out = [...pinnedRaw];
+      const seen = new Set(out);
+      for (const h of pinnedRaw) {
+        const gid = legacyGoalIdForPlannerEventCandidates(legacyGoals, h);
+        if (!gid) continue;
+        const g = legacyGoals.find((x) => String(x.id) === String(gid));
+        for (const ce of g?.calEventIds || []) {
+          const s = String(ce);
+          if (s && !seen.has(s)) {
+            seen.add(s);
+            out.push(s);
+          }
+        }
+      }
+      return out;
+    })();
 
     const barHintsCached = gpGdCollectLocationBarEventHints();
 
@@ -5685,7 +5704,7 @@
         hintDedup.add(s);
         hints.push(s);
       };
-      for (const h of pinnedFirst) pushHint(h);
+      for (const h of pinnedExpanded) pushHint(h);
       for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
       for (const h of barHintsCached) pushHint(h);
 
