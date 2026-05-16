@@ -5249,6 +5249,7 @@
     let bestArea = 0;
     gpGdWalkComposedElements(dialogHost, (el) => {
       if (!gpGdIsElementVisuallyExposed(el)) return;
+      if (gpGdIsCalendarGridContainer(el)) return;
       const r = el.getBoundingClientRect();
       if (r.width < 220 || r.width > 760 || r.height < 120) return;
       const text = String(el.innerText || '');
