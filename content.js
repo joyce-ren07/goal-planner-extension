@@ -6654,7 +6654,9 @@
           return;
         }
         window.clearTimeout(_gpGdDomObsDebounce);
-        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), 200);
+        const delay =
+          __gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl) ? 200 : 35;
+        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), delay);
       });
       obs.observe(document.documentElement || document.body, {
         subtree: true,
