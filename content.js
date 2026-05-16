@@ -237,6 +237,8 @@
     state.suggestions = [];
     _originalSuggestions = [];
     removeGhostEvents();
+    releaseGhostPreviewScrollContainer();
+    ensureGhostPreviewRecoveryObserver();
     resetPrefTimeInput();
   }
 
