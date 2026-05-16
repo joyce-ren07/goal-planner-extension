@@ -8403,6 +8403,7 @@
         // Dedup guard — inner structure already injected; sync done state and
         // re-bound the chip height in case GCal reflowed (e.g. window resize,
         // navigation, panel open/close changes column widths).
+        if (!chip.classList.contains('ext-goal-chip')) chip.classList.add('ext-goal-chip');
         if (chip.querySelector('.ext-goal-root')) {
           boundChipHeight(chip);
           const eidAttr = chip.closest('[data-eventid]')?.getAttribute('data-eventid');
