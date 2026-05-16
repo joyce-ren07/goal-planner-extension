@@ -4929,6 +4929,10 @@
   let _gpGdPinnedHints = /** @type {string[]} */ ([]);
   let _gpGdPinnedAt = 0;
   let _gpGdOpenBurstGen = 0;
+  let _gpGdAnchorX = /** @type {number | null} */ (null);
+  let _gpGdAnchorY = /** @type {number | null} */ (null);
+  let _gpGdRemountCount = 0;
+  let _gpGdRemountGoalKey = '';
 
   function gpGdResolveGoalChipFromEvent(e) {
     const path =
