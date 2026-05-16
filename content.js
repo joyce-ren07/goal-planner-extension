@@ -7047,15 +7047,32 @@
         );
         if (renderedPinned) {
           gpGdStopInspectorPinWatch();
+          _gpGdHydrateQuietUntil = Date.now() + 15000;
           return;
         }
       }
     }
 
+    const hintDedup = new Set();
+    const hints = [];
+    const pushHint = (h) => {
+      const s = h == null || h === '' ? '' : String(h).trim();
+      if (!s || hintDedup.has(s)) return;
+      hintDedup.add(s);
+      hints.push(s);
+    };
+    for (const h of pinnedExpanded) pushHint(h);
+    for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
+    if (!_gpGdPinnedGoalId) {
+      for (const h of gpGdCollectLocationBarEventHints()) pushHint(h);
+    }
+
     for (let hi = 0; hi < hints.length; hi++) {
       let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
       if (!hit?.goal?.id || !hit.session?.eventId) {
-        gpGdDiag('goal match: MISS hint', hints[hi]);
+        if (pinnedHintSet.has(hints[hi])) {
+          gpGdDiag('goal match: MISS hint (pinned)', hints[hi]);
+        }
         continue;
       }
       gpGdDiag('goal match: OK', {
