@@ -6608,19 +6608,16 @@
         childList: true,
       });
 
-      let _gdUiBump = 0;
-      const bumpDialogScanDebounced = () => {
-        gpGdMarkDetailScanActive(12000);
-        window.clearTimeout(_gdUiBump);
-        _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 120);
-      };
       const onGoalOpenGesture = (e) => {
-        bumpDialogScanDebounced();
+        if (e.type === 'click') {
+          const chip = gpGdResolveGoalChipFromEvent(e);
+          if (!chip) return;
+          if (gpGdDetailBlockReady()) return;
+        }
         gpGdOnUserOpenedGoalSession(e);
       };
       window.addEventListener('pointerdown', onGoalOpenGesture, true);
       window.addEventListener('click', onGoalOpenGesture, true);
-      window.addEventListener('focusin', bumpDialogScanDebounced, true);
 
       scheduleGpGdDialogScan();
       scheduleGpGdFromUnifiedEcho();
