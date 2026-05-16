@@ -6497,7 +6497,7 @@
       });
       return null;
     }
-    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell);
+    const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(shell, goal?.title);
     if (gpGdIsInvalidDetailMountParent(mountParent, cardRoot)) {
       gpGdTrace('abort render — mount parent invalid');
       return null;
