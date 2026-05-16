@@ -5119,8 +5119,10 @@
     if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
       for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
         if (!(el instanceof Element)) continue;
-        const d = el.closest('[role="dialog"], [role="alertdialog"]');
-        if (d instanceof HTMLElement && gpGdIsGoalPlannerInspector(d) && gpGdIsElementVisuallyExposed(d)) {
+        const d =
+          el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+          el.closest('[role="presentation"]');
+        if (d instanceof HTMLElement && gpGdInspectorShellMatchesGoal(d, '')) {
           return d;
         }
       }
