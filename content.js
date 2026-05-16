@@ -6669,12 +6669,15 @@
         window.clearTimeout(_gdUiBump);
         _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 120);
       };
-      const onGoalOpenGesture = (e) => {
-        bumpDialogScanDebounced();
-        gpGdOnUserOpenedGoalSession(e);
+      const onGoalOpenPointerDown = (e) => {
+        gpGdOnUserOpenedGoalSession(e, 'down');
       };
-      window.addEventListener('pointerdown', onGoalOpenGesture, true);
-      window.addEventListener('click', onGoalOpenGesture, true);
+      const onGoalOpenClick = (e) => {
+        bumpDialogScanDebounced();
+        gpGdOnUserOpenedGoalSession(e, 'click');
+      };
+      window.addEventListener('pointerdown', onGoalOpenPointerDown, true);
+      window.addEventListener('click', onGoalOpenClick, true);
       window.addEventListener('focusin', bumpDialogScanDebounced, true);
 
       scheduleGpGdDialogScan();
