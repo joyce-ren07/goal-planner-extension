@@ -5167,13 +5167,20 @@
   }
 
   function gpGdIsGoalPlannerInspectorStillOpen() {
-    return !!gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint);
+    if (gpGdFindAnyVisibleEventInspector(_gpGdPinnedTitleHint)) return true;
+    if (_gpGdPinnedHints.length && Date.now() - _gpGdPinnedAt < 25000) return true;
+    return false;
   }
 
   function gpGdRefreshPinnedSessionLease() {
-    if (!gpGdIsGoalPlannerInspectorStillOpen()) return;
-    _gpGdPinnedAt = Date.now();
-    gpGdMarkDetailScanActive(22000);
+    if (gpGdFindAnyVisibleEventInspector(_gpGdPinnedTitleHint)) {
+      _gpGdPinnedAt = Date.now();
+      gpGdMarkDetailScanActive(22000);
+      return;
+    }
+    if (_gpGdPinnedHints.length && Date.now() - _gpGdPinnedAt < 25000) {
+      gpGdMarkDetailScanActive(12000);
+    }
   }
 
   /** True when focus is in GCal’s native title/description/notes field inside the inspector. */
