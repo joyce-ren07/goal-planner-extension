@@ -5116,34 +5116,46 @@
   }
 
   /** Walk up from a row parent until width matches the card (not the full overlay flex row). */
-  function gpGdConstrainMountParentToCard(mountParent, cardRoot) {
+  function gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost) {
     if (!(mountParent instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return mountParent;
+    if (cardRoot === dialogHost) return mountParent;
     const cardW = cardRoot.getBoundingClientRect().width;
+    if (cardW < 200) return mountParent;
+    const maxW = Math.max(cardW * 1.12, 320);
     /** @type {HTMLElement} */
     let best = mountParent;
     let cur = mountParent;
     for (let d = 0; d < 14 && cur && gpGdComposedSubtreeContains(cardRoot, cur); d++) {
       const r = cur.getBoundingClientRect();
-      if (r.width >= 260 && r.width <= Math.max(cardW * 1.08, 680)) best = cur;
+      if (r.width >= 200 && r.width <= maxW) best = cur;
       const p = gpGdComposableParentHTMLElement(cur);
       cur = p instanceof HTMLElement ? p : null;
     }
     const br = best.getBoundingClientRect();
-    if (br.width > cardW * 1.2) return gpGdPickGoalDetailMountParent(cardRoot);
+    if (br.width > maxW) return gpGdPickGoalDetailMountParent(dialogHost, cardRoot);
     return best;
   }
 
   /** Prefer the scrollable metadata column inside the inspector card (not the dialog chrome). */
-  function gpGdPickGoalDetailMountParent(dialogHost) {
-    const scope =
-      dialogHost instanceof HTMLElement ? gpGdFindEventDetailCardRoot(dialogHost) : dialogHost;
+  function gpGdPickGoalDetailMountParent(dialogHost, cardRootOpt) {
+    const cardRoot =
+      cardRootOpt instanceof HTMLElement
+        ? cardRootOpt
+        : dialogHost instanceof HTMLElement
+          ? gpGdFindEventDetailCardRoot(dialogHost)
+          : dialogHost;
+    const scope = cardRoot instanceof HTMLElement ? cardRoot : dialogHost;
+    const maxMountW =
+      scope instanceof HTMLElement && scope !== dialogHost
+        ? Math.max(scope.getBoundingClientRect().width * 1.15, 300)
+        : Math.min(920, window.innerWidth * 0.92);
     /** @type {HTMLElement | null} */
     let best = null;
     let bestExtra = 0;
     gpGdWalkComposedElements(scope, (el) => {
       if (!(el instanceof HTMLElement)) return;
       const r = el.getBoundingClientRect();
-      if (r.width > 760) return;
+      if (r.width > maxMountW) return;
       const extra = el.scrollHeight - el.clientHeight;
       if (extra <= 24 || el.clientHeight < 72) return;
       if (extra > bestExtra) {
