@@ -5571,8 +5571,8 @@
       if (!gpGdIsElementVisuallyExposed(el)) return;
       if (gpGdIsCalendarGridContainer(el)) return;
       const r = el.getBoundingClientRect();
-      if (r.width < 220 || r.width > maxW) return;
-      if (r.height < 120 || r.height > vh * 0.96) return;
+      if (r.width < 200 || r.width > maxW) return;
+      if (r.height < 72 || r.height > vh * 0.96) return;
 
       const text = String(el.innerText || '').slice(0, 1400);
       if (!INSPECTOR_TEXT_RE.test(text)) return;
