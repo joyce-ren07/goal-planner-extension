@@ -1326,3 +1326,257 @@
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-time {
   color: #e79992;
 }
+
+/* ── Goal Planner: native Calendar event-detail injection (reads unifiedGoalState only) ── */
+
+#gp-gcal-detail-goal-extension.gp-gcal-detail-goal-extension {
+  display: block;
+  box-sizing: border-box;
+  margin: 12px -12px 0 -12px;
+  padding: 12px 12px 10px;
+  border-top: 1px solid rgba(60, 64, 67, 0.12);
+  background: rgba(248, 249, 250, 0.88);
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 18px;
+  color: rgb(60, 64, 67);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-hr {
+  display: none;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  background: rgb(228, 240, 255);
+  color: rgb(25, 103, 210);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-metrics-title {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 22px;
+  color: rgb(60, 64, 67);
+  margin-bottom: 4px;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-metrics-rows {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: rgb(95, 99, 104);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-metrics-rows strong {
+  font-weight: 500;
+  color: rgb(32, 33, 36);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-dot {
+  margin: 0 6px;
+  opacity: 0.6;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-schedule {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgb(255, 255, 255);
+  border: 1px solid rgba(60, 64, 67, 0.1);
+  font-size: 13px;
+  line-height: 18px;
+  color: rgb(60, 64, 67);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-list-wrap {
+  margin-top: 10px;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-list-caption,
+#gp-gcal-detail-goal-extension .gp-gd-subtasks-cap {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: rgb(95, 99, 104);
+  margin-bottom: 6px;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(60, 64, 67, 0.08);
+  background: rgb(255, 255, 255);
+  margin-bottom: 6px;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-row--focused {
+  border-color: rgba(26, 115, 232, 0.45);
+  box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.12);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-row--completed .gp-gd-session-line {
+  color: rgb(128, 134, 139);
+  text-decoration: line-through;
+  text-decoration-color: rgb(154, 160, 166);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-session-line {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: rgb(32, 33, 36);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn,
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn-inline {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(26, 115, 232, 0.45);
+  background: rgb(240, 248, 255);
+  color: rgb(26, 115, 232);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn:hover,
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn-inline:hover {
+  background: rgb(226, 235, 255);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn-inline {
+  border: none;
+  background: transparent;
+  padding: 2px;
+  opacity: 0.8;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-mini-btn-inline:hover {
+  opacity: 1;
+  background: rgba(60, 64, 67, 0.06);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-subtasks {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(60, 64, 67, 0.1);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-subtasks-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-subtask {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 18px;
+  color: rgb(32, 33, 36);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-subtask input[type='checkbox'] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: rgb(26, 115, 232);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-subtask-label--done {
+  color: rgb(128, 134, 139);
+  text-decoration: line-through;
+  text-decoration-color: rgb(154, 160, 166);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-muted {
+  font-size: 13px;
+  color: rgb(128, 134, 139);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-text-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgb(26, 115, 232);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-text-btn:hover {
+  color: rgb(21, 86, 188);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(60, 64, 67, 0.1);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-major-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-major-btn-secondary {
+  background: rgb(230, 240, 255);
+  color: rgb(26, 115, 232);
+}
+
+#gp-gcal-detail-goal-extension .gp-gd-major-btn-secondary:hover {
+  background: rgb(214, 230, 255);
+}
