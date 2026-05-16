@@ -214,6 +214,21 @@
     document.querySelectorAll('[role="columnheader"]').forEach(el => {
       if (el.closest('#gp-panel, #gp-recurrence-overlay')) return;
       const label = (el.getAttribute('aria-label') || '').toLowerCase();
+      const mSlash = label.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})/);
+      if (mSlash) {
+        const month = parseInt(mSlash[1], 10) - 1;
+        const dayNum = parseInt(mSlash[2], 10);
+        const year = parseInt(mSlash[3], 10);
+        if (month >= 0 && month <= 11 && dayNum >= 1 && dayNum <= 31) {
+          const key = `${year}-${month}-${dayNum}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          const rect = el.getBoundingClientRect();
+          if (rect.width < 10) return;
+          columns.push({ date: new Date(year, month, dayNum), left: rect.left, width: rect.width });
+        }
+        return;
+      }
       // Match "Sunday, April 19, 2026" or "Apr 19"
       const m = label.match(/\w+day,?\s+(\w+)\s+(\d{1,2}),?\s*(\d{4})?/) ||
                 label.match(/^(\w{3,})\s+(\d{1,2}),?\s*(\d{4})?/);
