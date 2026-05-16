@@ -5891,6 +5891,23 @@
   }
 
   /** Re-run hydration when GCal’s React layer drops our sentinel node. */
+  let _gpGdRepairDebounce = 0;
+
+  function gpGdScheduleInspectorRepair(dialogShell) {
+    if (!(dialogShell instanceof HTMLElement) || !dialogShell.isConnected) return;
+    gpGdRefreshPinnedSessionLease();
+    window.clearTimeout(_gpGdRepairDebounce);
+    _gpGdRepairDebounce = window.setTimeout(() => {
+      _gpGdRepairDebounce = 0;
+      gpGdSyncBlockElRef();
+      if (!gpGdInspectorNeedsGoalBlock(dialogShell)) return;
+      gpGdStripNativeMeetingNotes(dialogShell);
+      __gpGdBlockEl = null;
+      _gpGdHydrateQuietUntil = 0;
+      scheduleGpGdDialogScan();
+    }, 72);
+  }
+
   function gpGdEnsureDialogRepairObserver(dialogShell) {
     if (!_gpGdDialogRepairObservers || !(dialogShell instanceof HTMLElement)) return;
     if (_gpGdDialogRepairObservers.has(dialogShell)) return;
@@ -5900,13 +5917,8 @@
       gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
       window.clearTimeout(deb);
       deb = window.setTimeout(() => {
-        gpGdStripNativeMeetingNotes(dialogShell);
-        const ext = __gpGdBlockEl;
-        if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          if (gpGdIsGoalBlockVisible(ext)) return;
-        }
-        if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
-      }, 220);
+        if (gpGdInspectorNeedsGoalBlock(dialogShell)) gpGdScheduleInspectorRepair(dialogShell);
+      }, 48);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
