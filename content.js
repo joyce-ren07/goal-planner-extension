@@ -5388,14 +5388,23 @@
   }
 
   function scheduleGpGdDialogScan() {
-    if (_gpGdScanTimer) return;
+    if (_gpGdScanTimer) {
+      _gpGdScanPending = true;
+      return;
+    }
     _gpGdScanTimer = requestAnimationFrame(() => {
       _gpGdScanTimer = 0;
-      try {
-        void gpGdHydrateMountedDetailDecoration();
-      } catch (_) {
-        /* ignore */
-      }
+      Promise.resolve()
+        .then(() => gpGdHydrateMountedDetailDecoration())
+        .catch((err) => {
+          gpGdTrace('hydrate error', err);
+        })
+        .finally(() => {
+          if (_gpGdScanPending) {
+            _gpGdScanPending = false;
+            scheduleGpGdDialogScan();
+          }
+        });
     });
   }
 
