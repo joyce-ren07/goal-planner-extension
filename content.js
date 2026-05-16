@@ -5013,9 +5013,93 @@
   let _gpGdRemountGoalKey = '';
   let _gpGdDetailScanActiveUntil = 0;
   let _gpGdDomObsDebounce = 0;
+  /** @type {{ at: number, unified: object | null, goals: object[] | null }} */
+  let _gpGdPrefetch = { at: 0, unified: null, goals: null };
+  /** @type {Promise<void> | null} */
+  let _gpGdPrefetchPromise = null;
+  /** @type {MutationObserver | null} */
+  let _gpGdPinWatchMo = null;
+  let _gpGdPinWatchDebounce = 0;
 
   function gpGdMarkDetailScanActive(ms) {
     _gpGdDetailScanActiveUntil = Date.now() + (ms || 12000);
+  }
+
+  function gpGdPrefetchDetailData() {
+    const Model = globalThis.GoalPlannerModel;
+    _gpGdPrefetchPromise = Promise.all([
+      Model?.loadUnifiedState?.() ?? Promise.resolve(null),
+      getGoals(),
+    ])
+      .then(([unified, goals]) => {
+        _gpGdPrefetch = {
+          at: Date.now(),
+          unified: unified && typeof unified === 'object' ? unified : null,
+          goals: Array.isArray(goals) ? goals : null,
+        };
+      })
+      .catch(() => {
+        /* ignore */
+      });
+  }
+
+  async function gpGdReadPrefetch() {
+    if (Date.now() - _gpGdPrefetch.at < 12000 && _gpGdPrefetch.unified) return _gpGdPrefetch;
+    if (_gpGdPrefetchPromise) await _gpGdPrefetchPromise;
+    return _gpGdPrefetch;
+  }
+
+  function gpGdStopInspectorPinWatch() {
+    if (_gpGdPinWatchMo) {
+      try {
+        _gpGdPinWatchMo.disconnect();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    _gpGdPinWatchMo = null;
+    window.clearTimeout(_gpGdPinWatchDebounce);
+    _gpGdPinWatchDebounce = 0;
+  }
+
+  /** While a goal chip open is pending, hydrate as soon as GCal mounts the inspector DOM. */
+  function gpGdStartInspectorPinWatch() {
+    gpGdStopInspectorPinWatch();
+    const until = Date.now() + 4500;
+    _gpGdPinWatchMo = new MutationObserver(() => {
+      if (Date.now() > until) {
+        gpGdStopInspectorPinWatch();
+        return;
+      }
+      if (!gpGdShouldRunDetailScan()) {
+        gpGdStopInspectorPinWatch();
+        return;
+      }
+      if (__gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl)) {
+        gpGdStopInspectorPinWatch();
+        return;
+      }
+      window.clearTimeout(_gpGdPinWatchDebounce);
+      _gpGdPinWatchDebounce = window.setTimeout(() => {
+        gpGdRunDetailHydratePass();
+      }, 10);
+    });
+    try {
+      _gpGdPinWatchMo.observe(document.documentElement || document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['aria-hidden', 'aria-modal', 'role', 'hidden'],
+      });
+    } catch (_) {
+      gpGdStopInspectorPinWatch();
+    }
+  }
+
+  function gpGdRunDetailHydratePass() {
+    void gpGdHydrateMountedDetailDecoration().catch((err) => {
+      gpGdTrace('hydrate error', err);
+    });
   }
 
   function gpGdShouldRunDetailScan() {
