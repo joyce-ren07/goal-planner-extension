@@ -6568,7 +6568,18 @@
       __gpGdBlockEl?.dataset.gpGoalId || ''
     );
     if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
-    return gpGdForceMountIntoCard(footer, card, null);
+    const cr = card.getBoundingClientRect();
+    const pr = footer.parentElement?.getBoundingClientRect?.();
+    if (
+      gpGdComposedSubtreeContains(card, footer) &&
+      pr &&
+      cr.width >= 200 &&
+      pr.width <= cr.width * 1.12
+    ) {
+      gpGdApplyCardContainmentStyles(footer, card);
+      return true;
+    }
+    return gpGdInsertDetailNodeInCard(footer, card, null, true);
   }
 
   /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
