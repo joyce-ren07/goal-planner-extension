@@ -6819,9 +6819,10 @@
         bumpDialogScanDebounced();
         gpGdOnUserOpenedGoalSession(e, 'click');
       };
-      window.addEventListener('pointerdown', onGoalOpenPointerDown, true);
-      window.addEventListener('click', onGoalOpenClick, true);
-      window.addEventListener('focusin', bumpDialogScanDebounced, true);
+      document.body.addEventListener('pointerdown', onGoalOpenPointerDown, true);
+      document.body.addEventListener('click', onGoalOpenClick, true);
+      document.body.addEventListener('focusin', bumpDialogScanDebounced, true);
+      gpGdDiag('listeners: attached to document.body capture=true');
 
       scheduleGpGdDialogScan();
       scheduleGpGdFromUnifiedEcho();
