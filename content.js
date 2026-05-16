@@ -6840,51 +6840,13 @@
       existing?.isConnected &&
       existing.dataset.gpGoalId === goalId &&
       dialogShell instanceof HTMLElement &&
-      gpGdComposedSubtreeContains(dialogShell, existing)
+      gpGdComposedSubtreeContains(dialogShell, existing) &&
+      gpGdIsValidEventDetailInspectorShell(dialogShell)
     ) {
-      gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      if (!gpGdIsGoalBlockVisible(existing)) {
-        gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      }
-      if (gpGdIsGoalBlockVisible(existing) || gpGdIsGoalBlockPainted(existing)) {
-        gpGdRefreshDetailSubtasks(existing, hit);
-        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
-        if (keepCard instanceof HTMLElement) {
-          if (!gpGdGetDetailMarkCompleteBtn()) {
-            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
-          } else {
-            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
-          }
-        }
-        gpGdEnsureDetailDelegates(existing, hit);
-        _gpGdHydrateQuietUntil = Date.now() + 12000;
-        _gpGdRemountCount = 0;
-        gpGdMarkDetailScanActive(12000);
-        return existing;
-      }
-      const remountKey = goalId + '|' + token;
-      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
-        gpGdTrace('remount capped — keep last block', goalId);
-        gpGdRefreshDetailSubtasks(existing, hit);
-        const keepCard = gpGdResolveInspectorCardRoot(dialogShell, goalId);
-        if (keepCard instanceof HTMLElement) {
-          if (!gpGdGetDetailMarkCompleteBtn()) {
-            gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!hit.session?.completed), keepCard);
-          } else {
-            gpGdSyncMarkCompleteButton(!!hit.session?.completed);
-          }
-        }
-        gpGdEnsureDetailDelegates(existing, hit);
-        _gpGdHydrateQuietUntil = Date.now() + 12000;
-        return existing;
-      }
-      _gpGdRemountGoalKey = remountKey;
-      _gpGdRemountCount += 1;
-      gpGdTrace('remount (block not visible)', goalId);
-      teardownGpGdBlock();
-    } else {
-      teardownGpGdBlock();
+      gpGdStabilizeMountedDetailBlock(existing, dialogShell, hit);
+      return existing;
     }
+    if (existing?.isConnected) teardownGpGdBlock();
     gpGdTrace('render start', token, goalId);
 
     /** Drop stale clones if React orphaned them from `__gpGdBlockEl` tracking */
