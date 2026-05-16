@@ -4729,6 +4729,103 @@
     return out;
   }
 
+  /** URL / hash tokens when the inspector omits `[data-eventid]` in scraped DOM paths. */
+  function gpGdCollectLocationBarEventHints() {
+    const out = [];
+    const seen = new Set();
+    const tryAddRaw = /** @type {(raw: string) => void} */ ((raw) => {
+      let s = String(raw || '').trim();
+      if (!s) return;
+      const variants = [];
+      variants.push(s);
+      try {
+        variants.push(decodeURIComponent(s.replace(/\+/g, ' ')));
+      } catch (_) {
+        /* ignore */
+      }
+      for (const cand of variants) {
+        const t = cand.trim();
+        if (t.length < 4 || seen.has(t)) continue;
+        seen.add(t);
+        out.push(t);
+      }
+    });
+
+    const blob = `${location.pathname || ''}?${location.search || ''}${location.hash || ''}`;
+    const rex = [
+      /[?&#]eid=([^?&#]+)/i,
+      /[?&#]eventId=([^?&#]+)/i,
+      /\/eventedit\/([^/?#]+)/i,
+      /\bcalendar(?:\/u\/\d+)?\/r\/event(?:edit)?\/([^/?#]+)/i,
+      /\/embedded\?.*?[?&#]eventId=([^?&#]+)/i,
+    ];
+    for (const re of rex) {
+      let m = re.exec(blob);
+      if (m && m[1]) tryAddRaw(m[1]);
+    }
+    return out;
+  }
+
+  /**
+   * GCal often surfaces the inspector as an unlabeled div shell (no role=dialog + no role=presentation wrapper).
+   * Anchor off `[data-eventid]` OUTSIDE decorated grid chips, then ascend to the large metadata panel shell.
+   */
+  function gpGdCollectLikelyInspectorRootsFromBeacon(htmlRoot) {
+    const LABEL_RE =
+      /\bGuests\b|\bAdd guests\b|\bGoing\?\b|\bGoing\b|\bCalendar\s*\(|Visibility|Notification|Reminder|Join with\b|\bMeeting link\b|\bVideo call\b|\bLocation\b|\bOrganizer\b/i;
+
+    /** @returns {HTMLElement | null} */
+    function ascendToAnnotatedPanel(beacon, stopAt) {
+      /** @type {HTMLElement | null} */
+      let best = null;
+      let cur = /** @type {HTMLElement | null} */ (beacon);
+      for (let d = 0; d < 28 && cur && cur instanceof HTMLElement && cur !== stopAt; d++) {
+        const sample = String(cur.innerText || '').slice(0, 1100);
+        const r = cur.getBoundingClientRect();
+        const hMin = Math.min(Math.max(Math.round(window.innerHeight * 0.2), 160), Math.round(window.innerHeight * 0.92));
+        if (
+          LABEL_RE.test(sample) &&
+          r.width >= 200 &&
+          r.height >= hMin &&
+          r.bottom > 40 &&
+          r.right > 80
+        ) {
+          best = cur;
+        }
+        cur = gpGdComposableParentHTMLElement(cur);
+      }
+      return best;
+    }
+
+    const discovered = [];
+    const seenPanels = new Set();
+    const beacons = gpGdQuerySelectorAllDeep(htmlRoot, '[data-eventid]');
+    const stopAt = htmlRoot instanceof HTMLElement ? htmlRoot : null;
+
+    for (const b of beacons) {
+      if (!(b instanceof HTMLElement)) continue;
+      if (!b.isConnected) continue;
+      if (b.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols')) continue;
+
+      /** Grid goal chips reuse `[data-eventid]` — omit so we only latch side panels / pop-ins. */
+      if (b.closest('.ext-goal-chip') || b.closest('[data-eventchip].ext-goal-chip')) continue;
+
+      const panel = ascendToAnnotatedPanel(b, /** @type {HTMLElement | null} */ (stopAt));
+      if (!(panel instanceof HTMLElement) || seenPanels.has(panel)) continue;
+
+      /** Require that the annotated panel contains this beacon in the composed subtree. */
+      if (!gpGdComposedSubtreeContains(panel, b)) continue;
+
+      /** Skip tiny inline affordances mistaken for inspectors. */
+      const pr = panel.getBoundingClientRect();
+      if (pr.width < 220 || pr.height < 170) continue;
+
+      seenPanels.add(panel);
+      discovered.push(panel);
+    }
+    return discovered;
+  }
+
   function gpEnumerateNativeEventDetailHosts() {
     const seenNodes = new Set();
     const out = [];
