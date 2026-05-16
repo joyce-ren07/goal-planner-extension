@@ -5325,13 +5325,22 @@
   function scheduleGpGdInspectorOpenBurst() {
     const gen = ++_gpGdOpenBurstGen;
     gpGdMarkDetailScanActive(15000);
+    const ext = __gpGdBlockEl;
+    if (
+      ext?.isConnected &&
+      (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) &&
+      Date.now() < _gpGdHydrateQuietUntil + 2000
+    ) {
+      gpGdRunDetailHydratePass();
+      return;
+    }
     const run = () => {
       if (gen !== _gpGdOpenBurstGen) return;
       gpGdRunDetailHydratePass();
     };
     run();
     requestAnimationFrame(run);
-    for (const ms of [16, 40, 80, 150, 280, 500, 900, 1400]) {
+    for (const ms of [120, 400, 900]) {
       window.setTimeout(run, ms);
     }
   }
