@@ -4880,6 +4880,15 @@
         out.push(el);
       }
     }
+
+    /** Tertiary: un-roled inspector shells surfaced via annotated metadata text + beacon `[data-eventid]`. */
+    for (const el of gpGdCollectLikelyInspectorRootsFromBeacon(html)) {
+      if (!(el instanceof HTMLElement)) continue;
+      if (!el.isConnected) continue;
+      if (seenNodes.has(el)) continue;
+      seenNodes.add(el);
+      out.push(el);
+    }
     return out;
   }
 
