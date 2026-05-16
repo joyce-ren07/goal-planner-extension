@@ -460,47 +460,30 @@
   }
 
   /**
-   * When Goal Planner creation UI is showing, derive sessions drawn on the calendar.
-   * Returns `false` when preview layer should be omitted entirely.
+   * When Goal Planner ghost preview should draw on the calendar.
+   * Strict: ONLY the create flow “Suggested sessions” screen (never form-only, edit mode, or home).
    */
   function deriveGhostSessionsForCreationPreviewLayer() {
     const panel = document.getElementById('gp-panel');
     if (!panel?.classList.contains('open')) return false;
 
-    if (document.getElementById('gp-screen-home')?.classList.contains('active')) return false;
-
     const suggScr = document.getElementById('gp-screen-suggestions');
-    const formScr = document.getElementById('gp-screen-form');
-    const ovOpen = document.getElementById('gp-recurrence-overlay')?.classList.contains('open');
+    /** ghostSessionsEnabled ⇒ creation suggested-sessions step only (not edit-reschedule UX). */
+    if (!suggScr?.classList.contains('active')) return false;
+    if (state.editingGoalId) return false;
 
-    if (
-      !suggScr?.classList.contains('active') &&
-      !formScr?.classList.contains('active') &&
-      !ovOpen
-    ) {
-      return false;
+    /** Suggestions loaded — authoritative preview anchors for commit + grid. */
+    if (state.suggestions?.length) {
+      return { sessions: state.suggestions.slice(), markNonPersisted: true };
     }
-
-    /** Screen 3 — prefer smart suggestions when loaded; else ephemeral grid from recurrence draft. */
-    if (suggScr?.classList.contains('active')) {
-      if (state.suggestions?.length)
-        return { sessions: state.suggestions.slice(), markNonPersisted: true };
-      const rDraft = resolveRecurrenceDraftForGhostPreview();
-      if (rDraft.period !== 'day' && (!rDraft.days || !rDraft.days.length))
-        return { sessions: [], markNonPersisted: true };
-      return {
-        sessions: computeEphemeralGhostSessionsForVisibleDays(rDraft),
-        markNonPersisted: true,
-      };
-    }
-
-    const r = resolveRecurrenceDraftForGhostPreview();
-    if (!r) return { sessions: [], markNonPersisted: true };
-    if (r.period !== 'day' && (!r.days || !r.days.length))
+    /** Skeleton / loading phase: ephemeral slots from recurrence draft until computePreviewSuggestions returns. */
+    const rDraft = resolveRecurrenceDraftForGhostPreview();
+    if (rDraft.period !== 'day' && (!rDraft.days || !rDraft.days.length))
       return { sessions: [], markNonPersisted: true };
-
-    const sessions = computeEphemeralGhostSessionsForVisibleDays(r);
-    return { sessions, markNonPersisted: true };
+    return {
+      sessions: computeEphemeralGhostSessionsForVisibleDays(rDraft),
+      markNonPersisted: true,
+    };
   }
 
   let _ghostPrevDebounceT = 0;
