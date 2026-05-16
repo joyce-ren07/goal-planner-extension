@@ -5608,7 +5608,11 @@
       (sessDone ? 'opacity:0.55;' : '');
     wrap.appendChild(markBtn);
 
-    if (insertBefore && insertBefore.parentNode === mountParent) {
+    if (
+      insertBefore &&
+      mountParent.isConnected &&
+      gpGdComposedSubtreeContains(mountParent, insertBefore)
+    ) {
       mountParent.insertBefore(wrap, insertBefore);
     } else {
       mountParent.appendChild(wrap);
