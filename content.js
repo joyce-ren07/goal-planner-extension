@@ -6729,7 +6729,17 @@
     wrap.setAttribute('data-goals-injected', 'true');
     wrap.dataset.gpEventToken = String(tokenHint || '');
     wrap.dataset.gpGoalId = String(goal?.id ?? '');
-    wrap.dataset.gpSessionEventId = String(sess?.eventId ?? '');
+    const pinHints = gpGdConsumePinnedSessionHints();
+    wrap.dataset.gpSessionEventId = String(
+      sess?.eventId ?? pinHints[0] ?? ''
+    ).trim();
+    wrap.dataset.gpSlotIdx = String(
+      typeof hit?.sIdx === 'number' && hit.sIdx >= 0
+        ? hit.sIdx
+        : String(_gpGdPinnedGoalId) === String(goal?.id ?? '') && _gpGdPinnedSlotIdx >= 0
+          ? _gpGdPinnedSlotIdx
+          : ''
+    );
     wrap.style.cssText =
       'display:block !important;position:relative;z-index:5;box-sizing:border-box;width:auto;max-width:100%;' +
       'margin:0;padding:0 16px 12px;border:0;clear:both;overflow:hidden;opacity:1 !important;visibility:visible !important;' +
