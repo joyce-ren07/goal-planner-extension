@@ -1566,6 +1566,7 @@
   outline: 1px dotted rgba(25, 103, 210, 0.4);
 }
 
+#gp-gcal-detail-mark-footer .gp-gd-mark-complete,
 #gp-gcal-detail-goal-extension .gp-gd-mark-complete {
   display: block;
   width: 100%;
