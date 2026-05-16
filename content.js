@@ -180,8 +180,6 @@
       }
       _gpGhostTipEl = null;
     }
-    const rootInHost = document.querySelector('#gp-ghost-preview-host #gp-ghost-preview-root');
-    if (rootInHost) rootInHost.replaceChildren();
     document.querySelectorAll('body > .goal-ghost-event').forEach((el) => el.remove());
     tearDownGpGhostPreviewHostLayers();
   }
