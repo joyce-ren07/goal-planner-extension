@@ -5211,6 +5211,7 @@
     add(chip.dataset.gpChipKey);
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
+    _gpGdPinnedTitleHint = (chip.textContent || '').replace(/🎯\s*/g, '').trim().split('\n')[0].trim();
     gpGdMarkDetailScanActive(15000);
     const r = chip.getBoundingClientRect();
     _gpGdAnchorX = r.left + r.width / 2;
