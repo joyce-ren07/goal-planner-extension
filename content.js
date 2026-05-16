@@ -5165,11 +5165,22 @@
         : [e?.target].filter(Boolean);
     for (const n of path) {
       if (!(n instanceof Element)) continue;
+      if (n instanceof HTMLElement && gpGdIsGCalLeftSidebarRegion(n)) continue;
       const dialog = n.closest('[role="dialog"], [role="alertdialog"]');
-      if (dialog instanceof HTMLElement && gpGdIsGoalPlannerInspector(dialog) && gpGdIsElementVisuallyExposed(dialog)) {
+      if (
+        dialog instanceof HTMLElement &&
+        gpGdIsEventDetailPopupHost(dialog) &&
+        gpGdIsGoalPlannerInspector(dialog) &&
+        gpGdIsElementVisuallyExposed(dialog)
+      ) {
         return dialog;
       }
-      if (n instanceof HTMLElement && gpGdInspectorHasCloseControl(n) && gpGdIsGoalPlannerInspector(n)) {
+      if (
+        n instanceof HTMLElement &&
+        gpGdInspectorHasCloseControl(n) &&
+        gpGdIsEventDetailPopupHost(n) &&
+        gpGdIsGoalPlannerInspector(n)
+      ) {
         return n;
       }
     }
