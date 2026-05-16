@@ -5121,11 +5121,53 @@
     if (best) return best;
 
     for (const el of gpGdQuerySelectorAllDeep(dialogHost, '[role="dialog"], [role="alertdialog"]')) {
+      if (!gpGdIsElementVisuallyExposed(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width >= 240 && r.width <= maxW && r.height >= 120) return el;
     }
 
     return dialogHost;
+  }
+
+  /** Prefer the on-screen card that actually shows this goal title (avoids hidden GCal clones). */
+  function gpGdFindVisibleEventCardForGoal(dialogHost, goalTitle) {
+    if (!(dialogHost instanceof HTMLElement)) return null;
+    const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
+    if (needle.length < 2) return null;
+    const short = needle.slice(0, Math.min(needle.length, 32));
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestArea = 0;
+    gpGdWalkComposedElements(dialogHost, (el) => {
+      if (!gpGdIsElementVisuallyExposed(el)) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 220 || r.width > 760 || r.height < 120) return;
+      const text = String(el.innerText || '');
+      if (!text.includes(short)) return;
+      const area = r.width * r.height;
+      if (area > bestArea) {
+        bestArea = area;
+        best = el;
+      }
+    });
+    return best;
+  }
+
+  function gpGdPickBestVisibleInspectorHost(hosts, goalTitle) {
+    const list = hosts.filter((h) => h instanceof HTMLElement);
+    const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
+    if (needle.length >= 2) {
+      const short = needle.slice(0, Math.min(needle.length, 32));
+      for (const h of list) {
+        if (!gpGdIsElementVisuallyExposed(h)) continue;
+        if (String(h.innerText || '').includes(short)) return h;
+      }
+    }
+    for (const h of list) {
+      const card = gpGdFindEventDetailCardRoot(h);
+      if (gpGdIsElementVisuallyExposed(card)) return h;
+    }
+    return list[0] || null;
   }
 
   function gpGdIsGoalBlockVisible(el) {
