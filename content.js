@@ -4589,6 +4589,590 @@
     return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   }
 
+  /** Event detail enrichment — observes only which native dialog hosts an event key; rendered data flows from unified GoalPlannerModel state (+ storage echoes). */
+
+  /** @typedef {{ goal: object, session: object, gIdx: number, sIdx: number } | null} GpUnifiedGoalHit */
+
+  /** Match DOM event token to unified session — mirrors chip id tolerance (encoded / instance suffixes). */
+  function gpFindUnifiedSessionForDomEventKey(state, domHintRaw) {
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.findSessionByEventId || !state?.goals || domHintRaw == null || domHintRaw === '')
+      return null;
+    let domHint = String(domHintRaw).trim();
+    if (!domHint) return null;
+
+    /** @type {(a: unknown, b: unknown) => boolean} */
+    const flex = (storedId, key) =>
+      !!(storedId &&
+        domHint &&
+        (gpChipDoneKeyMatchesCalEventId(String(storedId), domHint) ||
+          gpChipDoneMirrorStrictPair(String(storedId), domHint)));
+
+    const tight = Model.findSessionByEventId(state, domHint);
+    if (tight && tight.goal) return tight;
+
+    let decoded = domHint;
+    try {
+      decoded = decodeURIComponent(String(domHint).replace(/\+/g, ' '));
+    } catch (_) {
+      decoded = domHint;
+    }
+    if (decoded && decoded !== domHint) {
+      const d2 = Model.findSessionByEventId(state, decoded);
+      if (d2 && d2.goal) return d2;
+    }
+
+    for (let gi = 0; gi < state.goals.length; gi++) {
+      const g = state.goals[gi];
+      const list = g.sessions || [];
+      for (let si = 0; si < list.length; si++) {
+        const s = list[si];
+        if (!s?.eventId) continue;
+        if (flex(s.eventId, domHint))
+          return { goal: g, session: s, gIdx: gi, sIdx: si };
+      }
+    }
+    return null;
+  }
+
+  function gpCollectEventIdHintsFromRoot(rootEl) {
+    const out = [];
+    const seen = new Set();
+    if (!rootEl) return out;
+
+    /** @type {Element[]} */
+    const nodesWithId = [...rootEl.querySelectorAll('[data-eventid]')];
+    nodesWithId.forEach((node) => {
+      const raw = node.getAttribute('data-eventid');
+      if (!raw || seen.has(raw)) return;
+      seen.add(raw);
+      out.push(raw);
+    });
+
+    const links = [...rootEl.querySelectorAll('a[href*="calendar.google"], a[href*="google.com/calendar"], a[href*="eid="]')];
+    for (const a of links) {
+      const href = a.getAttribute('href') || '';
+      let m =
+        /\beid=(https%3A%2F%2F[^&]+)/i.exec(href) ||
+        /\beventId=([^&]+)/i.exec(href) ||
+        /\/calendar\/(.*\/)?(event|events)\/(e\/|r\/)?([^/?#]+)/i.exec(href);
+      const token =
+        Array.isArray(m) && typeof m[m.length - 1] === 'string' ? m[m.length - 1] : '';
+      if (!token || seen.has(token)) continue;
+      seen.add(token);
+      out.push(token);
+    }
+
+    try {
+      if (nodesWithId.length) {
+        const ec = nodesWithId[0].closest('[data-eventchip]')
+          ? nodesWithId[0]
+          : nodesWithId[0].closest('[aria-label*="event" i]');
+        ec?.closest?.('[aria-label*="event" i]');
+      }
+    } catch (_) {
+      /* ignore */
+    }
+
+    return out;
+  }
+
+  function gpEnumerateNativeEventDetailHosts() {
+    const seenNodes = new Set();
+    const out = [];
+
+    /** @type {Element[]} */
+    const stack = [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')];
+    for (const raw of stack) {
+      let el = raw;
+      if (!(el instanceof Element)) continue;
+      if (
+        !document.documentElement.contains(el) ||
+        el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols') ||
+        el.id === 'gp-panel' ||
+        el.id === 'gp-recurrence-overlay'
+      )
+        continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 48 || r.height < 48) continue;
+
+      /** De-dupe by element identity — GCal nests nested dialog layers. */
+      if (seenNodes.has(el)) continue;
+      /** Prefer outermost ancestor among intersecting dialogs (dedupe overlays). */
+      let skipAsInner = false;
+      for (const u of stack) {
+        if (u === el || !u.contains(el)) continue;
+        const ru = u.getBoundingClientRect();
+        if (
+          ru.left <= r.left &&
+          ru.top <= r.top &&
+          ru.right >= r.right &&
+          ru.bottom >= r.bottom
+        )
+          skipAsInner = true;
+      }
+      if (skipAsInner) continue;
+      seenNodes.add(el);
+      out.push(el);
+    }
+
+    /** Secondary: anchored popovers lacking role=dialog — still scoped to transient UI shells. */
+    for (const el of document.querySelectorAll('[role="presentation"]')) {
+      if (!el.closest('body')) continue;
+      if (el.closest('#gp-panel, #gp-recurrence-overlay')) continue;
+      if (!el.contains(el.querySelector('[data-eventid]'))) continue;
+      const rr = el.getBoundingClientRect();
+      if (rr.width < 200 || rr.height < 160) continue;
+      if (!seenNodes.has(el)) {
+        seenNodes.add(el);
+        out.push(el);
+      }
+    }
+    return out;
+  }
+
+  function gpDetailComposeSessionScheduleLineUnified(goal, sess) {
+    if (!sess) return '';
+    const stRaw = sess.startTime;
+    const enRaw = sess.endTime;
+    if (!stRaw || !enRaw) return '';
+    const a = new Date(stRaw);
+    const b = new Date(enRaw);
+    if (!Number.isFinite(a.getTime()) || !Number.isFinite(b.getTime())) return '';
+    return `${formatDayDate(a)} • ${formatTime(a)} – ${formatTime(b)}`;
+  }
+
+  /** Subtasks array shape on gp_goals row + unified Goal. */
+  async function gpDetailPersistGoalSubtasksAndMirror(goalId, list) {
+    const goals = await getGoals();
+    const ix = goals.findIndex((g) => String(g.id) === String(goalId));
+    if (ix < 0) return null;
+    const row = goals[ix];
+    const next = [...(Array.isArray(list) ? list : [])].map((x) => ({
+      id: String(x?.id ?? '').trim() || `sub_${generateId().slice(-10)}`,
+      title: typeof x.title === 'string' ? x.title.slice(0, 400) : String(x.title || '').slice(0, 400),
+      done: !!x.done,
+    }));
+    row.subtasks = next;
+    goals[ix] = row;
+    await persistGpGoalsAndUnified(goals);
+    return goals[ix];
+  }
+
+  let _gpGdScanTimer = 0;
+  let _gpGdDetailRefreshTimer = 0;
+  let _gpGdLastHost = /** @type {Element | null} */ (null);
+  let _gpGdLastHints = '';
+
+  /** Last mounted extension node (detached automatically when inspector closes). */
+  let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
+
+  function teardownGpGdBlock() {
+    if (__gpGdBlockEl?.isConnected) {
+      try {
+        __gpGdBlockEl.remove();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    __gpGdBlockEl = null;
+    _gpGdLastHost = null;
+    _gpGdLastHints = '';
+  }
+
+  function scheduleGpGdDialogScan() {
+    if (_gpGdScanTimer) return;
+    _gpGdScanTimer = requestAnimationFrame(() => {
+      _gpGdScanTimer = 0;
+      try {
+        void gpGdHydrateMountedDetailDecoration();
+      } catch (_) {
+        /* ignore */
+      }
+    });
+  }
+
+  /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
+  function scheduleGpGdFromUnifiedEcho() {
+    if (_gpGdDetailRefreshTimer) clearTimeout(_gpGdDetailRefreshTimer);
+    _gpGdDetailRefreshTimer = setTimeout(() => {
+      _gpGdDetailRefreshTimer = 0;
+      void gpGdHydrateMountedDetailDecoration();
+    }, 96);
+  }
+
+  /** Find Goal chip decorated on grid for Planner event ids (required for GoalInteractionController path). */
+  function gpFindRepresentativeGoalChip(plannerIds) {
+    const idsArr = [...(Array.isArray(plannerIds) ? plannerIds : [])].filter(Boolean).map(String);
+    if (!idsArr.length) return null;
+    for (const chip of document.querySelectorAll('[data-eventchip].ext-goal-chip')) {
+      const ecId = chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim();
+      if (!ecId) continue;
+      const ok = idsArr.some(
+        (p) =>
+          p === ecId ||
+          gpChipDoneKeyMatchesCalEventId(p, ecId) ||
+          gpChipDoneMirrorStrictPair(p, ecId)
+      );
+      if (ok && chip.querySelector('.ext-goal-root')) return chip;
+    }
+    return null;
+  }
+
+  async function gpGdRenderDetailBlock(hit, tokenHint, mountHost, unifiedStateFresh) {
+    const goal = hit.goal;
+    const sess = hit.session;
+
+    teardownGpGdBlock();
+    /** @type {HTMLElement} */
+    const wrap = document.createElement('aside');
+    wrap.id = 'gp-gcal-detail-goal-extension';
+    wrap.className = 'gp-gcal-detail-goal-extension';
+    wrap.dataset.gpEventToken = String(tokenHint || '');
+    wrap.dataset.gpGoalId = String(goal?.id ?? '');
+    wrap.dataset.gpSessionEventId = String(sess?.eventId ?? '');
+
+    const total =
+      typeof goal.totalSessions === 'number' && goal.totalSessions > 0 ? goal.totalSessions : 0 ||
+      Math.max(goal.sessions?.length || 0, totalCandidateFromUnified(goal));
+
+    /** @deprecated inline helper when totalSessions zero */
+    function totalCandidateFromUnified(gRow) {
+      const Model = globalThis.GoalPlannerModel;
+      if (!Model?.resolveGoalTotalSessions) return 0;
+      const legacyGuess = {
+        id: gRow.id,
+        recurrence: gRow.recurrence,
+        endDate: gRow.endDate,
+        sessionAnchors: [],
+        calEventIds: [],
+        created: gRow.created,
+        startDate: gRow.startDate,
+      };
+      return Model.resolveGoalTotalSessions(legacyGuess) || 0;
+    }
+
+    const totalResolved =
+      (typeof goal.totalSessions === 'number' && goal.totalSessions > 0 ? goal.totalSessions : 0) ||
+      Math.max(goal.sessions?.length || 0, totalCandidateFromUnified(goal));
+
+    const doneCount =
+      typeof goal.completedSessionsEstimate === 'number'
+        ? goal.completedSessionsEstimate
+        : goal.sessions
+          ? goal.sessions.filter((s) => s.completed).length
+          : 0;
+
+    /** Use model-computed pct when authoritative */
+    let pctRaw = typeof goal.progressPct === 'number' ? goal.progressPct : 0;
+    if (!pctRaw && totalResolved > 0) pctRaw = Math.round((doneCount / totalResolved) * 100);
+
+    /** Title line — Goal title stripped of stray emoji duplication (native card already shows 🎯 in title elsewhere). */
+    const titleTxt = escapeHtmlGp(String(goal.title || '').replace(/^\s*🎯\s*/u, '').trim() || 'Goal');
+
+    const schedLine = escapeHtmlGp(
+      goal.scheduleLabel || (goal.recurrence ? 'Repeating sessions' : 'Schedule')
+    );
+
+    /** Session rows — GoalSession unified rows mapped to calendars (times when geometry/sync populated iso). */
+    const sessionsSorted = [...(goal.sessions || [])].sort((sa, sb) => {
+      const ta = Date.parse(sa.startTime);
+      const tb = Date.parse(sb.startTime);
+      if (Number.isFinite(ta) && Number.isFinite(tb)) return ta - tb;
+      if (sa.eventId === sess.eventId) return -1;
+      if (sb.eventId === sess.eventId) return 1;
+      return 0;
+    });
+
+    const sessionRowsHtml = sessionsSorted
+      .map((rs) => {
+        const highlight = rs.eventId === sess.eventId;
+        const line = gpDetailComposeSessionScheduleLineUnified(goal, rs);
+        const lineDisp = escapeHtmlGp(line || 'Time pending sync');
+        const stCl = rs.completed ? 'completed' : 'upcoming';
+        return `
+          <li class="gp-gd-session-row gp-gd-session-row--${stCl}${highlight ? ' gp-gd-session-row--focused' : ''}">
+            <div class="gp-gd-session-line">${lineDisp}</div>
+            <button type="button" class="gp-gd-mini-btn gp-gd-toggle-session"${
+              rs.eventId
+                ? ` data-gp-detail-toggle-session="1" data-session-event="${escapeHtmlGp(String(rs.eventId))}"`
+                : ' disabled=""'
+            }>${escapeHtmlGp(rs.completed ? 'Completed' : 'Mark complete')}</button>
+          </li>`;
+      })
+      .join('');
+
+    const subtasks = Array.isArray(goal.subtasks)
+      ? goal.subtasks.filter((st) => st && String(st.title || '').trim().length > 0)
+      : [];
+
+    const subtasksRows = subtasks
+      .map(
+        (t) =>
+          `<label class="gp-gd-subtask"><input type="checkbox" data-gp-sub-id="${escapeHtmlGp(
+            String(t.id)
+          )}" ${t.done ? 'checked' : ''}/><span class="gp-gd-subtask-label${t.done ? ' gp-gd-subtask-label--done' : ''}">${escapeHtmlGp(
+            String(t.title || '')
+          )}</span></label>`
+      )
+      .join('');
+
+    wrap.innerHTML = `
+      <div class="gp-gd-hr" role="presentation"></div>
+      <header class="gp-gd-heading">
+        <span class="gp-gd-chip">Goal Planner</span>
+        <button type="button" class="gp-gd-mini-btn-inline" title="Rename goal title" aria-label="Edit goal title inline" data-gp-detail-act="title-edit">⋯</button>
+      </header>
+      <div class="gp-gd-metrics">
+        <div class="gp-gd-metrics-title">${titleTxt}</div>
+        <div class="gp-gd-metrics-rows">
+          <span><strong>${totalResolved}</strong> sessions total</span>
+          <span class="gp-gd-dot">•</span>
+          <span><strong>${doneCount}</strong> completed</span>
+          <span class="gp-gd-dot">•</span>
+          <span><strong>${clampPct(gpSafeProgressPct(doneCount, totalResolved, pctRaw))}%</strong> progress</span>
+        </div>
+      </div>
+      <section class="gp-gd-schedule" aria-label="Recurrence">${schedLine}</section>
+      <section class="gp-gd-session-list-wrap" aria-label="Linked Calendar sessions">
+        <div class="gp-gd-session-list-caption">Sessions (calendar-linked)</div>
+        <ul class="gp-gd-session-list">${sessionRowsHtml || '<li class="gp-gd-session-row">No session rows synced yet.</li>'}</ul>
+      </section>
+      ${
+        subtasks.length || true
+          ? `<section class="gp-gd-subtasks" aria-label="Subtasks"><div class="gp-gd-subtasks-cap">Tasks</div>
+        <div class="gp-gd-subtasks-rows">${subtasksRows || `<span class="gp-gd-muted">No subtasks yet.</span>`}</div>
+        <button type="button" class="gp-gd-text-btn" data-gp-detail-act="add-sub">Add task</button></section>`
+          : ''
+      }
+      <footer class="gp-gd-actions">
+        <button type="button" class="gp-gd-major-btn gp-gd-major-btn-secondary" data-gp-detail-act="schedule-edit">Adjust schedule…</button>
+      </footer>
+    `;
+
+    mountHost.appendChild(wrap);
+    __gpGdBlockEl = wrap;
+    gpGdWireDetailDelegates(wrap, hit);
+
+    /** @param {unknown} pct */
+    function clampPct(pg) {
+      const n = Number(pg);
+      if (!Number.isFinite(n)) return 0;
+      return Math.max(0, Math.min(100, Math.round(n)));
+    }
+
+    /** @param {number} done @param {number} tot */
+    function gpSafeProgressPct(done, tot, fallbackPct) {
+      if (tot > 0) return Math.round((done / tot) * 100);
+      return clampPct(fallbackPct);
+    }
+    return wrap;
+  }
+
+  /**
+   * @param {GpUnifiedGoalHit} hit
+   * @param {HTMLElement} wrapHost
+   */
+  function gpGdWireDetailDelegates(wrapHost, hit) {
+    wrapHost.querySelector('[data-gp-detail-act="title-edit"]')?.addEventListener('click', () => {
+      const nextPlain = prompt('Goal title', String(hit.goal.title || '').replace(/^\s*🎯\s*/u, '').trim());
+      if (nextPlain == null) return;
+      const trimmed = nextPlain.trim();
+      if (!trimmed) return;
+      void gpGdApplyRenameGoal(hit.goal?.id, trimmed);
+    });
+
+    wrapHost.querySelector('[data-gp-detail-act="schedule-edit"]')?.addEventListener('click', async () => {
+      const gid = hit.goal?.id;
+      if (!gid) return;
+      teardownGpGdBlock();
+      await openEditGoal(gid);
+      openPanel();
+    });
+
+    wrapHost.querySelector('[data-gp-detail-act="add-sub"]')?.addEventListener('click', async () => {
+      const label = prompt('New task title');
+      if (!label?.trim()) return;
+      const list = [...(hit.goal.subtasks || [])];
+      list.push({ id: `sub_${generateId().slice(-9)}`, title: label.trim(), done: false });
+      await gpDetailPersistGoalSubtasksAndMirror(hit.goal.id, list);
+      scheduleGpGdFromUnifiedEcho();
+    });
+
+    wrapHost.addEventListener('change', async (ev) => {
+      const tg = /** @type {HTMLElement} */ (ev.target);
+      if (!(tg instanceof HTMLInputElement)) return;
+      if (tg.matches('.gp-gd-subtask input[type="checkbox"][data-gp-sub-id]')) {
+        const id = tg.getAttribute('data-gp-sub-id');
+        if (!id) return;
+        const list = [...(hit.goal.subtasks || [])].map((item) =>
+          item.id === id ? { ...item, done: !!tg.checked } : item
+        );
+        await gpDetailPersistGoalSubtasksAndMirror(hit.goal.id, list);
+      }
+    });
+
+    wrapHost.addEventListener(
+      'click',
+      /** @type {(e: Event) => Promise<void>} */ async function gpGdDelegationClick(ev) {
+        const btn =
+          /** @type {HTMLElement} */ (ev.target && ev.target instanceof Element ? ev.target : null)?.closest?.(
+          '[data-gp-detail-toggle-session]'
+        );
+        if (!btn || !(btn instanceof HTMLButtonElement)) return;
+        const raw = btn.dataset.sessionEvent;
+        if (!raw) return;
+        const lg = hit.goal;
+        const plannerIds = [
+          ...(Array.isArray(lg.calEventIds) ? lg.calEventIds.map(String).filter(Boolean) : []),
+        ];
+        if (!plannerIds.length) plannerIds.push(String(raw));
+        const chip = gpFindRepresentativeGoalChip(plannerIds);
+        const domKeyRaw = chip?.closest('[data-eventid]')?.getAttribute('data-eventid') || raw || '';
+        if (!chip) {
+          alert('Goal session checkbox is syncing — reopen from the calendar grid if this persists.');
+          return;
+        }
+        GoalInteractionController.toggleCompletion(domKeyRaw, chip);
+        scheduleGpGdFromUnifiedEcho();
+      },
+      false
+    );
+  }
+
+  async function gpGdApplyRenameGoal(goalId, plainTitle) {
+    try {
+      const token = await getAuthToken();
+      const goals = await getGoals();
+      const ix = goals.findIndex((g) => String(g.id) === String(goalId));
+      if (ix < 0) return;
+      const row = goals[ix];
+      row.title = plainTitle.trim();
+      const ids = [...(Array.isArray(row.calEventIds) ? row.calEventIds : []).filter(Boolean)];
+      await persistGpGoalsAndUnified(goals);
+      await patchCalendarGoalSummariesForIds(ids, plainTitle.trim(), token);
+      scheduleGpGdFromUnifiedEcho();
+    } catch (e) {
+      console.warn('GoalPlanner: rename popup flow failed', e);
+    }
+  }
+
+  /** Core mount pass — derives event key from inspector shell only to index unified Goal rows. All fields render from GoalPlannerUnifiedState snapshots. */
+
+  /** @typedef {GpUnifiedGoalHit} UnifiedHitCompat */
+
+  async function gpGdHydrateMountedDetailDecoration() {
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.loadUnifiedState) {
+      teardownGpGdBlock();
+      return;
+    }
+
+    /** @type {import('./dummy').GpUnifiedGoalHit} */
+    let unifiedStateSnapshot;
+    try {
+      unifiedStateSnapshot = await Model.loadUnifiedState();
+    } catch (_) {
+      teardownGpGdBlock();
+      return;
+    }
+
+    const natives = gpEnumerateNativeEventDetailHosts();
+
+    /** No native inspector chrome — teardown */
+    if (!natives.length) {
+      teardownGpGdBlock();
+      return;
+    }
+
+    /** First dialog that yields a Planner hit wins (multi-open edge). */
+    for (const host of natives) {
+      const hints = gpCollectEventIdHintsFromRoot(host);
+      const hintJoined = hints.join('|');
+      for (let hi = 0; hi < hints.length; hi++) {
+        /** @type {UnifiedHitCompat} */
+        let hitCandidate = gpFindUnifiedSessionForDomEventKey(unifiedStateSnapshot, hints[hi]);
+
+        /** Only decorate Goal-managed sessions carrying 🎯 linkage (unified GoalSession hit). */
+        if (!hitCandidate?.goal?.id || !hitCandidate.session?.eventId) continue;
+
+        /** Mount target — footer-adjacent or dialog body trailing region for minimal layout disruption */
+        /** @type {HTMLElement} */
+        const mountHostCandidate =
+          (host.tagName !== 'SECTION' &&
+            [...host.children].reverse().find(
+              /** @returns {HTMLElement} */
+              function findScroll(x) {
+                return x.scrollHeight > x.clientHeight + 20 ? /** @type {HTMLElement} */ (x) : null;
+              }
+            )) ||
+          /** @type {HTMLElement} */ (host.lastElementChild) ||
+          host;
+
+        if (!mountHostCandidate) continue;
+
+        if (__gpGdBlockEl?.isConnected && _gpGdLastHost === host && _gpGdLastHints === hintJoined) {
+          /** Hot refresh text only */
+
+          teardownGpGdBlock();
+        }
+
+        /** @type {UnifiedHitCompat} */
+        let hitStable = gpFindUnifiedSessionForDomEventKey(
+          unifiedStateSnapshot,
+          hints[hi]
+        );
+
+        /** Re-load hit after teardown */
+        unifiedStateSnapshot = await Model.loadUnifiedState();
+        hitStable = gpFindUnifiedSessionForDomEventKey(unifiedStateSnapshot, hints[hi]);
+        if (!hitStable?.goal?.id) continue;
+
+        await gpGdRenderDetailBlock(hitStable, hints[hi], mountHostCandidate, unifiedStateSnapshot);
+        _gpGdLastHost = host;
+        _gpGdLastHints = hintJoined;
+        return;
+      }
+    }
+    teardownGpGdBlock();
+  }
+
+  /** Install observer + GoalPlannerUnifiedState listeners (subscriber + chrome.storage echo). Does not wire calendar-chip DOM mutation for goal field reads. */
+
+  /** @suppress {duplicate} */
+  function setupGpCalGoalDetailEnrichment() {
+    if (globalThis.__gpCalGoalInspectorEnrichment) return;
+    globalThis.__gpCalGoalInspectorEnrichment = true;
+
+    const Model = globalThis.GoalPlannerModel;
+    if (!Model?.loadUnifiedState) return;
+
+    if (typeof chrome?.storage?.onChanged?.addListener === 'function') {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local' || !changes.goalPlannerUnifiedState) return;
+        scheduleGpGdFromUnifiedEcho();
+      });
+    }
+
+    Model.subscribeGoalsState?.(() => {
+      scheduleGpGdFromUnifiedEcho();
+    });
+
+    const obs = new MutationObserver(() => {
+      scheduleGpGdDialogScan();
+    });
+    obs.observe(document.documentElement || document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['aria-hidden', 'aria-modal'],
+    });
+
+    scheduleGpGdDialogScan();
+
+    scheduleGpGdFromUnifiedEcho();
+  }
+
   // ── Native GCal sidebar conflict handling ──
   function getGCalNativeSidebar() {
     const KNOWN = ['[data-panelid]', '.fZNHHb', '.P9GGKe'];
