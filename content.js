@@ -6322,6 +6322,18 @@
     return markBtn;
   }
 
+  /** Re-parent Mark completed footer into the white inspector card (not a wide overlay row). */
+  function gpGdAlignMarkFooterToCard(dialogShell) {
+    const footer = __gpGdMarkFooterEl;
+    if (!(footer instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    const card = gpGdResolveInspectorCardRoot(
+      dialogShell,
+      __gpGdBlockEl?.dataset.gpGoalId || ''
+    );
+    if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
+    return gpGdForceMountIntoCard(footer, card, null);
+  }
+
   /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
   function gpGdMountMarkCompleteFooter(markBtn, cardRoot) {
     if (!(markBtn instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return null;
@@ -6332,22 +6344,20 @@
     footer.id = 'gp-gcal-detail-mark-footer';
     footer.setAttribute('data-gp-mark-footer', '1');
     footer.style.cssText =
-      'display:block !important;position:relative;box-sizing:border-box;width:100%;max-width:100%;' +
-      'margin:0;padding:8px 16px 16px;border:0;background:transparent;clear:both;';
+      'display:block !important;position:relative !important;box-sizing:border-box !important;' +
+      'width:100% !important;max-width:100% !important;margin:0 !important;' +
+      'padding:8px 16px 16px !important;border:0 !important;background:transparent !important;' +
+      'clear:both !important;left:0 !important;right:auto !important;transform:none !important;';
     footer.appendChild(markBtn);
 
-    const nativeRow = gpGdFindFirstMetadataRowMatching(
-      cardRoot,
-      /\bmark\s+(?:as\s+)?completed\b/i
-    );
-    if (nativeRow?.parentElement instanceof HTMLElement) {
-      nativeRow.setAttribute('data-gp-native-mark-hidden', '1');
-      nativeRow.style.setProperty('display', 'none', 'important');
-      nativeRow.parentElement.insertBefore(footer, nativeRow);
+    const nativeFooter = gpGdFindNativeMarkCompletedFooterRow(cardRoot);
+    if (nativeFooter?.parentElement instanceof HTMLElement) {
+      nativeFooter.parentElement.insertBefore(footer, nativeFooter);
     } else {
       cardRoot.appendChild(footer);
     }
-
+    gpGdHideNativeMarkCompletedAffordances(cardRoot);
+    gpGdForceMountIntoCard(footer, cardRoot, null);
     gpGdApplyCardContainmentStyles(footer, cardRoot);
     __gpGdMarkFooterEl = footer;
     return footer;
