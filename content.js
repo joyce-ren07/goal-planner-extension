@@ -6087,7 +6087,7 @@
     });
     natives = gpGdPruneNestedInspectorHosts(natives);
 
-    const host = natives[0];
+    const host = gpGdPickBestVisibleInspectorHost(natives, '');
     if (!(host instanceof HTMLElement)) {
       teardownGpGdBlock();
       return;
