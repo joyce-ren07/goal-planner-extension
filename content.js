@@ -1133,6 +1133,7 @@
 
     initDatePicker();
     initPrefTimePicker();
+    initGhostPlannedHoverCue();
   }
 
   // ── Panel toggle ──
