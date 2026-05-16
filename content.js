@@ -5101,6 +5101,82 @@
     }
   }
 
+  function gpGdIsCalendarGridContainer(el) {
+    if (!(el instanceof HTMLElement)) return false;
+    if (el.closest('[role="dialog"], [role="alertdialog"]')) return false;
+    const main = el.closest('[role="main"]');
+    if (!main) return false;
+    return main.querySelectorAll('[data-eventid]').length >= 4;
+  }
+
+  function gpGdInspectorHasCloseControl(root) {
+    if (!(root instanceof HTMLElement)) return false;
+    for (const btn of gpGdQuerySelectorAllDeep(root, 'button')) {
+      const lab = (btn.getAttribute('aria-label') || btn.getAttribute('title') || '').toLowerCase();
+      if (/\bclose\b/.test(lab)) return true;
+    }
+    return false;
+  }
+
+  function gpGdScoreInspectorCandidate(el, goalTitle, ax, ay) {
+    if (!gpGdIsElementVisuallyExposed(el)) return -1;
+    const r = el.getBoundingClientRect();
+    if (r.width < 240 || r.height < 130) return -1;
+    let score = Math.min(r.width, 640) * Math.min(r.height, 720);
+    if (gpGdIsCalendarGridContainer(el)) score *= 0.02;
+    if (gpGdInspectorHasCloseControl(el)) score *= 2.5;
+    const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
+    if (needle.length >= 2 && String(el.innerText || '').includes(needle.slice(0, 28))) score *= 4;
+    if (ax != null && ay != null && Number.isFinite(ax) && Number.isFinite(ay)) {
+      if (ax >= r.left && ax <= r.right && ay >= r.top && ay <= r.bottom) score *= 6;
+      const dist = Math.hypot((r.left + r.right) / 2 - ax, (r.top + r.bottom) / 2 - ay);
+      if (dist < 320) score *= 2;
+      if (dist > 900) score *= 0.15;
+    }
+    return score;
+  }
+
+  /** Real GCal event popup — has Close, near the chip click, not the week grid scroll area. */
+  function gpGdFindEventInspectorShell(goalTitle) {
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    /** @type {HTMLElement | null} */
+    let best = null;
+    let bestScore = 0;
+    const html = document.documentElement;
+    if (!(html instanceof HTMLElement)) return null;
+
+    gpGdWalkComposedElements(html, (el) => {
+      if (!(el instanceof HTMLElement)) return;
+      const isDialog =
+        el.matches('[role="dialog"], [role="alertdialog"]') || el.getAttribute('aria-modal') === 'true';
+      if (!isDialog && !gpGdInspectorHasCloseControl(el)) return;
+      if (!isDialog) {
+        const r = el.getBoundingClientRect();
+        if (r.width < 260 || r.height < 140) return;
+      }
+      const outerDialog = el.closest('[role="dialog"], [role="alertdialog"]');
+      if (outerDialog && outerDialog !== el && !el.matches('[role="dialog"], [role="alertdialog"]')) return;
+
+      const s = gpGdScoreInspectorCandidate(el, goalTitle, ax, ay);
+      if (s > bestScore) {
+        bestScore = s;
+        best = el;
+      }
+    });
+
+    if (best) return best;
+
+    if (ax != null && ay != null) {
+      for (const el of document.elementsFromPoint(ax, ay)) {
+        if (!(el instanceof Element)) continue;
+        const d = el.closest('[role="dialog"], [role="alertdialog"]');
+        if (d instanceof HTMLElement && gpGdIsElementVisuallyExposed(d)) return d;
+      }
+    }
+    return null;
+  }
+
   /** Climb to a flex/grid “row” container so we remove the whole native row, not a leaf span. */
   function gpGdElevateToMetadataRow(dialogHost, node) {
     let cur = /** @type {HTMLElement | null} */ (node instanceof HTMLElement ? node : node.parentElement);
