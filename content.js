@@ -5721,6 +5721,22 @@
     return found;
   }
 
+  /** Native GCal event inspector white card (not the full-viewport overlay wrapper). */
+  function gpGdFindNativeGcalPopupCard(dialogHost) {
+    if (!(dialogHost instanceof HTMLElement)) return null;
+    const trySel = ['[data-dialog-for]', '[jsname="V5qPEc"]', '.VfPpkd-YPqjbf'];
+    for (const sel of trySel) {
+      for (const el of gpGdQuerySelectorAllDeep(dialogHost, sel)) {
+        if (!gpGdIsElementVisuallyExposed(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width >= 220 && r.width <= 760 && r.height >= 120 && r.height <= window.innerHeight * 0.96) {
+          return el;
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Insert goal rows before Calendar / Guests / Visibility style native rows when possible.
    * @returns {{ mountParent: HTMLElement, insertBefore: HTMLElement | null }}
@@ -5733,11 +5749,11 @@
       };
     }
     gpGdStripNativeMeetingNotes(dialogHost);
-    const cardRoot = gpGdFindEventDetailCardRoot(dialogHost);
+    const cardRoot =
+      gpGdFindNativeGcalPopupCard(dialogHost) || gpGdFindEventDetailCardRoot(dialogHost);
     gpGdStripNativeMeetingNotes(cardRoot);
 
-    const rowScopes =
-      cardRoot !== dialogHost ? [cardRoot, dialogHost] : [dialogHost];
+    const rowScopes = cardRoot instanceof HTMLElement ? [cardRoot] : [dialogHost];
     /** @type {HTMLElement | null} */
     let before = null;
     const rowRes = [
@@ -5757,17 +5773,12 @@
       if (before) break;
     }
 
-    /** @type {HTMLElement} */
-    let mountParent =
-      before?.parentElement instanceof HTMLElement
-        ? before.parentElement
-        : gpGdPickGoalDetailMountParent(dialogHost, cardRoot);
-    mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot, dialogHost);
+    /** Always mount inside the popup card — not before.parentElement (often the wide overlay). */
+    const mountParent =
+      cardRoot instanceof HTMLElement ? cardRoot : gpGdPickGoalDetailMountParent(dialogHost, cardRoot);
 
     const insertBefore =
-      before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before)
-        ? before
-        : null;
+      before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before) ? before : null;
     return { mountParent, insertBefore };
   }
 
