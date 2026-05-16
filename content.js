@@ -5999,17 +5999,23 @@
   /** Refresh mounted overlay data when unified GoalPlannerUnifiedState persists (silent geometry saves bypass subscriber). */
   function gpGdAttemptUnifiedEchoHydrate() {
     _gpGdDetailRefreshTimer = 0;
+    gpGdSyncBlockElRef();
     const ext = __gpGdBlockEl;
-    if (
+    const composing =
       ext &&
       ext.isConnected &&
       typeof ext.matches === 'function' &&
       ext.matches(':focus-within') &&
-      ext.querySelector('[data-gp-st-compose]:not([hidden])')
-    ) {
+      ext.querySelector('[data-gp-st-compose]:not([hidden]), [data-gp-st-new]:focus');
+    if (composing) {
       _gpGdDetailRefreshTimer = setTimeout(() => {
         gpGdAttemptUnifiedEchoHydrate();
       }, 220);
+      return;
+    }
+    if (gpGdDetailBlockReady()) {
+      const host = gpGdFindFrontGoalInspector(_gpGdPinnedTitleHint);
+      if (host) void gpGdHydrateMountedDetailDecoration();
       return;
     }
     void gpGdHydrateMountedDetailDecoration();
