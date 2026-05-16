@@ -5172,6 +5172,7 @@
   }
 
   function gpGdResolveGoalChipFromEvent(e) {
+    gpGdDiag('click: resolve chip — start', e?.type, e?.target);
     const path =
       e && typeof e.composedPath === 'function'
         ? e.composedPath()
@@ -5180,12 +5181,29 @@
       if (!(n instanceof Element)) continue;
       const direct =
         n.matches?.('[data-eventchip]') ? /** @type {HTMLElement} */ (n) : n.closest?.('[data-eventchip]');
-      if (direct instanceof HTMLElement && gpGdChipLooksLikeGoalSession(direct)) return direct;
+      if (direct instanceof HTMLElement) {
+        const looks = gpGdChipLooksLikeGoalSession(direct);
+        gpGdDiag('click: [data-eventchip] on path', {
+          looksLikeGoal: looks,
+          classes: direct.className,
+          titleSnippet: String(direct.textContent || '').slice(0, 60),
+        });
+        if (looks) return direct;
+      }
       const ec = n.closest?.('[data-eventid]');
       if (!ec) continue;
       const inner = ec.querySelector('[data-eventchip].ext-goal-chip, [data-eventchip]');
-      if (inner instanceof HTMLElement && gpGdChipLooksLikeGoalSession(inner)) return inner;
+      if (inner instanceof HTMLElement) {
+        const looks = gpGdChipLooksLikeGoalSession(inner);
+        gpGdDiag('click: chip inside [data-eventid]', {
+          eventId: ec.getAttribute('data-eventid'),
+          looksLikeGoal: looks,
+          titleSnippet: String(inner.textContent || '').slice(0, 60),
+        });
+        if (looks) return inner;
+      }
     }
+    gpGdDiag('click: resolve chip — MISS (no ext-goal-chip / 🎯 on path)');
     return null;
   }
 
