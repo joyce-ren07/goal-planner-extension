@@ -5432,6 +5432,13 @@
     add(chip.closest('[data-eventid]')?.getAttribute('data-eventid'));
     add(chip.dataset.gpCalEventId);
     add(chip.dataset.gpChipKey);
+    const nextDom = hints[0] || '';
+    const prevDom = __gpGdBlockEl?.dataset?.gpDomEventId || '';
+    if (prevDom && nextDom && prevDom !== nextDom) {
+      teardownGpGdBlock();
+      _gpGdPlacementLocked = false;
+      _gpGdHydrateQuietUntil = 0;
+    }
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
     _gpGdPinnedTitleHint = (chip.textContent || '').replace(/🎯\s*/g, '').trim().split('\n')[0].trim();
