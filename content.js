@@ -4865,6 +4865,80 @@
     return Math.max(0, Math.min(100, Math.round(n)));
   }
 
+  /** @param {HTMLElement} wrapHost Detail extension root `#gp-gcal-detail-goal-extension`. */
+  function gpGdApplySubtasksEditMode(wrapHost, editing) {
+    const sec = wrapHost.querySelector('.gp-gd-subtasks');
+    if (!(sec instanceof HTMLElement)) return;
+    const enterBtn = /** @type {HTMLButtonElement | null} */ (
+      wrapHost.querySelector('[data-gp-detail-act="subtasks-enter-edit"]')
+    );
+    const exitBtn = /** @type {HTMLButtonElement | null} */ (
+      wrapHost.querySelector('[data-gp-detail-act="subtasks-exit-edit"]')
+    );
+    const addSlot = sec.querySelector('.gp-gd-subtasks-add-slot');
+    const emptyHint = sec.querySelector('.gp-gd-subtasks-empty');
+    const listUl = sec.querySelector('.gp-gd-tasklist');
+    if (editing) {
+      sec.classList.add('gp-gd-subtasks--editing');
+      if (enterBtn) enterBtn.hidden = true;
+      if (exitBtn) exitBtn.hidden = false;
+      sec.querySelectorAll('.gp-gd-task-view').forEach((el) => el.setAttribute('hidden', ''));
+      sec.querySelectorAll('.gp-gd-task-edit').forEach((el) => el.removeAttribute('hidden'));
+      if (addSlot) addSlot.removeAttribute('hidden');
+      if (emptyHint) emptyHint.setAttribute('hidden', '');
+      requestAnimationFrame(() => {
+        const pick =
+          /** @type {HTMLInputElement | null} */ (sec.querySelector('.gp-gd-task-title-input')) ||
+          /** @type {HTMLInputElement | null} */ (sec.querySelector('.gp-gd-task-input-new'));
+        pick?.focus();
+      });
+    } else {
+      sec.classList.remove('gp-gd-subtasks--editing');
+      if (enterBtn) enterBtn.hidden = false;
+      if (exitBtn) exitBtn.hidden = true;
+      sec.querySelectorAll('.gp-gd-task-view').forEach((el) => el.removeAttribute('hidden'));
+      sec.querySelectorAll('.gp-gd-task-edit').forEach((el) => el.setAttribute('hidden', ''));
+      if (addSlot) {
+        addSlot.setAttribute('hidden', '');
+        const ni = /** @type {HTMLInputElement | null} */ (addSlot.querySelector('.gp-gd-task-input-new'));
+        if (ni) ni.value = '';
+      }
+      const hasTasks = !!(listUl && listUl.querySelector('.gp-gd-task-item'));
+      if (emptyHint) {
+        if (hasTasks) emptyHint.setAttribute('hidden', '');
+        else emptyHint.removeAttribute('hidden');
+      }
+    }
+  }
+
+  /** Read edit-mode DOM into a Goal-level subtask array (drops blank titles). */
+  function gpGdCollectSubtasksEditDom(sec) {
+    /** @type {{ id: string, title: string, completed: boolean }[]} */
+    const out = [];
+    for (const li of sec.querySelectorAll('.gp-gd-task-item')) {
+      const id = String(li.getAttribute('data-gp-sub-id') || '').trim();
+      const chk = li.querySelector('.gp-gd-task-cb-edit');
+      const inp = /** @type {HTMLInputElement | null} */ (li.querySelector('.gp-gd-task-title-input'));
+      const title = String(inp?.value || '').trim();
+      if (!title) continue;
+      out.push({
+        id: id || `sub_${generateId().slice(-10)}`,
+        title,
+        completed: chk instanceof HTMLInputElement ? !!chk.checked : false,
+      });
+    }
+    const newInp = /** @type {HTMLInputElement | null} */ (sec.querySelector('.gp-gd-task-input-new'));
+    const nu = String(newInp?.value || '').trim();
+    if (nu) {
+      out.push({
+        id: `sub_${generateId().slice(-10)}`,
+        title: nu,
+        completed: false,
+      });
+    }
+    return out;
+  }
+
   function gpGdRenderDetailBlock(hit, tokenHint, mountHost) {
     const goal = hit.goal;
     const sess = hit.session;
