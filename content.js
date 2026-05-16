@@ -5050,6 +5050,7 @@
       if (gpGdIsCalendarGridContainer(el)) return;
       if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-material-symbols')) return;
       if (el.id === 'gp-panel' || el.id === 'gp-recurrence-overlay') return;
+      if (gpGdIsGCalLeftSidebarRegion(el)) return;
 
       const sample = String(el.innerText || '').replace(/\s+/g, ' ').trim();
       if (!sample || sample.length < 12 || !LABEL_RE.test(sample)) return;
