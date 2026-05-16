@@ -6748,7 +6748,12 @@
 
     gpGdRefreshPinnedSessionLease();
 
-    if (gpGdNativeInspectorEditingActive(host) && pinnedRaw.length && gpGdInspectorNeedsGoalBlock(host)) {
+    if (
+      __gpGdBlockEl?.isConnected &&
+      gpGdNativeInspectorEditingActive(host) &&
+      pinnedRaw.length &&
+      gpGdInspectorNeedsGoalBlock(host)
+    ) {
       gpGdTrace('native field edit — defer re-mount');
       window.setTimeout(() => scheduleGpGdDialogScan(), 160);
       return;
