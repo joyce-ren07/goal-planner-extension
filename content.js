@@ -5657,37 +5657,65 @@
     return pruned.length ? pruned : list;
   }
 
-  /** When mount parent is a wide flex row, shift goal block into the white card column. */
-  function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
-    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
-    if (gpGdIsCalendarGridContainer(wrap.parentElement)) return false;
-    const card = gpGdFindEventDetailCardRoot(dialogShell);
-    if (!(card instanceof HTMLElement)) return false;
-    const cr = card.getBoundingClientRect();
-    const wr = wrap.getBoundingClientRect();
-    const pr = wrap.parentElement?.getBoundingClientRect?.();
-    if (!pr || cr.width < 200) return false;
-
+  /** Stamp explicit width on the goal block so it cannot inherit a week-grid parent's 100% width. */
+  function gpGdApplyCardContainmentStyles(wrap, cardRoot) {
+    if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return;
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200) return;
     const inset = 16;
-    const parentW = pr.width > 0 ? pr.width : cr.width;
-    const w = Math.max(120, Math.min(Math.round(cr.width - inset * 2), Math.round(parentW - inset * 2)));
+    const w = Math.max(160, Math.round(cr.width - inset * 2));
     wrap.style.width = w + 'px';
     wrap.style.maxWidth = '100%';
     wrap.style.boxSizing = 'border-box';
     wrap.style.overflow = 'hidden';
+    wrap.style.marginLeft = '0';
+    wrap.style.marginRight = '0';
+    wrap.style.clear = 'both';
+    wrap.style.position = 'relative';
+    wrap.style.left = '';
+    wrap.style.transform = '';
+  }
 
-    const targetLeft = Math.round(cr.left + inset);
-    const marginLeft = Math.max(0, targetLeft - Math.round(pr.left));
-    wrap.style.marginLeft = marginLeft + 'px';
-    wrap.style.marginRight = 'auto';
+  /** Physically mount inside the white inspector card (margin shifts are not enough on wide grid parents). */
+  function gpGdForceMountIntoCard(wrap, cardRoot, insertBefore) {
+    if (!(wrap instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
+    if (gpGdIsInvalidDetailMountTarget(cardRoot)) return false;
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200) return false;
 
-    const wr2 = wrap.getBoundingClientRect();
-    return (
-      wr2.left <= cr.right + 12 &&
-      wr2.right <= cr.right + 56 &&
-      Math.min(wr2.right, cr.right) - Math.max(wr2.left, cr.left) >=
-        Math.min(wr2.width, cr.width) * 0.42
-    );
+    const parent = wrap.parentElement;
+    const pr = parent?.getBoundingClientRect?.();
+    const outsideCard = !parent || !gpGdComposedSubtreeContains(cardRoot, wrap);
+    const parentTooWide = !!(pr && pr.width > cr.width * 1.12);
+
+    if (outsideCard || parentTooWide) {
+      try {
+        if (
+          insertBefore instanceof HTMLElement &&
+          gpGdComposedSubtreeContains(cardRoot, insertBefore)
+        ) {
+          cardRoot.insertBefore(wrap, insertBefore);
+        } else {
+          cardRoot.appendChild(wrap);
+        }
+      } catch (_) {
+        return false;
+      }
+    }
+
+    gpGdApplyCardContainmentStyles(wrap, cardRoot);
+    return gpGdIsGoalBlockWellPlaced(wrap, cardRoot, false);
+  }
+
+  /** Re-parent into the inspector card when the block escaped a wide calendar/grid ancestor. */
+  function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    const card =
+      gpGdFindNativeGcalPopupCard(dialogShell) ||
+      gpGdFindEventDetailCardRoot(dialogShell) ||
+      gpGdFindVisibleEventCardForGoal(dialogShell, wrap.dataset.gpGoalId || '');
+    if (!(card instanceof HTMLElement) || gpGdIsInvalidDetailMountTarget(card)) return false;
+    return gpGdForceMountIntoCard(wrap, card, null);
   }
 
   /** Walk up from a row parent until width matches the card (not the full overlay flex row). */
