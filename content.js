@@ -4770,7 +4770,26 @@
         } else {
           gpGdSyncMarkCompleteButton(!!hit?.session?.completed);
         }
-        gpGdAlignMarkFooterToCard(dialogShell);
+        const foot = __gpGdMarkFooterEl;
+        if (foot instanceof HTMLElement) {
+          const fpr = foot.parentElement?.getBoundingClientRect?.();
+          const footWide =
+            !gpGdComposedSubtreeContains(card, foot) ||
+            !!(fpr && cr.width >= 200 && fpr.width > cr.width * 1.12);
+          if (footWide) {
+            gpGdSetDetailUiHidden(foot, true);
+            gpGdInsertDetailNodeInCard(foot, card, null, true);
+          } else {
+            gpGdApplyCardContainmentStyles(foot, card);
+          }
+        } else if (!gpGdGetDetailMarkCompleteBtn()) {
+          gpGdMountMarkCompleteFooter(
+            gpGdBuildMarkCompleteButton(!!hit?.session?.completed),
+            card
+          );
+        } else {
+          gpGdSyncMarkCompleteButton(!!hit?.session?.completed);
+        }
       }
       if (hit?.goal) gpGdRefreshDetailSubtasks(ext, hit);
       gpGdEnsureDetailDelegates(ext, hit || gpGdDetailHitFromWrap(ext));
