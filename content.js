@@ -6591,25 +6591,10 @@
     rowMy.appendChild(lblMyWrap);
     wrap.appendChild(rowMy);
 
-    /** Row — Subtasks */
-    const rowSt = document.createElement('div');
-    rowSt.style.cssText = S_ROW;
-    const icSt = document.createElement('div');
-    icSt.setAttribute('aria-hidden', 'true');
-    icSt.style.cssText = S_IC_COL;
-    const hamSvg = gpGdParseSvg(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">' +
-        '<path stroke="#5f6368" stroke-width="2" stroke-linecap="round" fill="none" ' +
-        'd="M4 6h12M4 10h12M4 14h12"/></svg>'
-    );
-    if (hamSvg) icSt.appendChild(hamSvg);
-    const stCol = document.createElement('div');
-    stCol.style.cssText = S_TEXT_COL_SIDE;
-
-    const stHead = document.createElement('div');
-    stHead.textContent = 'Subtasks';
-    stHead.style.cssText =
-      'font-size:14px;line-height:20px;color:#3c4043;font-weight:500;margin:0 0 4px;padding:0;';
+    /** Subtasks checklist — no section header or icon column (native GCal task style). */
+    const stCol = document.createElement('motion');
+    stCol.style.cssText =
+      S_TEXT_COL_SIDE + 'padding-left:36px;box-sizing:border-box;width:100%;';
 
     const emptySt = document.createElement('div');
     emptySt.setAttribute('data-gp-st-empty', '1');
