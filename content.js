@@ -6174,10 +6174,13 @@
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
       gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      if (gpGdIsGoalBlockVisible(existing)) {
+      if (!gpGdIsGoalBlockVisible(existing)) {
+        gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      }
+      if (gpGdIsGoalBlockVisible(existing) || gpGdIsGoalBlockPainted(existing)) {
         gpGdRefreshDetailSubtasks(existing, hit);
         gpGdEnsureDetailDelegates(existing, hit);
-        _gpGdHydrateQuietUntil = Date.now() + 4000;
+        _gpGdHydrateQuietUntil = Date.now() + 12000;
         _gpGdRemountCount = 0;
         gpGdMarkDetailScanActive(12000);
         return existing;
@@ -6187,6 +6190,7 @@
         gpGdTrace('remount capped — keep last block', goalId);
         gpGdRefreshDetailSubtasks(existing, hit);
         gpGdEnsureDetailDelegates(existing, hit);
+        _gpGdHydrateQuietUntil = Date.now() + 12000;
         return existing;
       }
       _gpGdRemountGoalKey = remountKey;
