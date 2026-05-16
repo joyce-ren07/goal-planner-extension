@@ -5344,6 +5344,14 @@
 
   function gpGdPinSessionHintsFromChip(chip) {
     if (!(chip instanceof HTMLElement)) return;
+    /** Opening Goal Planner create flow — do not keep event-popup scan latched on chip hints. */
+    if (isGhostCreationPreviewUiActive()) {
+      _gpGdPinnedHints = [];
+      _gpGdPinnedAt = 0;
+      _gpGdPinnedGoalId = '';
+      _gpGdPinnedSlotIdx = -1;
+      return;
+    }
     const seen = new Set();
     /** @type {string[]} */
     const hints = [];
