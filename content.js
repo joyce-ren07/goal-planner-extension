@@ -6084,71 +6084,26 @@
     const stCol = document.createElement('div');
     stCol.style.cssText = S_TEXT_COL_SIDE;
 
+    const stHead = document.createElement('div');
+    stHead.textContent = 'Subtasks';
+    stHead.style.cssText =
+      'font-size:14px;line-height:20px;color:#3c4043;font-weight:500;margin:0 0 4px;padding:0;';
+
+    const emptySt = document.createElement('div');
+    emptySt.setAttribute('data-gp-st-empty', '1');
+    emptySt.textContent = 'No tasks yet';
+    emptySt.hidden = subtasks.length > 0;
+    emptySt.style.cssText = 'font-size:14px;line-height:20px;color:#9aa0a6;margin:0 0 6px;padding:0;';
+
     const ul = document.createElement('ul');
     ul.setAttribute('role', 'list');
+    ul.setAttribute('data-gp-st-list', '1');
+    ul.className = 'gp-gd-st-list';
     ul.style.cssText = 'list-style:none;margin:0;padding:0;width:100%;';
+    gpGdPaintSubtaskList(ul, subtasks);
 
-    const subtasks = Array.isArray(goal.subtasks)
-      ? goal.subtasks.filter((st) => st && String(st.title || '').trim().length > 0)
-      : [];
-
-    for (const st of subtasks) {
-      const co = gpSubtaskIsCompleted(st);
-      const li = document.createElement('li');
-      li.setAttribute('data-gp-st-item', '1');
-      li.setAttribute('data-gp-sub-id', String(st.id));
-      li.style.cssText =
-        'display:flex;align-items:flex-start;gap:12px;padding:4px 0;margin:0;' +
-        'box-sizing:border-box;width:100%;';
-
-      const ring = document.createElement('button');
-      ring.type = 'button';
-      ring.setAttribute('data-gp-sub-ring', String(st.id));
-      ring.setAttribute('role', 'checkbox');
-      ring.setAttribute(
-        'aria-label',
-        `${co ? 'Unmark' : 'Mark'} subtask "${String(st.title || '').slice(0, 80)}".`
-      );
-      ring.style.cssText =
-        'flex-shrink:0;width:18px;height:18px;margin:2px 0 0;padding:0;box-sizing:border-box;' +
-        'border-radius:999px;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
-        'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;';
-      ring.addEventListener('mouseenter', () => {
-        if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'rgba(95,99,104,0.1)';
-      });
-      ring.addEventListener('mouseleave', () => {
-        if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'transparent';
-      });
-
-      let checkSvg =
-        gpGdParseSvg(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">' +
-            '<path fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ' +
-            'stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>'
-        );
-      if (checkSvg)
-        /** @type {SVGSVGElement} */ (checkSvg).style.cssText =
-          'display:block;width:12px;height:12px;opacity:0;pointer-events:none;';
-
-      if (checkSvg) ring.appendChild(checkSvg);
-      gpGdApplySubtaskRingVisual(
-        ring,
-        checkSvg instanceof SVGSVGElement ? checkSvg : null,
-        co
-      );
-
-      const lbl = document.createElement('span');
-      lbl.setAttribute('data-gp-st-label', '1');
-      lbl.textContent = String(st.title || '');
-      lbl.style.cssText = co
-        ? 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#9aa0a6;text-decoration:line-through;padding-top:1px;margin:0;'
-        : 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#3c4043;padding-top:1px;margin:0;';
-
-      li.appendChild(ring);
-      li.appendChild(lbl);
-      ul.appendChild(li);
-    }
-
+    stCol.appendChild(stHead);
+    stCol.appendChild(emptySt);
     stCol.appendChild(ul);
 
     const addBtn = document.createElement('button');
