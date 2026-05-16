@@ -4764,8 +4764,6 @@
       }
     }
     __gpGdBlockEl = null;
-    _gpGdLastHost = null;
-    _gpGdLastHints = '';
   }
 
   function scheduleGpGdDialogScan() {
