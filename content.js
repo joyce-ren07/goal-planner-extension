@@ -6276,9 +6276,12 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          gpGdAlignInjectedBlockToCard(ext, dialogShell);
-          gpGdAlignMarkFooterToCard(dialogShell);
-          if (gpGdIsGoalBlockVisible(ext)) {
+          gpGdTeardownOrphanedDetailUi();
+          if (__gpGdBlockEl?.isConnected) {
+            gpGdAlignInjectedBlockToCard(ext, dialogShell);
+            gpGdAlignMarkFooterToCard(dialogShell);
+          }
+          if (gpGdIsGoalBlockVisible(ext) && gpGdIsDetailUiInEventDialog(ext)) {
             _gpGdHydrateQuietUntil = Date.now() + 6000;
             return;
           }
