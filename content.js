@@ -180,14 +180,10 @@
       }
       _gpGhostTipEl = null;
     }
-    const root = document.getElementById('gp-ghost-preview-root');
-    if (root) root.replaceChildren();
+    const rootInHost = document.querySelector('#gp-ghost-preview-host #gp-ghost-preview-root');
+    if (rootInHost) rootInHost.replaceChildren();
     document.querySelectorAll('body > .goal-ghost-event').forEach((el) => el.remove());
-    if (_ghostScrollEl && _ghostScrollHandler) {
-      _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
-      _ghostScrollEl = null;
-      _ghostScrollHandler = null;
-    }
+    tearDownGpGhostPreviewHostLayers();
   }
 
   /** In-memory preview only: never written to chrome.storage until confirmAddToCalendar succeeds. */
