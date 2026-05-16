@@ -7006,6 +7006,40 @@
     ) {
       return;
     }
+    if (!hit?.goal?.id && keep?.isConnected && gpGdIsGoalPlannerInspector(host)) {
+      const inspTitle = gpGdExtractGoalTitleFromInspector(host);
+      const keepTitle = keep.dataset.gpGoalTitle || '';
+      if (
+        inspTitle &&
+        gpGdNormalizeTitleHint(inspTitle) === gpGdNormalizeTitleHint(keepTitle)
+      ) {
+        const gid = keep.dataset.gpGoalId;
+        const legacyRow = legacyGoals.find((lg) => String(lg.id) === String(gid));
+        const unifiedGoal = gpGdFindUnifiedGoalByLegacy(legacyRow, unified);
+        const sessions = unifiedGoal?.sessions || [];
+        if (unifiedGoal && sessions.length) {
+          const slot = hints.length ? gpGdSessionSlotForDomHint(legacyRow, hints[0]) : -1;
+          const sIdx = slot >= 0 && sessions[slot] ? slot : 0;
+          const gIdx = unified.goals.findIndex((ug) => String(ug.id) === String(unifiedGoal.id));
+          const partial = {
+            goal: unifiedGoal,
+            session: sessions[sIdx],
+            gIdx,
+            sIdx,
+          };
+          const enriched = await gpGdEnrichHitForDetail(partial);
+          gpGdRefreshDetailSubtasks(keep, enriched);
+          gpGdEnsureDetailDelegates(keep, enriched);
+          const vis =
+            gpGdFindOpenInspectorNearClick(enriched.goal.title) ||
+            gpGdFindEventInspectorShell(enriched.goal.title) ||
+            host;
+          gpGdReparentBlockIntoScrollColumn(keep, vis);
+          _gpGdHydrateQuietUntil = Date.now() + 5000;
+          return;
+        }
+      }
+    }
     if (!pinnedRaw.length) teardownGpGdBlock();
     if (hints.length) gpGdTrace('no unified session match', hints.slice(0, 3));
   }
