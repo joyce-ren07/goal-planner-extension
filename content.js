@@ -5056,7 +5056,6 @@
     /** First dialog that yields a Planner hit wins (multi-open edge). */
     for (const host of natives) {
       const hints = gpCollectEventIdHintsFromRoot(host);
-      const hintJoined = hints.join('|');
       for (let hi = 0; hi < hints.length; hi++) {
         const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
 
