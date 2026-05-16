@@ -5745,13 +5745,22 @@
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
+      const remountKey = goalId + '|' + token;
       if (!gpGdIsGoalBlockWellPlaced(existing, dialogShell)) {
         gpGdAlignInjectedBlockToCard(existing, dialogShell);
       }
       if (gpGdIsGoalBlockWellPlaced(existing, dialogShell)) {
         _gpGdHydrateQuietUntil = Date.now() + 1800;
+        _gpGdRemountCount = 0;
         return existing;
       }
+      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 2) {
+        teardownGpGdBlock();
+        gpGdTrace('remount capped — wrong mount target', goalId);
+        return null;
+      }
+      _gpGdRemountGoalKey = remountKey;
+      _gpGdRemountCount += 1;
       gpGdTrace('remount (block visible but misaligned)', goalId);
       teardownGpGdBlock();
     } else {
