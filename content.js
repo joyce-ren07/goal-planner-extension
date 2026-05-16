@@ -5951,8 +5951,7 @@
       };
     }
     gpGdStripNativeMeetingNotes(dialogHost);
-    const cardRoot =
-      gpGdFindNativeGcalPopupCard(dialogHost) || gpGdFindEventDetailCardRoot(dialogHost);
+    const cardRoot = gpGdResolveInspectorCardRoot(dialogHost, '');
     gpGdStripNativeMeetingNotes(cardRoot);
 
     const rowScopes = cardRoot instanceof HTMLElement ? [cardRoot] : [dialogHost];
