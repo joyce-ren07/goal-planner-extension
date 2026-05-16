@@ -6741,6 +6741,7 @@
       hit = await gpGdEnrichHitForDetail(hit);
 
       const visibleHost =
+        gpGdFindOpenInspectorNearClick(hit.goal.title) ||
         gpGdFindEventInspectorShell(hit.goal.title) ||
         gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
         host;
