@@ -817,6 +817,7 @@
     setupCalendarPushObserver();
     setupNativeSidebarObserver();
     setupGoalChipDecorationCaches();
+    setupGoalChipFlashGuard();
     setupGoalEventObserver();
     scheduleGoalEventDecoration();
 
