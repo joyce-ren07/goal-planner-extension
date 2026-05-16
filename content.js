@@ -5162,8 +5162,65 @@
     _gpGdPinWatchDebounce = 0;
   }
 
+  /** Extension UI that must never host the GCal event-detail goal block. */
+  function gpGdIsGoalPlannerExtensionSurface(el) {
+    if (!(el instanceof Element)) return false;
+    if (el instanceof HTMLElement) {
+      const id = el.id;
+      if (
+        id === 'gp-panel' ||
+        id === 'gp-recurrence-overlay' ||
+        id === 'gp-delete-overlay' ||
+        id === 'gp-gcal-sidebar-goals-root' ||
+        id === 'gp-sidebar-btn' ||
+        id === 'gp-gcal-detail-goal-extension' ||
+        id === 'gp-gcal-detail-mark-footer'
+      ) {
+        return true;
+      }
+    }
+    return !!el.closest(
+      '#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-gcal-sidebar-goals-root, #gp-sidebar-btn, #gp-rail-fallback, #gp-material-symbols, #gp-gcal-detail-goal-extension, #gp-gcal-detail-mark-footer'
+    );
+  }
+
+  function gpGdTeardownDetailIfExtensionChrome() {
+    if (
+      gpGdIsGoalPlannerExtensionSurface(__gpGdBlockEl) ||
+      gpGdIsGoalPlannerExtensionSurface(__gpGdMarkFooterEl)
+    ) {
+      teardownGpGdBlock();
+      return true;
+    }
+    return false;
+  }
+
+  /** True only for native Google Calendar event inspector / popover surfaces. */
+  function gpGdIsValidNativeEventInspectorHost(host) {
+    if (!(host instanceof HTMLElement) || !host.isConnected) return false;
+    if (gpGdIsGoalPlannerExtensionSurface(host)) return false;
+    if (gpGdIsCalendarGridContainer(host)) return false;
+    if (host.querySelector('#gp-screen-home, #gp-empty-state, .gp-header-eyebrow')) {
+      if (!host.querySelector('[data-goals-injected="true"]')) return false;
+    }
+    const t = String(host.innerText || '').replace(/\s+/g, ' ');
+    const isGoalPlannerDrawer =
+      /\bGOAL PLANNER\b/i.test(t) && /\bPlan a long-term goal\b/i.test(t);
+    const hasEventTime = /\d{1,2}:\d{2}/.test(t);
+    if (isGoalPlannerDrawer && !hasEventTime && !/🎯/.test(t)) return false;
+    return (
+      hasEventTime ||
+      /🎯/.test(t) ||
+      /\b(?:Guests|Calendar|Visibility|minutes before|Organizer|Weekly on|doesn't repeat|Edit event)\b/i.test(
+        t
+      )
+    );
+  }
+
   function gpGdHasOpenEventInspector() {
-    return gpEnumerateNativeEventDetailHosts().some((h) => gpGdIsElementVisuallyExposed(h));
+    return gpEnumerateNativeEventDetailHosts().some(
+      (h) => gpGdIsElementVisuallyExposed(h) && gpGdIsValidNativeEventInspectorHost(h)
+    );
   }
 
   /** While a goal chip open is pending, hydrate as soon as GCal mounts the inspector DOM. */
