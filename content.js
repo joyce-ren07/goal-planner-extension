@@ -5284,7 +5284,7 @@
       gpGdShowTaskCompose(wrapHost, true);
     });
 
-    const newInp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('.gp-gd-st-new-inp'));
+    const newInp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('[data-gp-st-new]'));
     newInp?.addEventListener('keydown', async (e) => {
       const inp = /** @type {HTMLInputElement | null} */ (e.target instanceof HTMLInputElement ? e.target : null);
       if (!inp || e.key !== 'Enter') return;
