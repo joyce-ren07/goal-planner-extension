@@ -6683,35 +6683,11 @@
       }
     };
 
-    const placementOk = () => {
-      gpGdReparentBlockIntoScrollColumn(wrap, shell);
-      return gpGdIsGoalBlockWellPlaced(wrap, shell, false);
-    };
-
-    if (!tryMount(mountParent, insertBefore) && cardRoot instanceof HTMLElement) {
-      tryMount(cardRoot, null);
+    if (!tryMount(mountParent, insertBefore)) {
+      const alt = gpGdResolveGoalInjectionMount(shell);
+      tryMount(alt.mountParent, alt.insertBefore);
     }
-    if (!placementOk() && cardRoot instanceof HTMLElement) {
-      try {
-        wrap.remove();
-      } catch (_) {
-        /* ignore */
-      }
-      tryMount(cardRoot, null);
-      placementOk();
-    }
-    if (!gpGdIsGoalBlockPainted(wrap) && cardRoot instanceof HTMLElement) {
-      try {
-        wrap.remove();
-      } catch (_) {
-        /* ignore */
-      }
-      const list = gpGdPickGoalDetailMountParent(cardRoot);
-      tryMount(list, null);
-      gpGdReparentBlockIntoScrollColumn(wrap, shell);
-    }
-
-    gpGdReparentBlockIntoScrollColumn(wrap, shell);
+    gpGdStabilizeBlockPlacement(wrap, shell);
     __gpGdBlockEl = wrap;
     if (dialogShell instanceof HTMLElement) gpGdEnsureDialogRepairObserver(dialogShell);
     gpGdEnsureDetailDelegates(wrap, hit);
