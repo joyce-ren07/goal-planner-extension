@@ -7055,6 +7055,8 @@
   // ── Forensic diagnostic: log chip DOM structure and pointer-event state ──
   // Flip GP_DEBUG to true in DevTools (or here) to get a full readout.
   const GP_DEBUG = false;
+  /** Verbose `.ext-goal-root` churn logging (normally off — GCal can rewrite chips during resize). */
+  const GP_DECOR_RESTORE_LOG = false;
 
   function debugChipStructure(chip, phase) {
     if (!GP_DEBUG) return;
