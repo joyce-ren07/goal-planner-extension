@@ -1382,6 +1382,7 @@
     }
 
     panel.classList.add('open');
+    gpGdTeardownDetailIfExtensionChrome();
     document.getElementById('gp-sidebar-btn').classList.add('active');
     setCalendarPushed(true);
     requestAnimationFrame(() => setCalendarPushed(true));
