@@ -5088,31 +5088,64 @@
       openPanel();
     });
 
-    wrapHost.querySelector('[data-gp-detail-act="add-sub"]')?.addEventListener('click', async () => {
-      const label = prompt('New task title');
-      if (!label?.trim()) return;
-      const list = [...(hit.goal.subtasks || [])];
-      list.push({ id: `sub_${generateId().slice(-9)}`, title: label.trim(), done: false });
-      await gpDetailPersistGoalSubtasksAndMirror(hit.goal.id, list);
+    wrapHost.querySelector('[data-gp-detail-act="subtasks-enter-edit"]')?.addEventListener('click', () => {
+      gpGdApplySubtasksEditMode(wrapHost, true);
+    });
+
+    wrapHost.querySelector('[data-gp-detail-act="subtasks-exit-edit"]')?.addEventListener('click', async () => {
+      const gid = wrapHost.dataset.gpGoalId;
+      const sec = wrapHost.querySelector('.gp-gd-subtasks');
+      if (!gid || !(sec instanceof HTMLElement)) return;
+      const nextList = gpGdCollectSubtasksEditDom(sec);
+      await gpDetailPersistGoalSubtasksAndMirror(gid, nextList);
+      gpGdApplySubtasksEditMode(wrapHost, false);
       scheduleGpGdFromUnifiedEcho();
     });
 
     wrapHost.addEventListener('change', async (ev) => {
-      const tg = /** @type {HTMLElement} */ (ev.target);
+      const tg = ev.target;
       if (!(tg instanceof HTMLInputElement)) return;
-      if (tg.matches('.gp-gd-subtask input[type="checkbox"][data-gp-sub-id]')) {
-        const id = tg.getAttribute('data-gp-sub-id');
-        if (!id) return;
-        const list = [...(hit.goal.subtasks || [])].map((item) =>
-          item.id === id ? { ...item, done: !!tg.checked } : item
-        );
-        await gpDetailPersistGoalSubtasksAndMirror(hit.goal.id, list);
+      if (!tg.matches('.gp-gd-task-cb[data-gp-sub-toggle]')) return;
+      if (wrapHost.querySelector('.gp-gd-subtasks.gp-gd-subtasks--editing')) return;
+      const gid = wrapHost.dataset.gpGoalId;
+      const sid = tg.getAttribute('data-gp-sub-toggle');
+      if (!gid || !sid) return;
+      const row = tg.closest('.gp-gd-task-row');
+      const span = row?.querySelector('.gp-gd-task-text');
+      if (span instanceof HTMLElement) {
+        if (tg.checked) span.classList.add('gp-gd-task-text--completed');
+        else span.classList.remove('gp-gd-task-text--completed');
       }
+      const goals = await getGoals();
+      const gRow = goals.find((g) => String(g.id) === String(gid));
+      if (!gRow) return;
+      const list = gpNormalizeSubtasksForPersist(gRow.subtasks).map((item) =>
+        String(item.id) === String(sid) ? { ...item, completed: !!tg.checked } : item
+      );
+      await gpDetailPersistGoalSubtasksAndMirror(gid, list);
+      scheduleGpGdFromUnifiedEcho();
     });
 
     wrapHost.addEventListener(
       'click',
       /** @type {(e: Event) => Promise<void>} */ async function gpGdDelegationClick(ev) {
+        const del =
+          /** @type {HTMLElement | null} */ (ev.target instanceof Element ? ev.target.closest('[data-gp-sub-delete]') : null);
+        if (del) {
+          ev.preventDefault();
+          const sec = wrapHost.querySelector('.gp-gd-subtasks');
+          del.closest('.gp-gd-task-item')?.remove();
+          if (!(sec instanceof HTMLElement)) return;
+          const listUl = sec.querySelector('.gp-gd-tasklist');
+          const emptyHint = sec.querySelector('.gp-gd-subtasks-empty');
+          const hasTasks = !!(listUl && listUl.querySelector('.gp-gd-task-item'));
+          if (emptyHint) {
+            if (hasTasks) emptyHint.setAttribute('hidden', '');
+            else emptyHint.removeAttribute('hidden');
+          }
+          return;
+        }
+
         const btn =
           /** @type {HTMLElement} */ (ev.target && ev.target instanceof Element ? ev.target : null)?.closest?.(
           '[data-gp-detail-toggle-session]'
