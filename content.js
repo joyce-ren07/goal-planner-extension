@@ -6070,7 +6070,7 @@
     wrap.appendChild(rowMy);
 
     /** Row — Subtasks */
-    const rowSt = document.createElement('motion');
+    const rowSt = document.createElement('div');
     rowSt.style.cssText = S_ROW;
     const icSt = document.createElement('motion');
     icSt.setAttribute('aria-hidden', 'true');
