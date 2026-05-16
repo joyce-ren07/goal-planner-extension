@@ -5136,21 +5136,60 @@
     return r.bottom > 4 && r.right > 4;
   }
 
+  /** True when the block sits inside the white event card, not in the wide overlay gutter. */
+  function gpGdIsGoalBlockWellPlaced(wrap, dialogShell) {
+    if (!gpGdIsGoalBlockVisible(wrap) || !(dialogShell instanceof HTMLElement)) return false;
+    const card = gpGdFindEventDetailCardRoot(dialogShell);
+    if (!(card instanceof HTMLElement)) return false;
+    const wr = wrap.getBoundingClientRect();
+    const cr = card.getBoundingClientRect();
+    if (cr.width < 200) return false;
+    if (wr.left > cr.right + 12) return false;
+    if (wr.right > cr.right + 56) return false;
+    const overlap = Math.min(wr.right, cr.right) - Math.max(wr.left, cr.left);
+    return overlap >= Math.min(wr.width, cr.width) * 0.42;
+  }
+
+  /** Keep the inner inspector shell — drop ancestors that swallow the whole viewport. */
+  function gpGdPruneNestedInspectorHosts(hosts) {
+    const list = hosts.filter((h) => h instanceof HTMLElement);
+    const pruned = list.filter((h, i) => {
+      for (let j = 0; j < list.length; j++) {
+        if (i === j) continue;
+        if (gpGdComposedSubtreeContains(h, list[j])) return false;
+      }
+      return true;
+    });
+    return pruned.length ? pruned : list;
+  }
+
   /** When mount parent is a wide flex row, shift goal block into the white card column. */
   function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
-    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return;
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
     const card = gpGdFindEventDetailCardRoot(dialogShell);
-    if (!(card instanceof HTMLElement)) return;
+    if (!(card instanceof HTMLElement)) return false;
     const cr = card.getBoundingClientRect();
+    const wr = wrap.getBoundingClientRect();
     const pr = wrap.parentElement?.getBoundingClientRect?.();
-    if (!pr || cr.width < 200) return;
-    if (pr.width <= cr.width * 1.1) return;
+    if (!pr || cr.width < 200) return false;
 
-    const w = Math.round(cr.width);
+    const w = Math.round(cr.width - 32);
     wrap.style.width = w + 'px';
     wrap.style.maxWidth = w + 'px';
-    wrap.style.marginLeft = Math.max(0, Math.round(cr.left - pr.left)) + 'px';
+    wrap.style.boxSizing = 'border-box';
+
+    const targetLeft = Math.round(cr.left + 16);
+    const marginLeft = Math.max(0, targetLeft - Math.round(pr.left));
+    wrap.style.marginLeft = marginLeft + 'px';
     wrap.style.marginRight = 'auto';
+
+    const wr2 = wrap.getBoundingClientRect();
+    return (
+      wr2.left <= cr.right + 12 &&
+      wr2.right <= cr.right + 56 &&
+      Math.min(wr2.right, cr.right) - Math.max(wr2.left, cr.left) >=
+        Math.min(wr2.width, cr.width) * 0.42
+    );
   }
 
   /** Walk up from a row parent until width matches the card (not the full overlay flex row). */
