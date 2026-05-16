@@ -5919,15 +5919,7 @@
 
   function scheduleGpGdDialogScan() {
     if (!gpGdShouldRunDetailScan()) return;
-    const ext = __gpGdBlockEl;
-    if (
-      ext?.isConnected &&
-      Date.now() < _gpGdHydrateQuietUntil &&
-      gpGdIsGoalBlockVisible(ext) &&
-      Date.now() > _gpGdInspectorOpenWatchUntil - 500
-    ) {
-      return;
-    }
+    if (gpGdDetailBlockReady()) return;
     if (_gpGdScanTimer) {
       _gpGdScanPending = true;
       return;
