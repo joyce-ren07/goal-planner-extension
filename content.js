@@ -6602,10 +6602,9 @@
     }
     _gpGdScanTimer = requestAnimationFrame(() => {
       _gpGdScanTimer = 0;
-      gpGdRunDetailHydratePass();
       if (_gpGdScanPending) {
         _gpGdScanPending = false;
-        scheduleGpGdDialogScan();
+        gpGdRunDetailHydratePass();
       }
     });
   }
