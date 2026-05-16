@@ -46,6 +46,9 @@
   // ── Ghost event state ──
   let _ghostScrollEl = null;
   let _ghostScrollHandler = null;
+  let _gpGhostCueRaf = 0;
+  /** Ghost under pointer for “Planned” tooltip cue (interaction only; no Goal state). */
+  let _gpGhostTipEl = null;
 
   // ── Original suggestions (before any preferred-time override) ──
   let _originalSuggestions = [];
