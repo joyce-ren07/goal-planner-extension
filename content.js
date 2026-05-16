@@ -6221,10 +6221,14 @@
     const ext = __gpGdBlockEl;
     if (
       ext?.isConnected &&
-      (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) &&
-      (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext))
+      (gpGdIsGoalBlockVisible(ext) || gpGdIsGoalBlockPainted(ext)) &&
+      (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector())
     ) {
-      return;
+      const host =
+        gpGdFindEventInspectorShell('') ||
+        gpGdPickBestVisibleInspectorHost(gpEnumerateNativeEventDetailHosts(), '');
+      if (host instanceof HTMLElement && gpGdTryProtectMountedDetailBlock(host)) return;
+      if (Date.now() < _gpGdHydrateQuietUntil || gpGdHasOpenEventInspector()) return;
     }
     gpGdRunDetailHydratePass();
     if (_gpGdScanTimer) {
