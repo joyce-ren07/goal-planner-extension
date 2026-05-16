@@ -6675,8 +6675,8 @@
 
     const finalizePlacement = () => gpGdForceMountIntoCard(wrap, cardRoot, insertBefore);
 
-    if (!tryMount(mountParent, insertBefore)) {
-      tryMount(cardRoot, insertBefore);
+    if (!tryMount(mountParent, insertBefore) && !tryMount(cardRoot, insertBefore)) {
+      tryMount(cardRoot, null);
     }
     if (!finalizePlacement()) {
       try {
