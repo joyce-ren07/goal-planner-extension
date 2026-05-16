@@ -4721,17 +4721,6 @@
     return out;
   }
 
-  function gpDetailComposeSessionScheduleLineUnified(goal, sess) {
-    if (!sess) return '';
-    const stRaw = sess.startTime;
-    const enRaw = sess.endTime;
-    if (!stRaw || !enRaw) return '';
-    const a = new Date(stRaw);
-    const b = new Date(enRaw);
-    if (!Number.isFinite(a.getTime()) || !Number.isFinite(b.getTime())) return '';
-    return `${formatDayDate(a)} • ${formatTime(a)} – ${formatTime(b)}`;
-  }
-
   /** Whether a goal subtask row is completed (supports legacy `done`). */
   function gpSubtaskIsCompleted(st) {
     return !!(st && (st.completed || st.done));
