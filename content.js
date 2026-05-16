@@ -6137,6 +6137,7 @@
     let before = null;
     const rowRes = [
       /\bminutes before\b/i,
+      /\b\d+\s*minutes?\s+before\b/i,
       /\bnotification\b/i,
       /\bOrganizer\b/i,
       /^\s*calendar\b/i,
