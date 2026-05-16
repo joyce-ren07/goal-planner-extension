@@ -4918,7 +4918,7 @@
       </div>
       <div class="gp-gd-nat-row gp-gd-nat-row--valign-top">
         <div class="gp-gd-nat-ic gp-gd-nat-ic--top" aria-hidden="true">
-          <span class="material-symbols-outlined gp-gd-ms-20">density_small</span>
+          <span class="material-symbols-outlined gp-gd-ms-20">segment</span>
         </div>
         <div class="gp-gd-nat-grow">
           <ul class="gp-gd-st-list" role="list">${subtasksRows}</ul>
