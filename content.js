@@ -5125,18 +5125,33 @@
    * @returns {{ mountParent: HTMLElement, insertBefore: HTMLElement | null }}
    */
   function gpGdResolveGoalInjectionMount(dialogHost) {
+    if (!(dialogHost instanceof HTMLElement)) {
+      return {
+        mountParent: /** @type {HTMLElement} */ (document.body),
+        insertBefore: null,
+      };
+    }
     gpGdStripNativeMeetingNotes(dialogHost);
+    const cardRoot = gpGdFindEventDetailCardRoot(dialogHost);
+    gpGdStripNativeMeetingNotes(cardRoot);
+
     /** @type {HTMLElement | null} */
     let before =
-      gpGdFindFirstMetadataRowMatching(dialogHost, /^\s*calendar\b/i) ||
-      gpGdFindFirstMetadataRowMatching(dialogHost, /\bcalendar\b.*\(/i) ||
-      gpGdFindFirstMetadataRowMatching(dialogHost, /\bguests?\b/i) ||
-      gpGdFindFirstMetadataRowMatching(dialogHost, /\bvisibility\b/i);
+      gpGdFindFirstMetadataRowMatching(cardRoot, /\bminutes before\b/i) ||
+      gpGdFindFirstMetadataRowMatching(cardRoot, /\bnotification\b/i) ||
+      gpGdFindFirstMetadataRowMatching(cardRoot, /\bOrganizer\b/i) ||
+      gpGdFindFirstMetadataRowMatching(cardRoot, /^\s*calendar\b/i) ||
+      gpGdFindFirstMetadataRowMatching(cardRoot, /\bcalendar\b.*\(/i) ||
+      gpGdFindFirstMetadataRowMatching(cardRoot, /\bguests?\b/i) ||
+      gpGdFindFirstMetadataRowMatching(cardRoot, /\bvisibility\b/i);
+
     /** @type {HTMLElement} */
-    const mountParent =
+    let mountParent =
       before?.parentElement instanceof HTMLElement
         ? before.parentElement
-        : gpGdPickGoalDetailMountParent(dialogHost);
+        : gpGdPickGoalDetailMountParent(cardRoot);
+    mountParent = gpGdConstrainMountParentToCard(mountParent, cardRoot);
+
     const insertBefore =
       before instanceof HTMLElement && gpGdComposedSubtreeContains(mountParent, before)
         ? before
