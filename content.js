@@ -6598,7 +6598,10 @@
       if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) continue;
       gpGdTrace('session hit', hints[hi], hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
       const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
-      if (rendered) return;
+      if (rendered) {
+        gpGdStopInspectorPinWatch();
+        return;
+      }
       return;
     }
 
