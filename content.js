@@ -6956,14 +6956,18 @@
       const want = gpGdNormalizeTitleHint(wantRaw);
       if (!want) continue;
       const g = legacyGoals.find((lg) => gpGdNormalizeTitleHint(lg.title) === want);
-      if (!g?.calEventIds?.length) continue;
-      for (const ce of g.calEventIds) pushHint(ce);
+      if (!g) continue;
+      for (const ce of g.calEventIds || []) pushHint(ce);
+      for (const d of g.calEventDomIds || []) pushHint(d);
     }
 
     const titleHint =
       _gpGdPinnedTitleHint || gpGdExtractGoalTitleFromInspector(host) || '';
 
     let hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, titleHint);
+    if (!hit?.goal?.id && gpGdIsGoalPlannerInspector(host) && titleHint) {
+      hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, titleHint);
+    }
     if (hit?.goal?.id && hit.session) {
       hit = await gpGdEnrichHitForDetail(hit);
 
