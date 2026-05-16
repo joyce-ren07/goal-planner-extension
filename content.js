@@ -7284,18 +7284,19 @@
       return;
     }
 
-    const raw = String(wrapHost.dataset.gpSessionEventId ?? hit?.session?.eventId ?? '').trim();
+    const enriched = await gpGdEnrichDetailHitForMark(wrapHost, hit);
+    const raw = String(
+      enriched?.session?.eventId ?? wrapHost.dataset.gpSessionEventId ?? ''
+    ).trim();
+    const hints = gpGdConsumePinnedSessionHints();
+
     let chip = raw ? gpFindChipForPlannerEventFlexible(raw) : null;
-    if (!chip && raw) {
-      for (const h of gpGdConsumePinnedSessionHints()) {
-        if (h && h !== raw) {
-          chip = gpFindChipForPlannerEventFlexible(h);
-          if (chip) break;
-        }
-      }
+    for (const h of hints) {
+      if (chip) break;
+      if (h) chip = gpFindChipForPlannerEventFlexible(h);
     }
     if (!chip) {
-      const gid = String(wrapHost.dataset.gpGoalId ?? hit?.goal?.id ?? '');
+      const gid = String(enriched?.goal?.id ?? wrapHost.dataset.gpGoalId ?? '');
       const goals = await getGoals();
       const row = goals.find((g) => String(g.id) === gid);
       for (const id of row?.calEventIds || []) {
@@ -7306,18 +7307,17 @@
 
     if (chip && !chip.classList.contains('ext-goal-completed')) {
       const domKey =
-        chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || raw;
+        chip.closest('[data-eventid]')?.getAttribute('data-eventid')?.trim() || raw || hints[0] || '';
       GoalInteractionController.toggleCompletion(domKey, chip);
-    } else if (!chip) {
-      const ok = await gpGdPersistSessionMarkedComplete(wrapHost, hit || gpGdDetailHitFromWrap(wrapHost));
+    } else {
+      const ok = await gpGdPersistSessionMarkedComplete(wrapHost, enriched);
       if (!ok) {
         alert(
-          'Could not mark this session complete — open the matching goal event on the calendar grid and use its checkbox, or try again after the event loads.'
+          'Could not mark this session complete. Try closing and re-opening this event from the calendar chip.'
         );
         return;
       }
-      gpGdSyncMarkCompleteButton(true);
-    } else {
+      if (chip) GoalInteractionController.applyGoalSessionCompletionUI(chip, true);
       gpGdSyncMarkCompleteButton(true);
     }
 
