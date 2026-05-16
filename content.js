@@ -5245,13 +5245,14 @@
   function gpGdDetailBlockReady(goalTitle) {
     const ext = __gpGdBlockEl;
     if (!ext?.isConnected || !gpGdIsGoalBlockVisible(ext)) return false;
+    if (gpGdIsGCalLeftSidebarRegion(ext)) return false;
     const title = goalTitle || ext.dataset.gpGoalTitle || _gpGdPinnedTitleHint || '';
     if (gpGdBlockInFrontInspector(ext, title)) return true;
     const shell =
       gpGdFindOpenInspectorNearClick(title) ||
       gpGdFindFrontGoalInspector(title) ||
       gpGdFindEventInspectorShell(title);
-    if (!(shell instanceof HTMLElement)) return false;
+    if (!(shell instanceof HTMLElement) || !gpGdIsEventDetailPopupHost(shell)) return false;
     if (!gpGdComposedSubtreeContains(shell, ext)) return false;
     return gpGdIsGoalBlockWellPlaced(ext, shell, false);
   }
