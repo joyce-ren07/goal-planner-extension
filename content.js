@@ -7346,9 +7346,11 @@
           if (jsNameEl) time = jsNameEl.textContent.trim();
         }
 
-        console.log('GOAL CHIP — aria-label:', ariaLabel);
-        console.log('GOAL CHIP — extracted time:', time);
-        console.log('GOAL CHIP — extracted title:', title);
+        if (GP_DEBUG) {
+          console.log('GOAL CHIP — aria-label:', ariaLabel);
+          console.log('GOAL CHIP — extracted time:', time);
+          console.log('GOAL CHIP — extracted title:', title);
+        }
 
         // Derive a stable key: prefer GCal's event ID, then goal id + text
         const eid =
