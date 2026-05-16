@@ -440,6 +440,8 @@
       });
       var startDate = deriveGoalStartDateYmd(lg);
       var totalSessions = resolveGoalTotalSessions(lg);
+      var subSrc =
+        lg.subtasks != null ? lg.subtasks : prev && prev.subtasks != null ? prev.subtasks : [];
       nextGoals.push({
         id: lg.id,
         title: lg.title || '',
@@ -449,6 +451,7 @@
         startDate: startDate,
         created: lg.created,
         color: lg.color || '',
+        subtasks: cloneSubtasks(subSrc),
         sessions: sessions,
         totalSessions: totalSessions,
         progressPct: 0,
