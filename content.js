@@ -5291,13 +5291,10 @@
     const card = gpGdFindEventDetailCardRoot(dialogShell);
     if (!(card instanceof HTMLElement)) return false;
 
-    const cardSt = window.getComputedStyle(card);
-    const cardBg = cardSt.backgroundColor;
     wrap.style.position = 'relative';
     wrap.style.zIndex = '2';
     wrap.style.isolation = 'isolate';
-    wrap.style.background =
-      cardBg && cardBg !== 'transparent' && cardBg !== 'rgba(0, 0, 0, 0)' ? cardBg : '#fff';
+    wrap.style.background = 'transparent';
 
     const insideCard = gpGdComposedSubtreeContains(card, wrap);
     const insideVertically = gpGdIsBlockVerticallyInsideCard(wrap, dialogShell);
