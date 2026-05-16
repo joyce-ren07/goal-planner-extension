@@ -8544,7 +8544,6 @@
             '<span class="ext-goal-time">' + initialTime + '</span>' +
           '</div>';
         boundChipHeight(chip);
-        clearGoalChipPendingState(chip);
         requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
       } finally {
         setTimeout(() => {
