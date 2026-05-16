@@ -6408,8 +6408,7 @@
       } catch (_) {
         /* ignore */
       }
-      const list = gpGdPickGoalDetailMountParent(cardRoot);
-      tryMount(list, null);
+      tryMount(cardRoot, insertBefore);
       gpGdAlignInjectedBlockToCard(wrap, shell);
     }
 
