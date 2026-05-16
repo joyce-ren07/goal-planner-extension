@@ -9049,22 +9049,43 @@
     return false;
   }
 
+  /** Next frame — used right after synchronous prime so full inject does not wait 120ms. */
+  function scheduleGoalEventDecorationNow() {
+    if (_gpDecorateTimer) {
+      clearTimeout(_gpDecorateTimer);
+      _gpDecorateTimer = 0;
+    }
+    if (_gpDecorateRaf) return;
+    _gpDecorateRaf = requestAnimationFrame(() => {
+      _gpDecorateRaf = 0;
+      processGoalChips();
+    });
+  }
+
   function scheduleGoalEventDecoration() {
     if (_gpDecorateTimer) clearTimeout(_gpDecorateTimer);
-    _gpDecorateTimer = setTimeout(processGoalChips, 120);
+    _gpDecorateTimer = setTimeout(processGoalChips, 80);
   }
 
   // Watch for new chips added by GCal and re-process; disconnect all observers for removed chips
   function setupGoalEventObserver() {
     new MutationObserver((mutations) => {
-      if (!mutationTouchesGoalChips(mutations)) return;
+      let primed = false;
+      let touched = false;
       for (const m of mutations) {
-        m.removedNodes.forEach(node => {
+        if (m.type === 'childList') {
+          forEachGoalChipInNodeList(m.addedNodes, (chip) => {
+            touched = true;
+            if (primeGoalChipInstant(chip)) primed = true;
+          });
+        }
+        m.removedNodes.forEach((node) => {
           if (node.nodeType !== 1) return;
           const chips = node.classList?.contains('ext-goal-chip')
             ? [node]
             : Array.from(node.querySelectorAll?.('.ext-goal-chip') || []);
-          chips.forEach(c => {
+          chips.forEach((c) => {
+            touched = true;
             c._resizeObserver?.disconnect();
             c._resizeMutAttrObs?.disconnect();
             if (c._gpLabelSyncRaf != null) {
@@ -9075,7 +9096,9 @@
           });
         });
       }
-      scheduleGoalEventDecoration();
+      if (!touched && !mutationTouchesGoalChips(mutations)) return;
+      if (primed) scheduleGoalEventDecorationNow();
+      else scheduleGoalEventDecoration();
     }).observe(document.body, { childList: true, subtree: true });
   }
 
