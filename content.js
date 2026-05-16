@@ -5817,6 +5817,123 @@
     }
   }
 
+  function gpGdSubtasksWithTitles(goal) {
+    return gpNormalizeSubtasksForPersist(goal?.subtasks).filter(
+      (st) => st && String(st.title || '').trim().length > 0
+    );
+  }
+
+  /** Prefer unified subtasks; fall back to gp_goals when unified row is empty. */
+  async function gpGdEnrichHitForDetail(hit) {
+    if (!hit?.goal?.id) return hit;
+    let subtasks = gpGdSubtasksWithTitles(hit.goal);
+    if (!subtasks.length) {
+      try {
+        const goals = await getGoals();
+        const leg = goals.find((g) => String(g.id) === String(hit.goal.id));
+        if (leg?.subtasks?.length) subtasks = gpGdSubtasksWithTitles(leg);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    return { ...hit, goal: { ...hit.goal, subtasks } };
+  }
+
+  /** @param {HTMLElement} ul */
+  function gpGdPaintSubtaskList(ul, subtasks) {
+    if (!(ul instanceof HTMLElement)) return;
+    ul.innerHTML = '';
+    for (const st of subtasks) {
+      const co = gpSubtaskIsCompleted(st);
+      const li = document.createElement('li');
+      li.setAttribute('data-gp-st-item', '1');
+      li.setAttribute('data-gp-sub-id', String(st.id));
+      li.className = 'gp-gd-st-item';
+      li.style.cssText =
+        'display:flex;align-items:flex-start;gap:12px;padding:4px 0;margin:0;' +
+        'box-sizing:border-box;width:100%;';
+
+      const ring = document.createElement('button');
+      ring.type = 'button';
+      ring.setAttribute('data-gp-sub-ring', String(st.id));
+      ring.setAttribute('role', 'checkbox');
+      ring.className = 'gp-gd-st-ring' + (co ? ' gp-gd-st-ring--on' : '');
+      ring.setAttribute(
+        'aria-label',
+        `${co ? 'Unmark' : 'Mark'} subtask "${String(st.title || '').slice(0, 80)}".`
+      );
+      ring.style.cssText =
+        'flex-shrink:0;width:18px;height:18px;margin:2px 0 0;padding:0;box-sizing:border-box;' +
+        'border-radius:999px;background:transparent;border:2px solid #5f6368;cursor:pointer;' +
+        'display:flex;align-items:center;justify-content:center;line-height:0;outline:none;';
+      ring.addEventListener('mouseenter', () => {
+        if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'rgba(95,99,104,0.1)';
+      });
+      ring.addEventListener('mouseleave', () => {
+        if (ring.getAttribute('aria-checked') !== 'true') ring.style.background = 'transparent';
+      });
+
+      let checkSvg = gpGdParseSvg(
+        '<svg class="gp-gd-st-check" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24">' +
+          '<path fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" ' +
+          'stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>'
+      );
+      if (checkSvg)
+        /** @type {SVGSVGElement} */ (checkSvg).style.cssText =
+          'display:block;width:12px;height:12px;opacity:0;pointer-events:none;';
+
+      if (checkSvg) ring.appendChild(checkSvg);
+      gpGdApplySubtaskRingVisual(ring, checkSvg instanceof SVGSVGElement ? checkSvg : null, co);
+
+      const lbl = document.createElement('span');
+      lbl.setAttribute('data-gp-st-label', '1');
+      lbl.className = 'gp-gd-st-txt' + (co ? ' gp-gd-st-txt--done' : '');
+      lbl.textContent = String(st.title || '');
+      lbl.style.cssText = co
+        ? 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#9aa0a6;text-decoration:line-through;padding-top:1px;margin:0;'
+        : 'flex:1;min-width:0;font-size:14px;line-height:20px;color:#3c4043;padding-top:1px;margin:0;';
+
+      li.appendChild(ring);
+      li.appendChild(lbl);
+      ul.appendChild(li);
+    }
+  }
+
+  /** Update subtask rows + session button without tearing down the popup block. */
+  function gpGdRefreshDetailSubtasks(wrap, hit) {
+    if (!(wrap instanceof HTMLElement) || !hit?.goal) return false;
+    const subtasks = gpGdSubtasksWithTitles(hit.goal);
+    const ul = wrap.querySelector('[data-gp-st-list]');
+    if (ul) gpGdPaintSubtaskList(ul, subtasks);
+
+    const emptyEl = wrap.querySelector('[data-gp-st-empty]');
+    if (emptyEl instanceof HTMLElement) {
+      emptyEl.hidden = subtasks.length > 0;
+    }
+
+    const titleEl = wrap.querySelector('[data-gp-my-goals-title]');
+    if (titleEl instanceof HTMLElement) {
+      const t = String(hit.goal.title || '').trim();
+      titleEl.textContent = t || 'Goal session';
+    }
+
+    const markBtn = wrap.querySelector('[data-gp-detail-act="mark-session-complete"]');
+    if (markBtn instanceof HTMLButtonElement) {
+      const sessDone = !!hit.session?.completed;
+      markBtn.disabled = sessDone;
+      markBtn.style.opacity = sessDone ? '0.55' : '1';
+      markBtn.style.cursor = sessDone ? 'default' : 'pointer';
+    }
+    return true;
+  }
+
+  function gpGdEnsureDetailDelegates(wrapHost, hit) {
+    if (!(wrapHost instanceof HTMLElement)) return;
+    if (wrapHost.dataset.gpDetailWired === '1') return;
+    wrapHost.dataset.gpDetailWired = '1';
+    gpGdWireDetailDelegates(wrapHost, hit);
+  }
+
   /** @param {HTMLElement} wrapHost Detail extension root (inline-styled DOM; data-* hooks only). */
   function gpGdShowTaskCompose(wrapHost, show) {
     const compose = wrapHost.querySelector('[data-gp-st-compose]');
