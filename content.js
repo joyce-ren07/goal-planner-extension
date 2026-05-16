@@ -744,13 +744,11 @@
       const nameEl = ghost.querySelector('.goal-ghost-event-name');
       if (nameEl && nameEl.textContent !== goalLabel) nameEl.textContent = goalLabel;
 
-      ghost.style.left = '0';
-      ghost.style.top = '0';
+      ghost.style.left = `${L.contentLeft}px`;
+      ghost.style.top = `${L.absTop}px`;
       ghost.style.width = `${L.width}px`;
       ghost.style.height = `${L.height}px`;
-      const tx = L.contentLeft - scrollCont.scrollLeft;
-      const ty = L.absTop - scrollCont.scrollTop;
-      ghost.style.transform = `translate3d(${tx}px,${ty}px,0)`;
+      ghost.style.removeProperty('transform');
 
       if (created) {
         ghost.classList.add('gp-ghost-new-mount');
@@ -758,25 +756,8 @@
           requestAnimationFrame(() => ghost.classList.remove('gp-ghost-new-mount'));
         });
       }
-
-      scrollSlots.push({ el: ghost, absTop: L.absTop, contentLeft: L.contentLeft });
     });
 
-    _ghostScrollEl = scrollCont;
-    let scrollRaf = null;
-    _ghostScrollHandler = () => {
-      if (scrollRaf) return;
-      scrollRaf = requestAnimationFrame(() => {
-        scrollRaf = null;
-        syncGpGhostPreviewRootToScrollGrid(scrollCont);
-        const st = scrollCont.scrollTop;
-        const sl = scrollCont.scrollLeft;
-        for (const g of scrollSlots) {
-          g.el.style.transform = `translate3d(${g.contentLeft - sl}px,${g.absTop - st}px,0)`;
-        }
-      });
-    };
-    scrollCont.addEventListener('scroll', _ghostScrollHandler, { passive: true });
     return true;
   }
 
