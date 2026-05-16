@@ -5028,8 +5028,6 @@
 
   /** Core mount pass — derives event key from inspector shell only to index unified Goal rows. All fields render from GoalPlannerUnifiedState snapshots. */
 
-  /** @typedef {GpUnifiedGoalHit} UnifiedHitCompat */
-
   async function gpGdHydrateMountedDetailDecoration() {
     const Model = globalThis.GoalPlannerModel;
     if (!Model?.loadUnifiedState) {
