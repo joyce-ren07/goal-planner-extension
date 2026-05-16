@@ -5053,6 +5053,54 @@
     return /Goal Planner session for:/i.test(t) || t.includes('🎯');
   }
 
+  /** Event inspector visible on screen — includes plain GCal popovers before our block mounts. */
+  function gpGdInspectorShellMatchesGoal(shell, goalTitle) {
+    if (!(shell instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(shell)) return false;
+    if (gpGdIsGoalPlannerInspector(shell)) return true;
+    const needle = String(goalTitle || _gpGdPinnedTitleHint || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const short = needle.slice(0, Math.min(needle.length, 36));
+    const t = String(shell.innerText || '');
+    if (short.length >= 2 && t.includes(short)) return true;
+    if (!gpGdInspectorHasCloseControl(shell)) return false;
+    return /\b(?:AM|PM)\b/i.test(t) && /\bminutes before\b/i.test(t);
+  }
+
+  function gpGdFindAnyVisibleEventInspector(goalTitle) {
+    const title = String(goalTitle || _gpGdPinnedTitleHint || '').trim();
+    const byShell = gpGdFindEventInspectorShell(title);
+    if (byShell instanceof HTMLElement && gpGdIsElementVisuallyExposed(byShell)) return byShell;
+
+    const ax = _gpGdAnchorX;
+    const ay = _gpGdAnchorY;
+    if (ax != null && ay != null) {
+      for (const el of document.elementsFromPoint(ax, ay)) {
+        if (!(el instanceof Element)) continue;
+        const shell =
+          el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+          el.closest('[role="presentation"]');
+        if (
+          shell instanceof HTMLElement &&
+          gpGdInspectorShellMatchesGoal(shell, title)
+        ) {
+          return shell;
+        }
+      }
+    }
+
+    let natives = gpEnumerateNativeEventDetailHosts();
+    const html = document.documentElement;
+    if (!natives.length && html instanceof HTMLElement) {
+      natives = gpGdCollectAnnotatedInspectorPanels(html);
+    }
+    natives = gpGdPruneNestedInspectorHosts(natives);
+    const picked = gpGdPickBestVisibleInspectorHost(natives, title) || natives[0];
+    if (picked instanceof HTMLElement && gpGdInspectorShellMatchesGoal(picked, title)) return picked;
+
+    return null;
+  }
+
   function gpGdFindGoalInspectorFromEvent(e) {
     const path =
       e && typeof e.composedPath === 'function'
