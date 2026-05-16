@@ -5739,6 +5739,7 @@
   /** Prefer the on-screen card that actually shows this goal title (avoids hidden GCal clones). */
   function gpGdFindVisibleEventCardForGoal(dialogHost, goalTitle) {
     if (!(dialogHost instanceof HTMLElement)) return null;
+    if (!gpGdRequireEventDialogAncestor(dialogHost)) return null;
     const needle = String(goalTitle || '').replace(/\s+/g, ' ').trim();
     if (needle.length < 2) return null;
     const short = needle.slice(0, Math.min(needle.length, 32));
@@ -5747,6 +5748,7 @@
     let bestArea = 0;
     gpGdWalkComposedElements(dialogHost, (el) => {
       if (!gpGdIsElementVisuallyExposed(el)) return;
+      if (!gpGdRequireEventDialogAncestor(el)) return;
       if (gpGdIsCalendarGridContainer(el)) return;
       const r = el.getBoundingClientRect();
       if (r.width < 200 || r.width > 760 || r.height < 72) return;
