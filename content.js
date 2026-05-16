@@ -6087,6 +6087,12 @@
         insertBefore: null,
       };
     }
+    if (gpGdIsGCalLeftSidebarRegion(dialogHost) || !gpGdIsEventDetailPopupHost(dialogHost)) {
+      return {
+        mountParent: /** @type {HTMLElement} */ (document.body),
+        insertBefore: null,
+      };
+    }
     gpGdStripNativeMeetingNotes(dialogHost);
     const cardRoot = gpGdFindEventDetailCardRoot(dialogHost);
     gpGdStripNativeMeetingNotes(cardRoot);
