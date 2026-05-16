@@ -8101,6 +8101,7 @@
 
       let _gdUiBump = 0;
       const bumpDialogScanDebounced = () => {
+        if (!gpGdHasRecentGoalChipOpenIntent() && !__gpGdBlockEl?.isConnected) return;
         gpGdMarkDetailScanActive(12000);
         window.clearTimeout(_gdUiBump);
         _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 120);
