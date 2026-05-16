@@ -6703,7 +6703,15 @@
 
     for (let hi = 0; hi < hints.length; hi++) {
       let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
-      if (!hit?.goal?.id || !hit.session?.eventId) continue;
+      if (!hit?.goal?.id || !hit.session?.eventId) {
+        gpGdDiag('goal match: MISS hint', hints[hi]);
+        continue;
+      }
+      gpGdDiag('goal match: OK', {
+        hint: hints[hi],
+        goalId: hit.goal.id,
+        goalTitle: hit.goal.title,
+      });
       hit = await gpGdEnrichHitForDetail(hit);
 
       const visibleHost =
@@ -6711,6 +6719,15 @@
         gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
         host;
       if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) continue;
+      const popupTitle = String(visibleHost.innerText || '').slice(0, 120);
+      const goalTitle = String(hit.goal.title || '').trim();
+      gpGdDiag('popup: title check', {
+        goalTitle,
+        popupTitleSnippet: popupTitle,
+        titleIncludesGoal: goalTitle
+          ? popupTitle.toLowerCase().includes(goalTitle.toLowerCase())
+          : popupTitle.includes('🎯'),
+      });
       gpGdTrace('session hit', hints[hi], hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
       const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
       if (rendered) {
