@@ -5373,6 +5373,29 @@
     _gpGdPinnedSlotIdx = Number.isFinite(slotN) && slotN >= 0 ? slotN : -1;
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
+    if (_gpGdPinnedGoalId) {
+      void (async () => {
+        try {
+          const goals = await getGoals();
+          const row = goals.find((g) => String(g.id) === String(_gpGdPinnedGoalId));
+          const allowed = row?.calEventIds || [];
+          if (!row || allowed.length <= 1) return;
+          const startIso = gpResolveSessionStartIsoFromChip(chip);
+          if (!startIso) return;
+          let enriched = row;
+          if (!enriched.sessionAnchors?.length) {
+            enriched = await enrichGoalRowWithUnifiedAnchors(row, goals, {});
+          }
+          const si = gpResolveSlotIndexByScheduleAnchors(enriched, startIso);
+          if (si >= 0 && si < allowed.length) {
+            _gpGdPinnedSlotIdx = si;
+            chip.dataset.gpSlotIdx = String(si);
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      })();
+    }
     gpGdMarkDetailScanActive(15000);
     const r = chip.getBoundingClientRect();
     _gpGdAnchorX = r.left + r.width / 2;
