@@ -6904,40 +6904,12 @@
         scheduleGpGdFromUnifiedEcho();
       });
 
-      const obs = new MutationObserver(() => {
-        if (!gpGdShouldRunDetailScan()) return;
-        const ext = __gpGdBlockEl;
-        if (ext?.isConnected && Date.now() < _gpGdHydrateQuietUntil && gpGdIsGoalBlockVisible(ext)) {
-          return;
-        }
-        window.clearTimeout(_gpGdDomObsDebounce);
-        const delay =
-          __gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl) ? 200 : 35;
-        _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), delay);
-      });
-      obs.observe(document.documentElement || document.body, {
-        subtree: true,
-        childList: true,
-      });
+      if (!globalThis.__gpGdDelegatedGoalClickInstalled) {
+        globalThis.__gpGdDelegatedGoalClickInstalled = true;
+        document.addEventListener('click', gpGdOnDelegatedGoalCalendarClick, true);
+        gpGdTrace('delegated capture click listener installed');
+      }
 
-      let _gdUiBump = 0;
-      const bumpDialogScanDebounced = () => {
-        gpGdMarkDetailScanActive(12000);
-        window.clearTimeout(_gdUiBump);
-        _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 120);
-      };
-      const onGoalOpenPointerDown = (e) => {
-        gpGdOnUserOpenedGoalSession(e, 'down');
-      };
-      const onGoalOpenClick = (e) => {
-        bumpDialogScanDebounced();
-        gpGdOnUserOpenedGoalSession(e, 'click');
-      };
-      window.addEventListener('pointerdown', onGoalOpenPointerDown, true);
-      window.addEventListener('click', onGoalOpenClick, true);
-      window.addEventListener('focusin', bumpDialogScanDebounced, true);
-
-      scheduleGpGdDialogScan();
       scheduleGpGdFromUnifiedEcho();
       return true;
     }
