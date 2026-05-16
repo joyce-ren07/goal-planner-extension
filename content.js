@@ -5587,6 +5587,7 @@
 
     gpGdWalkComposedElements(html, (el) => {
       if (!(el instanceof HTMLElement)) return;
+      if (gpGdIsGoalPlannerExtensionSurface(el)) return;
       const isDialog =
         el.matches('[role="dialog"], [role="alertdialog"]') || el.getAttribute('aria-modal') === 'true';
       if (!isDialog && !gpGdInspectorHasCloseControl(el)) return;
