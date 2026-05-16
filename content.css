@@ -942,7 +942,7 @@
 .goal-ghost-event {
   position: fixed;
   pointer-events: none;
-  z-index: 120;
+  z-index: 8;
   background: rgba(246, 179, 172, 0.22);
   border: 1.5px dashed rgba(211, 86, 75, 0.65);
   border-radius: 6px;
