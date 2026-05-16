@@ -121,7 +121,12 @@
   function findCalendarScrollContainer() {
     for (const sel of ['.FtZfle', '.M7Vc1b', '.ZCaJde']) {
       const el = document.querySelector(sel);
-      if (el && !el.closest('#gp-panel') && el.scrollHeight > el.clientHeight + 50) return el;
+      if (!el || el.closest('#gp-panel')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height < 120) continue;
+      /** When the week fits the viewport, scrollHeight ≈ clientHeight — still a valid grid shell. */
+      if (el.scrollHeight > el.clientHeight + 20) return el;
+      if (sel === '.FtZfle' || sel === '.M7Vc1b') return el;
     }
     for (const el of document.querySelectorAll('div')) {
       if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay')) continue;
@@ -129,8 +134,8 @@
       if (s.overflowY !== 'auto' && s.overflowY !== 'scroll' &&
           s.overflow !== 'auto' && s.overflow !== 'scroll') continue;
       const r = el.getBoundingClientRect();
-      if (r.height < 300 || el.scrollHeight <= el.clientHeight + 50) continue;
-      if (/\b\d{1,2}\s*(AM|PM)\b/.test(el.textContent)) return el;
+      if (r.height < 250) continue;
+      if (/\b\d{1,2}\s*(AM|PM)\b/i.test(el.textContent)) return el;
     }
     return null;
   }
