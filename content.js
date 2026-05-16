@@ -6836,19 +6836,32 @@
       for (const ce of g.calEventIds) pushHint(ce);
     }
 
-    for (let hi = 0; hi < hints.length; hi++) {
-      let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
-      if (!hit?.goal?.id || !hit.session?.eventId) continue;
+    const titleHint =
+      _gpGdPinnedTitleHint || gpGdExtractGoalTitleFromInspector(host) || '';
+
+    let hit = gpGdResolveInspectorGoalHit(unified, legacyGoals, hints, titleHint);
+    if (hit?.goal?.id && hit.session) {
       hit = await gpGdEnrichHitForDetail(hit);
+
+      const hostDomHints = gpCollectEventIdHintsFromRoot(host);
+      const domToken =
+        hostDomHints[0] ||
+        pinnedRaw[0] ||
+        String(hit.session.eventId || '') ||
+        hints[0] ||
+        '';
 
       const visibleHost =
         gpGdFindOpenInspectorNearClick(hit.goal.title) ||
         gpGdFindEventInspectorShell(hit.goal.title) ||
         gpGdPickBestVisibleInspectorHost(natives, hit.goal.title) ||
         host;
-      if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) continue;
-      gpGdTrace('session hit', hints[hi], hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
-      const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
+      if (!visibleHost || gpGdIsCalendarGridContainer(visibleHost)) {
+        if (pinnedRaw.length) scheduleGpGdDialogScan();
+        return;
+      }
+      gpGdTrace('session hit', domToken, hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
+      const rendered = gpGdRenderDetailBlock(hit, domToken, visibleHost);
       if (rendered) {
         gpGdStopInspectorOpenWatch();
         return;
