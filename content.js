@@ -5091,7 +5091,8 @@
 
   function scheduleGpGdInspectorOpenBurst() {
     const gen = ++_gpGdOpenBurstGen;
-    for (const ms of [0, 90, 220, 480, 1000]) {
+    gpGdMarkDetailScanActive(15000);
+    for (const ms of [0, 180, 450, 900]) {
       window.setTimeout(() => {
         if (gen !== _gpGdOpenBurstGen) return;
         scheduleGpGdDialogScan();
