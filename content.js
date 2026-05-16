@@ -5539,10 +5539,12 @@
     for (const el of gpGdQuerySelectorAllDeep(dialogHost, '[role="dialog"], [role="alertdialog"]')) {
       if (!gpGdIsElementVisuallyExposed(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width >= 240 && r.width <= maxW && r.height >= 120) return el;
+      if (r.width >= 240 && r.width <= maxW && r.height >= 120 && !gpGdIsInvalidDetailMountTarget(el)) {
+        return el;
+      }
     }
 
-    return dialogHost;
+    return null;
   }
 
   /** Prefer the on-screen card that actually shows this goal title (avoids hidden GCal clones). */
