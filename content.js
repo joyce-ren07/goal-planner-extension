@@ -6672,6 +6672,18 @@
     for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
     for (const h of barHintsCached) pushHint(h);
 
+    const titleCandidates = [
+      _gpGdPinnedTitleHint,
+      gpGdExtractGoalTitleFromInspector(host),
+    ].filter(Boolean);
+    for (const wantRaw of titleCandidates) {
+      const want = gpGdNormalizeTitleHint(wantRaw);
+      if (!want) continue;
+      const g = legacyGoals.find((lg) => gpGdNormalizeTitleHint(lg.title) === want);
+      if (!g?.calEventIds?.length) continue;
+      for (const ce of g.calEventIds) pushHint(ce);
+    }
+
     for (let hi = 0; hi < hints.length; hi++) {
       let hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
       if (!hit?.goal?.id || !hit.session?.eventId) continue;
