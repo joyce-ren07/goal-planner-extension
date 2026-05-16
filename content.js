@@ -5148,6 +5148,9 @@
     add(chip.closest('[data-eventid]')?.getAttribute('data-eventid'));
     add(chip.dataset.gpCalEventId);
     add(chip.dataset.gpChipKey);
+    _gpGdPinnedGoalId = chip.dataset.gpGoalId ? String(chip.dataset.gpGoalId) : '';
+    const slotN = Number(chip.dataset.gpSlotIdx);
+    _gpGdPinnedSlotIdx = Number.isFinite(slotN) && slotN >= 0 ? slotN : -1;
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
     gpGdMarkDetailScanActive(15000);
