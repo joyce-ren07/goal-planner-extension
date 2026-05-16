@@ -8448,42 +8448,73 @@
     const anchors = goalRow?.sessionAnchors || [];
     if (!allowed.length || !anchors.length) return -1;
 
-    let targetMs = NaN;
-    const geo = globalThis.GoalCalendarSync?.computeSessionRangeFromGeometry?.(chip);
-    if (geo?.startTime) targetMs = Date.parse(geo.startTime);
+    const startIso = gpResolveSessionStartIsoFromChip(chip);
+    if (!startIso) return -1;
 
-    if (!Number.isFinite(targetMs)) {
-      const aria = chip.closest('[data-eventid]')?.getAttribute('aria-label') || '';
-      const m = aria.match(
-        /(\d{1,2})(?::(\d{2}))?\s*(AM|PM)/i
+    const bySchedule = gpResolveSlotIndexByScheduleAnchors(goalRow, startIso);
+    if (bySchedule >= 0) return bySchedule;
+
+    const targetMs = Date.parse(startIso);
+    return gpResolveSlotIndexByAbsoluteAnchors(goalRow, targetMs);
+  }
+
+  async function gpResolveSlotIndexForSessionContext(goalRow, legacyGoals, opts) {
+    opts = opts || {};
+    const allowed = goalRow?.calEventIds || [];
+    if (!allowed.length) return -1;
+
+    let slotIdx =
+      typeof opts.slotIdx === 'number' && opts.slotIdx >= 0 && opts.slotIdx < allowed.length
+        ? opts.slotIdx
+        : -1;
+    if (slotIdx >= 0) return slotIdx;
+
+    const chip = opts.chip instanceof HTMLElement ? opts.chip : null;
+    const storageKey = opts.storageKey != null ? String(opts.storageKey) : '';
+
+    if (chip) {
+      slotIdx = readChipSlotIndexFromDataset(chip, allowed.length);
+      if (slotIdx >= 0) return slotIdx;
+    }
+
+    slotIdx = resolveDomSlotIndexFromGoalRow(goalRow, storageKey);
+    if (slotIdx >= 0) return slotIdx;
+
+    let row = goalRow;
+    if (!row?.sessionAnchors?.length) {
+      try {
+        row = await enrichGoalRowWithUnifiedAnchors(row, legacyGoals, opts.chipDoneMap || {});
+      } catch (_) {
+        row = goalRow;
+      }
+    }
+
+    let startIso = opts.startIso || '';
+    if (!startIso && chip) startIso = gpResolveSessionStartIsoFromChip(chip);
+    if (!startIso && opts.inspectorShell instanceof HTMLElement) {
+      startIso = gpResolveSessionStartIsoFromInspector(opts.inspectorShell);
+    }
+
+    if (startIso) {
+      slotIdx = gpResolveSlotIndexByScheduleAnchors(row, startIso);
+      if (slotIdx >= 0) return slotIdx;
+      const targetMs = Date.parse(startIso);
+      slotIdx = gpResolveSlotIndexByAbsoluteAnchors(row, targetMs);
+      if (slotIdx >= 0) return slotIdx;
+    }
+
+    if (chip) {
+      slotIdx = resolveSlotIndexByGoalChipsOnCalendar(chip, row, legacyGoals);
+      if (slotIdx >= 0) return slotIdx;
+      slotIdx = computeSlotIndexForGoalSession(
+        chip,
+        row,
+        opts.plannerEventId,
+        storageKey
       );
-      if (m) {
-        const now = new Date();
-        let h = parseInt(m[1], 10) % 12;
-        if (/pm/i.test(m[3])) h += 12;
-        const min = m[2] ? parseInt(m[2], 10) : 0;
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, min, 0, 0);
-        targetMs = d.getTime();
-      }
+      if (slotIdx >= 0) return slotIdx;
     }
 
-    if (!Number.isFinite(targetMs)) return -1;
-
-    let bestIdx = -1;
-    let bestDelta = Infinity;
-    for (const a of anchors) {
-      if (!a?.isoStart || a.eventId == null || a.eventId === '') continue;
-      const ms = Date.parse(a.isoStart);
-      if (!Number.isFinite(ms)) continue;
-      const idx = allowed.findIndex((id) => String(id) === String(a.eventId));
-      if (idx < 0) continue;
-      const d = Math.abs(ms - targetMs);
-      if (d < bestDelta) {
-        bestDelta = d;
-        bestIdx = idx;
-      }
-    }
-    if (bestIdx >= 0 && bestDelta <= 12 * 60 * 60 * 1000) return bestIdx;
     return -1;
   }
 
