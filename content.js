@@ -260,29 +260,29 @@
       window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
       return;
     }
+    const watchEl =
+      _gpGhostLockedScrollCont?.isConnected
+        ? _gpGhostLockedScrollCont
+        : findCalendarScrollContainerForGhostPreview();
+    if (!(watchEl instanceof HTMLElement)) return;
     if (_gpGhostPreviewRecoveryMo) return;
     _gpGhostPreviewRecoveryMo = new MutationObserver(() => {
       if (!isGhostCreationPreviewUiActive()) {
         ensureGhostPreviewRecoveryObserver();
         return;
       }
-      if (document.querySelector('#gp-ghost-preview-root .goal-ghost-event')) return;
+      const host = document.getElementById('gp-ghost-preview-host');
+      if (host?.isConnected && host.querySelector('.goal-ghost-event')) return;
       window.clearTimeout(_gpGhostPreviewRecoveryDebounce);
       _gpGhostPreviewRecoveryDebounce = window.setTimeout(() => {
-        if (
-          !isGhostCreationPreviewUiActive() ||
-          document.querySelector('#gp-ghost-preview-root .goal-ghost-event')
-        ) {
-          return;
-        }
+        if (!isGhostCreationPreviewUiActive()) return;
+        const h = document.getElementById('gp-ghost-preview-host');
+        if (h?.isConnected && h.querySelector('.goal-ghost-event')) return;
         scheduleGhostPreviewRefreshDebounced();
-      }, 100);
+      }, 150);
     });
     try {
-      _gpGhostPreviewRecoveryMo.observe(document.documentElement || document.body, {
-        childList: true,
-        subtree: true,
-      });
+      _gpGhostPreviewRecoveryMo.observe(watchEl, { childList: true, subtree: true });
     } catch (_) {
       _gpGhostPreviewRecoveryMo = null;
     }
