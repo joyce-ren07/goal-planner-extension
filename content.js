@@ -698,7 +698,7 @@
       return false;
     }
 
-    const scrollCont = findCalendarScrollContainer();
+    const scrollCont = findCalendarScrollContainerForGhostPreview();
     if (!scrollCont) {
       if (!previewUi) removeGhostEvents();
       return false;
@@ -720,7 +720,14 @@
     }
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
-    const dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
+    let dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
+    if (!dayColumns.length) {
+      const grid = scrollCont.getBoundingClientRect();
+      dayColumns = findDayColumnPositions().filter((c) => {
+        const cx = c.left + c.width / 2;
+        return cx >= grid.left - 64 && cx <= grid.right + 64;
+      });
+    }
     if (!dayColumns.length) {
       if (!previewUi) removeGhostEvents();
       return false;
