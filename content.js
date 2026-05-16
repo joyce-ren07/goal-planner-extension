@@ -6856,7 +6856,7 @@
       gpGdTrace('session hit', hints[hi], hit.goal.id, 'subtasks', (hit.goal.subtasks || []).length);
       const rendered = gpGdRenderDetailBlock(hit, hints[hi], visibleHost);
       if (rendered) {
-        gpGdStopInspectorPinWatch();
+        gpGdStopWaitForInspector();
         return;
       }
       return;
