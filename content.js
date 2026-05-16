@@ -6124,11 +6124,14 @@
   let _gpGdScanPending = false;
   let _gpGdDetailRefreshTimer = 0;
   let _gpGdHydrateQuietUntil = 0;
+  /** When set, avoid DOM moves that fight GCal’s layout (prevents flicker loops). */
+  let _gpGdPlacementLocked = false;
 
   /** Last mounted extension node (detached automatically when inspector closes). */
   let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
 
   function teardownGpGdBlock() {
+    _gpGdPlacementLocked = false;
     if (__gpGdBlockEl?.isConnected) {
       try {
         __gpGdBlockEl.remove();
