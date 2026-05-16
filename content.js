@@ -5846,10 +5846,10 @@
   //
   //  Track 2 — ResizeObserver (pixel-based live duration)
   //    GCal changes the inline height of [data-eventid] during a drag.  We
-  //    read the new height, convert to minutes via getGridMetrics() (same
-  //    pxPerHour constant used by the ghost-event renderer), and show a live
-  //    "X hr Y min" label.  This is the fallback when GCal hasn't yet updated
-  //    the aria-label mid-drag.  Storage is written only after the resize
+  //    read the new height for chip coupling + triggers label sync via
+  //    syncExtGoalTimeFromContainer (native range from DOM when available;
+  //    otherwise GoalCalendarSync.computeSessionRangeFromGeometry + Intl).
+  //    Storage is written only after the resize
   //    settles (400 ms debounce) to avoid thrashing chrome.storage.
   //
   //  Track 3 — mousedown on the GCal resize handle
