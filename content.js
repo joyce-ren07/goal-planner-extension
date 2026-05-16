@@ -6388,6 +6388,9 @@
   let _gpGdScanPending = false;
   let _gpGdDetailRefreshTimer = 0;
   let _gpGdHydrateQuietUntil = 0;
+  let _gpGdHydrateInFlight = false;
+  let _gpGdHydrateQueued = false;
+  let _gpGdMutatingDetailUi = false;
 
   /** Last mounted extension node (detached automatically when inspector closes). */
   let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
