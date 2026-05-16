@@ -5013,6 +5013,10 @@
   let _gpGdRemountGoalKey = '';
   let _gpGdDetailScanActiveUntil = 0;
   let _gpGdDomObsDebounce = 0;
+  let _gpGdLastOpenGestureKey = '';
+  let _gpGdLastOpenGestureAt = 0;
+  let _gpGdInspectorOpenWatchUntil = 0;
+  let _gpGdInspectorOpenWatchMo = /** @type {MutationObserver | null} */ (null);
 
   function gpGdMarkDetailScanActive(ms) {
     _gpGdDetailScanActiveUntil = Date.now() + (ms || 12000);
@@ -5023,6 +5027,57 @@
     if (Date.now() < _gpGdDetailScanActiveUntil) return true;
     if (Date.now() - _gpGdPinnedAt < 12000 && _gpGdPinnedHints.length) return true;
     return false;
+  }
+
+  function gpGdDetailBlockReady() {
+    const ext = __gpGdBlockEl;
+    return !!(ext?.isConnected && gpGdIsGoalBlockVisible(ext));
+  }
+
+  function gpGdStopInspectorOpenWatch() {
+    _gpGdInspectorOpenWatchUntil = 0;
+    _gpGdInspectorOpenWatchMo?.disconnect();
+    _gpGdInspectorOpenWatchMo = null;
+  }
+
+  /** Fast MO while GCal animates the event inspector open (stops once our block is visible). */
+  function gpGdStartInspectorOpenWatch() {
+    gpGdStopInspectorOpenWatch();
+    _gpGdInspectorOpenWatchUntil = Date.now() + 4200;
+    _gpGdInspectorOpenWatchMo = new MutationObserver(() => {
+      if (!gpGdShouldRunDetailScan()) return;
+      if (gpGdDetailBlockReady()) {
+        gpGdStopInspectorOpenWatch();
+        return;
+      }
+      scheduleGpGdDialogScan();
+    });
+    try {
+      _gpGdInspectorOpenWatchMo.observe(document.documentElement || document.body, {
+        childList: true,
+        subtree: true,
+      });
+    } catch (_) {
+      /* ignore */
+    }
+    const poll = () => {
+      if (Date.now() > _gpGdInspectorOpenWatchUntil) {
+        gpGdStopInspectorOpenWatch();
+        return;
+      }
+      if (gpGdDetailBlockReady()) {
+        gpGdStopInspectorOpenWatch();
+        return;
+      }
+      scheduleGpGdDialogScan();
+      window.setTimeout(poll, 72);
+    };
+    scheduleGpGdDialogScan();
+    requestAnimationFrame(() => {
+      scheduleGpGdDialogScan();
+      requestAnimationFrame(() => scheduleGpGdDialogScan());
+    });
+    window.setTimeout(poll, 72);
   }
 
   function gpGdResolveGoalChipFromEvent(e) {
