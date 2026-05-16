@@ -5980,11 +5980,13 @@
         /** Mount into native metadata column; `dialogShell` used for repair observer + orphan cleanup. */
         if (!(host instanceof HTMLElement)) continue;
 
+        gpGdTrace('session hit', hints[hi], hit.goal.id);
         gpGdRenderDetailBlock(hit, hints[hi], host);
         return;
       }
     }
     teardownGpGdBlock();
+    gpGdTrace('no unified session match', pinnedExpanded.slice(0, 3));
   }
 
   /** Install observer + GoalPlannerUnifiedState listeners (subscriber + chrome.storage echo). Does not wire calendar-chip DOM mutation for goal field reads. */
