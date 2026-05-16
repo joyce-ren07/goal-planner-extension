@@ -6834,12 +6834,12 @@
       );
       if (alt instanceof HTMLElement) shell = alt;
     }
-    if (!shell || gpGdIsCalendarGridContainer(shell)) {
+    if (!shell || !gpGdIsValidEventDetailInspectorShell(shell)) {
       gpGdTrace('abort render — no event inspector shell near click');
       return null;
     }
     const cardRoot = gpGdResolveInspectorCardRoot(shell, goal?.title);
-    if (!(cardRoot instanceof HTMLElement) || gpGdIsWeekGridMountSurface(cardRoot)) {
+    if (!gpGdIsValidEventDetailCardRoot(cardRoot, shell)) {
       gpGdTrace('abort render — no narrow inspector card');
       gpGdDiag('inject: abort — card root missing or grid surface', {
         cardWidth: cardRoot?.getBoundingClientRect?.()?.width,
