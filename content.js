@@ -5339,9 +5339,12 @@
       if (!(el instanceof HTMLElement)) continue;
       if (!el.isConnected) continue;
       if (el.closest('#gp-panel, #gp-recurrence-overlay')) continue;
+      if (gpGdIsCalendarGridContainer(el)) continue;
       if (!gpGdQuerySelectorAllDeep(el, '[data-eventid]').length) continue;
       const rr = el.getBoundingClientRect();
       if (rr.width < 200 || rr.height < 160) continue;
+      if (rr.width > gpGdMaxInspectorCardWidth()) continue;
+      if (el.querySelectorAll('[data-eventchip]').length >= 6) continue;
       if (!seenNodes.has(el)) {
         seenNodes.add(el);
         out.push(el);
