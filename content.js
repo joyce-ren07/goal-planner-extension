@@ -4735,13 +4735,21 @@
 
     for (const h of hints) {
       const chip = gpFindChipForPlannerEventFlexible(h);
-      if (chip) {
-        const startIso = gpResolveSessionStartIsoFromChip(chip);
-        if (startIso) {
-          const legacy = unified.goals.find((ug) => String(ug.id) === String(gid));
-          const calIds = legacy?.sessions?.map((s) => s.eventId) || [];
-          const pseudoRow = { calEventIds: calIds, sessionAnchors: [] };
-          return null;
+      if (!chip) continue;
+      const startIso = gpResolveSessionStartIsoFromChip(chip);
+      if (!startIso) continue;
+      const calIds = sessions.map((s) => s?.eventId).filter(Boolean);
+      const anchors = sessions
+        .filter((s) => s?.eventId && s?.startTime)
+        .map((s) => ({ eventId: s.eventId, isoStart: s.startTime }));
+      const slotFromSchedule = gpResolveSlotIndexByScheduleAnchors(
+        { calEventIds: calIds, sessionAnchors: anchors },
+        startIso
+      );
+      if (slotFromSchedule >= 0 && slotFromSchedule < sessions.length) {
+        const sess = sessions[slotFromSchedule];
+        if (sess) {
+          return { goal: g, session: sess, gIdx: gi, sIdx: slotFromSchedule };
         }
       }
     }
