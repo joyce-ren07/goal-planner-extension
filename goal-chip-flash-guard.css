@@ -1,0 +1,32 @@
+/* Loaded at document_start — hide native GCal chip paint before content.js runs. */
+[data-eventchip][data-gp-goal-pending] {
+  position: relative !important;
+  box-sizing: border-box !important;
+  isolation: isolate;
+}
+
+[data-eventchip][data-gp-goal-pending] > :not(.ext-goal-root) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+[data-eventchip][data-gp-goal-pending] .ext-goal-root.ext-goal-root--prime {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border-radius: inherit;
+  box-sizing: border-box;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+  background: #ffd7d3;
+  border: none;
+  border-left: 4px solid #d3564b;
+  opacity: 1 !important;
+}
+
+[data-eventchip].ext-goal-chip.ext-goal-completed[data-gp-goal-pending] .ext-goal-root--prime {
+  background: #ffe5e2;
+  border-left-color: #e79992;
+}
