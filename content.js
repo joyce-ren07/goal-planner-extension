@@ -9011,12 +9011,27 @@
         // never fired, causing resize handles to be hidden along with everything
         // else.  With the additive overlay approach our visual content covers
         // GCal's original chip content, so no sibling manipulation is needed.
+  }
+
+  function processGoalChips() {
+    const run = (doneMap, goals) => {
+      document.querySelectorAll('[data-eventchip]').forEach((chip) => {
+        decorateOneGoalChip(chip, doneMap, goals);
       });
+    };
+    if (_gpChipDoneCache && _gpGoalsCache) {
+      run(_gpChipDoneCache, _gpGoalsCache);
+    }
+    chrome.storage.local.get(['gp_chip_done', 'gp_goals'], async (data) => {
+      _gpChipDoneCache = data.gp_chip_done || {};
+      _gpGoalsCache = Array.isArray(data.gp_goals) ? data.gp_goals : await getGoals();
+      run(_gpChipDoneCache, _gpGoalsCache);
     });
   }
 
   // Debounced scheduler — prevents thrashing on rapid DOM mutations
   let _gpDecorateTimer = null;
+  let _gpDecorateRaf = 0;
   function mutationTouchesGoalChips(mutations) {
     const scan = (nodes) => {
       for (const node of nodes) {
