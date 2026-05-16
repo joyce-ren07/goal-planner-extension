@@ -371,6 +371,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 }
 
 .mytasks-kanban .mk-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -487,9 +488,9 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
 }
 
 .mytasks-kanban .mk-card-header {
-  position: relative;
-  min-height: 18px;
-  padding-right: 24px;
+  position: static;
+  min-height: 16px;
+  padding-right: 36px;
   overflow: visible;
   pointer-events: none;
 }
@@ -534,8 +535,20 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   touch-action: auto;
 }
 
-.mytasks-kanban .mk-card.is-editing-title .mk-star-btn {
+.mytasks-kanban .mk-card.is-editing-title .mk-star-btn,
+.mytasks-kanban .mk-card.is-editing-title .mk-delete-btn {
   pointer-events: auto;
+}
+
+.mytasks-kanban .mk-card.is-delete-confirm {
+  cursor: default;
+  touch-action: auto;
+}
+
+.mytasks-kanban .mk-card.is-removing {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
 }
 
 .mytasks-kanban .mk-card-due,
@@ -584,29 +597,158 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   line-height: 14px;
 }
 
-.mytasks-kanban .mk-star-btn {
-  pointer-events: auto;
+.mytasks-kanban .mk-card-footer .mk-chip {
+  /* Text aligns with "Due" (8px); pill extends 6px left of text like default chip padding. */
+  margin-left: 2px;
+  padding: 1px 6px;
+}
+
+.mytasks-kanban .mk-card-header-actions {
+  pointer-events: none;
   position: absolute;
-  top: -2px;
-  right: -12px;
+  top: 8px;
+  right: 12px;
+  z-index: 1;
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
+  gap: 0;
+  height: 16px;
+}
+
+.mytasks-kanban .mk-star-btn,
+.mytasks-kanban .mk-delete-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 16px;
+  height: 16px;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   border: none;
   background: transparent;
-  color: #5f6368;
-  font-size: 15px;
-  line-height: 16px;
   cursor: pointer;
+}
+
+.mytasks-kanban .mk-star-btn {
+  color: #5f6368;
+  font-size: 14px;
+  line-height: 16px;
 }
 
 .mytasks-kanban .mk-star-btn.is-starred {
   color: #f9ab00;
+}
+
+.mytasks-kanban .mk-delete-btn {
+  color: #9aa0a6;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease;
+}
+
+.mytasks-kanban .mk-card:hover .mk-delete-btn,
+.mytasks-kanban .mk-card.is-delete-confirm .mk-delete-btn {
+  opacity: 1;
+}
+
+.mytasks-kanban .mk-delete-btn:hover,
+.mytasks-kanban .mk-card.is-delete-confirm .mk-delete-btn {
+  color: #d93025;
+}
+
+.mytasks-kanban .mk-delete-btn svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.mytasks-kanban .mk-card-delete-confirm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: 6px 8px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 0 0 10px 10px;
+  background: #fff1f2;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    top 150ms ease,
+    opacity 150ms ease,
+    padding 150ms ease;
+}
+
+.mytasks-kanban .mk-card.is-delete-confirm .mk-card-delete-confirm {
+  top: var(--mk-delete-confirm-top, 26px);
+  bottom: 0;
+  padding: 8px 12px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mytasks-kanban .mk-card-delete-confirm__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 14px;
+  color: #6b7280;
+}
+
+.mytasks-kanban .mk-card-delete-confirm__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mytasks-kanban .mk-card-delete-confirm__delete {
+  margin: 0;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 999px;
+  background: #ef4444;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.mytasks-kanban .mk-card-delete-confirm__delete:hover {
+  background: #dc2626;
+}
+
+.mytasks-kanban .mk-card-delete-confirm__cancel {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.mytasks-kanban .mk-card-delete-confirm__cancel:hover {
+  color: #374151;
 }
 
 .mytasks-kanban .mk-chip {

@@ -36,6 +36,8 @@
 
   const SIDEBAR_FOLDER_ORDER = ['overdue', 'today', 'tomorrow', 'later', 'completed'];
   const KANBAN_STORAGE_KEY = 'gpKanbanBoardState';
+  const MK_DELETE_CONFIRM_AUTO_CANCEL_MS = 5000;
+  const MK_CARD_REMOVE_ANIM_MS = 200;
   const FORCE_CLEAR_KANBAN_MARKER = 'gpForceClearKanbanBoard';
   const KANBAN_COLUMN_DEFS = [
     { id: 'todo', label: 'PLANNED' },
@@ -572,6 +574,10 @@
   let nativeTasksResizeObserver = null;
   let activeNativeTasksHost = null;
   let kanbanStateCache = null;
+  let mkDeleteConfirmCard = null;
+  let mkDeleteConfirmTimeoutId = null;
+  let mkDeleteConfirmOutsideHandler = null;
+  let mkDeleteConfirmEscapeHandler = null;
   let kanbanStorageListenerWired = false;
   let closeTaskStatusMenu = null;
 
@@ -3120,6 +3126,13 @@
     title.spellcheck = true;
     title.autocomplete = 'off';
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'mk-delete-btn';
+    deleteBtn.draggable = false;
+    deleteBtn.setAttribute('aria-label', 'Delete task');
+    deleteBtn.innerHTML = MK_DELETE_TRASH_ICON_SVG;
+
     const starBtn = document.createElement('button');
     starBtn.type = 'button';
     starBtn.className = 'mk-star-btn';
@@ -3129,8 +3142,13 @@
     starBtn.textContent = task.starred ? '★' : '☆';
     starBtn.classList.toggle('is-starred', Boolean(task.starred));
 
+    const headerActions = document.createElement('div');
+    headerActions.className = 'mk-card-header-actions';
+    headerActions.appendChild(deleteBtn);
+    headerActions.appendChild(starBtn);
+
     header.appendChild(title);
-    header.appendChild(starBtn);
+    header.appendChild(headerActions);
 
     const due = document.createElement('div');
     due.className = 'mk-card-due mk-card-due-btn';
@@ -3150,8 +3168,36 @@
     }
 
     footer.appendChild(chip);
+
+    const deleteConfirm = document.createElement('div');
+    deleteConfirm.className = 'mk-card-delete-confirm';
+    deleteConfirm.setAttribute('aria-hidden', 'true');
+
+    const deleteConfirmText = document.createElement('span');
+    deleteConfirmText.className = 'mk-card-delete-confirm__text';
+    deleteConfirmText.textContent = 'Delete this task?';
+
+    const deleteConfirmActions = document.createElement('div');
+    deleteConfirmActions.className = 'mk-card-delete-confirm__actions';
+
+    const deleteConfirmBtn = document.createElement('button');
+    deleteConfirmBtn.type = 'button';
+    deleteConfirmBtn.className = 'mk-card-delete-confirm__delete';
+    deleteConfirmBtn.textContent = 'Delete';
+
+    const deleteCancelBtn = document.createElement('button');
+    deleteCancelBtn.type = 'button';
+    deleteCancelBtn.className = 'mk-card-delete-confirm__cancel';
+    deleteCancelBtn.textContent = 'Cancel';
+
+    deleteConfirmActions.appendChild(deleteConfirmBtn);
+    deleteConfirmActions.appendChild(deleteCancelBtn);
+    deleteConfirm.appendChild(deleteConfirmText);
+    deleteConfirm.appendChild(deleteConfirmActions);
+
     card.appendChild(top);
     card.appendChild(footer);
+    card.appendChild(deleteConfirm);
 
     return card;
   }
@@ -3315,6 +3361,8 @@
   function renderKanbanBoard(root, state) {
     const board = root?.querySelector('.mytasks-kanban__board');
     if (!board) return;
+
+    clearMkDeleteConfirm();
 
     const visibleColumns = getVisibleKanbanColumns(state);
     board.classList.toggle('mytasks-kanban__board--single-column', state.filters.activeList !== 'all');
@@ -4394,6 +4442,133 @@
     await saveKanbanState(state);
   }
 
+  const MK_DELETE_TRASH_ICON_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+
+  function clearMkDeleteConfirm() {
+    if (mkDeleteConfirmTimeoutId) {
+      clearTimeout(mkDeleteConfirmTimeoutId);
+      mkDeleteConfirmTimeoutId = null;
+    }
+
+    if (mkDeleteConfirmOutsideHandler) {
+      document.removeEventListener('pointerdown', mkDeleteConfirmOutsideHandler, true);
+      mkDeleteConfirmOutsideHandler = null;
+    }
+
+    if (mkDeleteConfirmEscapeHandler) {
+      document.removeEventListener('keydown', mkDeleteConfirmEscapeHandler);
+      mkDeleteConfirmEscapeHandler = null;
+    }
+
+    if (mkDeleteConfirmCard) {
+      const confirmBar = mkDeleteConfirmCard.querySelector('.mk-card-delete-confirm');
+      mkDeleteConfirmCard.classList.remove('is-delete-confirm');
+      mkDeleteConfirmCard.style.removeProperty('--mk-delete-confirm-top');
+      if (confirmBar) {
+        confirmBar.setAttribute('aria-hidden', 'true');
+      }
+      mkDeleteConfirmCard = null;
+    }
+  }
+
+  function syncMkDeleteConfirmOverlay(card) {
+    if (!card) return;
+
+    const dueEl = card.querySelector('.mk-card-due');
+    if (!dueEl) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const dueRect = dueEl.getBoundingClientRect();
+    const topPx = Math.max(0, Math.round(dueRect.top - cardRect.top));
+    card.style.setProperty('--mk-delete-confirm-top', `${topPx}px`);
+  }
+
+  function openMkDeleteConfirm(card) {
+    if (!card) return;
+    clearMkDeleteConfirm();
+
+    mkDeleteConfirmCard = card;
+    card.style.setProperty('--mk-delete-confirm-top', `${card.offsetHeight}px`);
+
+    card.classList.add('is-delete-confirm');
+    const confirmBar = card.querySelector('.mk-card-delete-confirm');
+    if (confirmBar) {
+      confirmBar.setAttribute('aria-hidden', 'false');
+    }
+
+    requestAnimationFrame(() => {
+      syncMkDeleteConfirmOverlay(card);
+    });
+
+    mkDeleteConfirmTimeoutId = window.setTimeout(() => {
+      clearMkDeleteConfirm();
+    }, MK_DELETE_CONFIRM_AUTO_CANCEL_MS);
+
+    mkDeleteConfirmOutsideHandler = (event) => {
+      if (card.contains(event.target)) return;
+      clearMkDeleteConfirm();
+    };
+    document.addEventListener('pointerdown', mkDeleteConfirmOutsideHandler, true);
+
+    mkDeleteConfirmEscapeHandler = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      clearMkDeleteConfirm();
+    };
+    document.addEventListener('keydown', mkDeleteConfirmEscapeHandler);
+  }
+
+  async function removeKanbanCardById(cardId) {
+    if (!cardId) return;
+
+    const state = await loadKanbanState();
+    let removed = false;
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      const prev = state.columns[id] || [];
+      const next = prev.filter((card) => card.id !== cardId);
+      if (next.length !== prev.length) {
+        state.columns[id] = next;
+        removed = true;
+      }
+    });
+
+    if (!removed) return;
+    await saveKanbanState(state);
+  }
+
+  async function confirmMkDeleteKanbanCard(card) {
+    if (!card) return;
+
+    const cardId = card.dataset.cardId;
+    if (!cardId) return;
+
+    clearMkDeleteConfirm();
+
+    card.classList.add('is-removing');
+    await new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+
+      card.addEventListener('transitionend', (event) => {
+        if (event.target !== card) return;
+        if (event.propertyName === 'opacity' || event.propertyName === 'transform') {
+          finish();
+        }
+      });
+
+      window.setTimeout(finish, MK_CARD_REMOVE_ANIM_MS + 40);
+    });
+
+    card.remove();
+    await removeKanbanCardById(cardId);
+  }
+
   function getActiveKanbanRoot() {
     return activeNativeTasksHost?.querySelector(':scope > .mytasks-kanban')
       || document.querySelector('.mytasks-native-tasks-layout > .mytasks-kanban');
@@ -4535,6 +4710,36 @@
     wireKanbanCardTitleEditing(root);
 
     root.addEventListener('click', (event) => {
+      const deleteBtn = event.target.closest('.mk-delete-btn');
+      if (deleteBtn && root.contains(deleteBtn)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const card = deleteBtn.closest('.mk-card');
+        if (card) {
+          openMkDeleteConfirm(card);
+        }
+        return;
+      }
+
+      const deleteConfirmBtn = event.target.closest('.mk-card-delete-confirm__delete');
+      if (deleteConfirmBtn && root.contains(deleteConfirmBtn)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const card = deleteConfirmBtn.closest('.mk-card');
+        if (card) {
+          void confirmMkDeleteKanbanCard(card);
+        }
+        return;
+      }
+
+      const deleteCancelBtn = event.target.closest('.mk-card-delete-confirm__cancel');
+      if (deleteCancelBtn && root.contains(deleteCancelBtn)) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearMkDeleteConfirm();
+        return;
+      }
+
       const starBtn = event.target.closest('.mk-star-btn');
       if (starBtn && root.contains(starBtn)) {
         event.preventDefault();
@@ -4936,10 +5141,12 @@
 
       const card = event.target.closest('.mk-card');
       if (!card || !board.contains(card)) return;
-      if (event.target.closest('.mk-star-btn')) return;
+      if (event.target.closest('.mk-card-header-actions')) return;
+      if (event.target.closest('.mk-card-delete-confirm')) return;
       if (event.target.closest('.mk-card-due-btn')) return;
       if (event.target.closest('.mk-card-title')) return;
       if (card.classList.contains('is-editing-title')) return;
+      if (card.classList.contains('is-delete-confirm')) return;
 
       pendingCard = card;
       activePointerId = event.pointerId;
