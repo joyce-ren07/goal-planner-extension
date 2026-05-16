@@ -6462,6 +6462,10 @@
   /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
   function gpGdMountMarkCompleteFooter(markBtn, cardRoot) {
     if (!(markBtn instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return null;
+    if (!gpGdIsValidEventDetailCardRoot(cardRoot, cardRoot)) {
+      teardownGpGdMarkFooter();
+      return null;
+    }
     teardownGpGdMarkFooter();
     gpGdUnhideNativeMarkCompleted(cardRoot);
 
