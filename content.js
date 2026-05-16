@@ -5239,9 +5239,14 @@
   }
 
   function gpGdOnUserOpenedGoalSession(e, phase) {
+    gpGdDiag('click: handler', phase, 'listenerTarget=window capture');
     if (!_gpCalInspectDetailObserversInstalled) setupGpCalGoalDetailEnrichment();
     const chip = gpGdResolveGoalChipFromEvent(e);
     if (!chip) return;
+    gpGdDiag('click: chip resolved', {
+      gpGoalId: chip.dataset.gpGoalId,
+      eventId: chip.closest('[data-eventid]')?.getAttribute('data-eventid'),
+    });
     if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') {
       _gpGdAnchorX = e.clientX;
       _gpGdAnchorY = e.clientY;
