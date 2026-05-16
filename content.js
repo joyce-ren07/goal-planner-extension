@@ -5219,6 +5219,7 @@
           el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
           el.closest('[role="presentation"]');
         if (!(shell instanceof HTMLElement) || !gpGdIsElementVisuallyExposed(shell)) continue;
+        if (gpGdIsGCalLeftSidebarRegion(shell)) continue;
         if (!gpGdInspectorHasCloseControl(shell)) continue;
         const t = String(shell.innerText || '');
         if (short.length >= 2 && t.includes(short)) return shell;
