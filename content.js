@@ -5768,10 +5768,6 @@
       (sessDone ? 'opacity:0.55;' : '');
     wrap.appendChild(markBtn);
 
-    const cardRoot = gpGdFindEventDetailCardRoot(
-      dialogShell instanceof HTMLElement ? dialogShell : /** @type {HTMLElement} */ (document.body)
-    );
-
     const tryMount = (parent, beforeNode) => {
       if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
       try {
