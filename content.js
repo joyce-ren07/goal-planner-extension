@@ -5972,8 +5972,10 @@
   }
 
   function scheduleGpGdDialogScan() {
+    gpGdSyncBlockElRef();
     if (!gpGdShouldRunDetailScan()) return;
     if (gpGdDetailBlockReady()) return;
+    gpGdRefreshPinnedSessionLease();
     if (_gpGdScanTimer) {
       _gpGdScanPending = true;
       return;
