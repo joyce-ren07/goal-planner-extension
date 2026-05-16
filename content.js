@@ -145,11 +145,11 @@
   function findHourAbsolutePositions(scrollContainer) {
     const result = [];
     const seen = new Set();
-    const pattern = /^(\d{1,2})\s*(AM|PM)$/;
+    const pattern = /^(\d{1,2})(?::\d{2})?\s*(AM|PM)$/i;
     const contRect = scrollContainer.getBoundingClientRect();
 
     function processNode(node, requireVisible) {
-      const text = node.textContent.trim();
+      const text = node.textContent.trim().replace(/\s+/g, ' ');
       const m = text.match(pattern);
       if (!m) return;
       const parent = node.parentElement;
