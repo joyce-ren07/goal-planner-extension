@@ -5136,9 +5136,41 @@
     return r.bottom > 4 && r.right > 4;
   }
 
+  /** On-screen and not inside aria-hidden / opacity-0 ancestors (GCal keeps hidden inspector clones). */
+  function gpGdIsElementVisuallyExposed(el) {
+    if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+    let cur = el;
+    for (let d = 0; d < 32 && cur; d++) {
+      const st = window.getComputedStyle(cur);
+      if (st.display === 'none' || st.visibility === 'hidden' || Number(st.opacity) === 0) return false;
+      if (cur.getAttribute('aria-hidden') === 'true') return false;
+      const p = gpGdComposableParentHTMLElement(cur);
+      cur = p instanceof HTMLElement ? p : null;
+    }
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) return false;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (r.bottom < 4 || r.right < 4 || r.top > vh - 4 || r.left > vw - 4) return false;
+    return true;
+  }
+
+  /** Topmost element at block center should be our subtree (not covered by another layer). */
+  function gpGdIsGoalBlockPainted(wrap) {
+    if (!(wrap instanceof HTMLElement) || !wrap.isConnected) return false;
+    const r = wrap.getBoundingClientRect();
+    if (r.width < 40 || r.height < 12) return false;
+    const cx = Math.min(r.right - 6, Math.max(r.left + 6, r.left + r.width / 2));
+    const cy = Math.min(r.bottom - 6, Math.max(r.top + 6, r.top + 16));
+    const topEl = document.elementFromPoint(cx, cy);
+    if (!(topEl instanceof Element)) return false;
+    return topEl === wrap || wrap.contains(topEl) || topEl.contains(wrap);
+  }
+
   /** True when the block sits inside the white event card, not in the wide overlay gutter. */
   function gpGdIsGoalBlockWellPlaced(wrap, dialogShell) {
     if (!gpGdIsGoalBlockVisible(wrap) || !(dialogShell instanceof HTMLElement)) return false;
+    if (!gpGdIsGoalBlockPainted(wrap)) return false;
     const card = gpGdFindEventDetailCardRoot(dialogShell);
     if (!(card instanceof HTMLElement)) return false;
     const wr = wrap.getBoundingClientRect();
