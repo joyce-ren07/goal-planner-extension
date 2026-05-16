@@ -647,15 +647,15 @@
       const absTop = absYAtHour0 + (startMins / 60) * pxPerHour;
       const height = Math.max(20, (durationMin / 60) * pxPerHour);
       const leftPx = col.left + 2;
+      /** Horizontal content-X inside scrollport (stable across scrollLeft patches). */
+      const contentLeft = leftPx - contRect.left + scrollCont.scrollLeft;
       const width = Math.max(10, col.width - 4);
-      const topPx = contRect.top + absTop - scrollCont.scrollTop;
       layouts.push({
         key: ghostPreviewSlotKey(session),
         absTop,
-        left: leftPx,
+        contentLeft,
         width,
         height,
-        topPx,
       });
     }
 
@@ -664,7 +664,7 @@
       return false;
     }
 
-    const overlayRoot = ensureGpGhostPreviewRoot();
+    const overlayRoot = syncGpGhostPreviewRootToScrollGrid(scrollCont);
     const nextKeys = new Set(layouts.map((x) => x.key));
     [...overlayRoot.children].forEach((child) => {
       const slot = child.dataset?.gpGhostSlot;
