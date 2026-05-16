@@ -5843,27 +5843,24 @@
     if (
       existing?.isConnected &&
       existing.dataset.gpGoalId === goalId &&
-      existing.dataset.gpEventToken === token &&
       dialogShell instanceof HTMLElement &&
       gpGdComposedSubtreeContains(dialogShell, existing)
     ) {
-      const remountKey = goalId + '|' + token;
-      if (!gpGdIsGoalBlockWellPlaced(existing, dialogShell)) {
-        gpGdAlignInjectedBlockToCard(existing, dialogShell);
-      }
-      if (gpGdIsGoalBlockWellPlaced(existing, dialogShell)) {
-        _gpGdHydrateQuietUntil = Date.now() + 1800;
+      gpGdAlignInjectedBlockToCard(existing, dialogShell);
+      if (gpGdIsGoalBlockVisible(existing)) {
+        _gpGdHydrateQuietUntil = Date.now() + 4000;
         _gpGdRemountCount = 0;
+        gpGdMarkDetailScanActive(12000);
         return existing;
       }
-      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 2) {
-        teardownGpGdBlock();
-        gpGdTrace('remount capped — wrong mount target', goalId);
-        return null;
+      const remountKey = goalId + '|' + token;
+      if (remountKey === _gpGdRemountGoalKey && _gpGdRemountCount >= 1) {
+        gpGdTrace('remount capped — keep last block', goalId);
+        return existing;
       }
       _gpGdRemountGoalKey = remountKey;
       _gpGdRemountCount += 1;
-      gpGdTrace('remount (block visible but misaligned)', goalId);
+      gpGdTrace('remount (block not visible)', goalId);
       teardownGpGdBlock();
     } else {
       teardownGpGdBlock();
