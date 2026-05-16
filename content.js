@@ -5746,7 +5746,20 @@
         window.clearTimeout(_gdUiBump);
         _gdUiBump = window.setTimeout(() => scheduleGpGdDialogScan(), 55);
       };
-      window.addEventListener('pointerdown', bumpDialogScanDebounced, true);
+      window.addEventListener(
+        'pointerdown',
+        (e) => {
+          bumpDialogScanDebounced();
+          const t = e.target;
+          if (!(t instanceof Element)) return;
+          const chip = t.closest('[data-eventchip]');
+          if (!(chip instanceof HTMLElement)) return;
+          if (!chip.textContent.includes('🎯') && !chip.classList.contains('ext-goal-chip')) return;
+          gpGdPinSessionHintsFromChip(chip);
+          scheduleGpGdInspectorOpenBurst();
+        },
+        true
+      );
       window.addEventListener('focusin', bumpDialogScanDebounced, true);
 
       scheduleGpGdDialogScan();
