@@ -7281,9 +7281,10 @@
                 node.classList?.contains('ext-goal-root') ||
                 node.querySelector?.('.ext-goal-root')
               ) {
-                console.warn(
-                  '[GoalPlanner] Extension decoration (.ext-goal-root) removed by external DOM mutation; will restore.'
-                );
+                if (GP_DECOR_RESTORE_LOG)
+                  console.warn(
+                    '[GoalPlanner] Extension decoration (.ext-goal-root) removed by external DOM mutation; will restore.'
+                  );
                 needsRestore = true;
               }
             });
@@ -7291,7 +7292,10 @@
           if (!chip.querySelector('.ext-goal-root')) needsRestore = true;
           if (!needsRestore) return;
           clearTimeout(restoreTimeout);
-          restoreTimeout = setTimeout(() => restoreChip(chip, goalData), 16);
+          /** GCal rewires `[data-eventchip]` frequently during resize; avoid restore spam + races. */
+          const delay =
+            chip.classList.contains('ext-goal-resizing') || chip._resizeDebounce ? 460 : 220;
+          restoreTimeout = window.setTimeout(() => restoreChip(chip, goalData), delay);
         }).observe(chip, { childList: true, subtree: true });
 
         // Sibling elements within [data-eventid] are NOT touched.
