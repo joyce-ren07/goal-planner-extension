@@ -6578,7 +6578,7 @@
 
     const tryMount = (parent, beforeNode) => {
       if (!(parent instanceof HTMLElement) || !parent.isConnected) return false;
-      if (gpGdIsInvalidDetailMountTarget(parent)) return false;
+      if (gpGdIsInvalidDetailMountParent(parent, cardRoot)) return false;
       gpGdDiag('Inserting into:', {
         tag: parent.tagName,
         id: parent.id,
