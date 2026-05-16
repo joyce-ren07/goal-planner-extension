@@ -5244,7 +5244,73 @@
     const ext = __gpGdBlockEl;
     if (!ext?.isConnected || !gpGdIsGoalBlockVisible(ext)) return false;
     const title = goalTitle || ext.dataset.gpGoalTitle || _gpGdPinnedTitleHint || '';
-    return gpGdBlockInFrontInspector(ext, title);
+    if (gpGdBlockInFrontInspector(ext, title)) return true;
+    const shell =
+      gpGdFindOpenInspectorNearClick(title) ||
+      gpGdFindFrontGoalInspector(title) ||
+      gpGdFindEventInspectorShell(title);
+    if (!(shell instanceof HTMLElement)) return false;
+    if (!gpGdComposedSubtreeContains(shell, ext)) return false;
+    return gpGdIsGoalBlockWellPlaced(ext, shell, false);
+  }
+
+  function gpGdIsBlockVerticallyInsideCard(wrap, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return true;
+    const card = gpGdFindEventDetailCardRoot(dialogShell);
+    if (!(card instanceof HTMLElement)) return true;
+    const wr = wrap.getBoundingClientRect();
+    const cr = card.getBoundingClientRect();
+    if (cr.height < 80) return true;
+    return wr.top >= cr.top - 6 && wr.bottom <= cr.bottom + 20;
+  }
+
+  /** Style + rare re-insert before native rows — never append to scroll-column end (causes overflow/flicker). */
+  function gpGdStabilizeBlockPlacement(wrap, dialogShell) {
+    if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    const card = gpGdFindEventDetailCardRoot(dialogShell);
+    if (!(card instanceof HTMLElement)) return false;
+
+    const cardSt = window.getComputedStyle(card);
+    const cardBg = cardSt.backgroundColor;
+    wrap.style.position = 'relative';
+    wrap.style.zIndex = '2';
+    wrap.style.isolation = 'isolate';
+    wrap.style.background =
+      cardBg && cardBg !== 'transparent' && cardBg !== 'rgba(0, 0, 0, 0)' ? cardBg : '#fff';
+
+    const insideCard = gpGdComposedSubtreeContains(card, wrap);
+    const insideVertically = gpGdIsBlockVerticallyInsideCard(wrap, dialogShell);
+
+    if (_gpGdPlacementLocked && insideCard && insideVertically) {
+      gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
+      return true;
+    }
+
+    if (!insideCard || !insideVertically) {
+      const { mountParent, insertBefore } = gpGdResolveGoalInjectionMount(dialogShell);
+      if (mountParent instanceof HTMLElement && mountParent.isConnected) {
+        try {
+          if (
+            insertBefore instanceof HTMLElement &&
+            gpGdComposedSubtreeContains(mountParent, insertBefore)
+          ) {
+            mountParent.insertBefore(wrap, insertBefore);
+          } else {
+            mountParent.appendChild(wrap);
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+
+    gpGdNormalizeBlockInCardLayout(wrap, dialogShell);
+    const ok =
+      gpGdComposedSubtreeContains(card, wrap) &&
+      gpGdIsBlockVerticallyInsideCard(wrap, dialogShell) &&
+      gpGdIsGoalBlockWellPlaced(wrap, dialogShell, false);
+    if (ok) _gpGdPlacementLocked = true;
+    return ok;
   }
 
   async function gpGdLoadUnifiedCached() {
