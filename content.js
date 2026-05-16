@@ -5300,7 +5300,7 @@
     newInp?.addEventListener('blur', () => {
       window.setTimeout(() => {
         if (!wrapHost.isConnected) return;
-        const inp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('.gp-gd-st-new-inp'));
+        const inp = /** @type {HTMLInputElement | null} */ (wrapHost.querySelector('[data-gp-st-new]'));
         if (!(inp instanceof HTMLInputElement)) return;
         if (!inp.value.trim()) gpGdShowTaskCompose(wrapHost, false);
       }, 160);
