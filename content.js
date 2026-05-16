@@ -4663,17 +4663,6 @@
       out.push(token);
     }
 
-    try {
-      if (nodesWithId.length) {
-        const ec = nodesWithId[0].closest('[data-eventchip]')
-          ? nodesWithId[0]
-          : nodesWithId[0].closest('[aria-label*="event" i]');
-        ec?.closest?.('[aria-label*="event" i]');
-      }
-    } catch (_) {
-      /* ignore */
-    }
-
     return out;
   }
 
