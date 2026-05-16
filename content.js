@@ -6777,14 +6777,24 @@
     }
 
     const keep = __gpGdBlockEl;
-    if (
-      keep?.isConnected &&
-      gpGdIsGoalBlockVisible(keep) &&
-      (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length)
-    ) {
-      return;
+    if (keep?.isConnected) {
+      for (const h of natives) {
+        if (!gpGdComposedSubtreeContains(h, keep)) continue;
+        gpGdAlignInjectedBlockToCard(keep, h);
+        if (gpGdIsGoalBlockVisible(keep) || gpGdIsGoalBlockPainted(keep)) {
+          _gpGdHydrateQuietUntil = Date.now() + 12000;
+          gpGdMarkDetailScanActive(12000);
+          return;
+        }
+      }
+      if (
+        gpGdIsGoalBlockVisible(keep) &&
+        (Date.now() < _gpGdHydrateQuietUntil || pinnedRaw.length || gpGdHasOpenEventInspector())
+      ) {
+        return;
+      }
     }
-    if (!pinnedRaw.length) teardownGpGdBlock();
+    if (!pinnedRaw.length && !gpGdHasOpenEventInspector()) teardownGpGdBlock();
     if (hints.length) {
       gpGdTrace('no unified session match', hints.slice(0, 3));
       gpGdDiag('inject: SKIP — no unified session for hints', hints.slice(0, 5));
