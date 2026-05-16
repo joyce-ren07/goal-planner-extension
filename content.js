@@ -4197,6 +4197,7 @@
       alert('Could not add to Calendar. Make sure the extension has Calendar access.');
       btn.textContent = isEditing ? 'Save changes' : 'Create goal';
       btn.disabled = false;
+      scheduleGhostPreviewRefreshDebounced();
     }
   }
 
