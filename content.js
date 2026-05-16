@@ -6626,6 +6626,15 @@
       }, 220);
       return;
     }
+    if (ext?.isConnected) {
+      const shell =
+        ext.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]') ||
+        ext.parentElement;
+      if (shell instanceof HTMLElement && gpGdIsValidEventDetailInspectorShell(shell)) {
+        gpGdStabilizeMountedDetailBlock(ext, shell, null);
+        return;
+      }
+    }
     void gpGdHydrateMountedDetailDecoration();
   }
 
