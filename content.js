@@ -4911,6 +4911,29 @@
   let _gpGdPinnedAt = 0;
   let _gpGdOpenBurstGen = 0;
 
+  function gpGdResolveGoalChipFromEvent(e) {
+    const path =
+      e && typeof e.composedPath === 'function'
+        ? e.composedPath()
+        : [e?.target].filter(Boolean);
+    for (const n of path) {
+      if (!(n instanceof Element)) continue;
+      const direct =
+        n.matches?.('[data-eventchip]') ? /** @type {HTMLElement} */ (n) : n.closest?.('[data-eventchip]');
+      if (direct instanceof HTMLElement && gpGdChipLooksLikeGoalSession(direct)) return direct;
+      const ec = n.closest?.('[data-eventid]');
+      if (!ec) continue;
+      const inner = ec.querySelector('[data-eventchip].ext-goal-chip, [data-eventchip]');
+      if (inner instanceof HTMLElement && gpGdChipLooksLikeGoalSession(inner)) return inner;
+    }
+    return null;
+  }
+
+  function gpGdChipLooksLikeGoalSession(chip) {
+    if (!(chip instanceof HTMLElement)) return false;
+    return chip.classList.contains('ext-goal-chip') || chip.textContent.includes('🎯');
+  }
+
   function gpGdPinSessionHintsFromChip(chip) {
     if (!(chip instanceof HTMLElement)) return;
     const seen = new Set();
@@ -4927,6 +4950,14 @@
     add(chip.dataset.gpChipKey);
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
+    gpGdTrace('pinned session hints', hints);
+  }
+
+  function gpGdOnUserOpenedGoalSession(e) {
+    const chip = gpGdResolveGoalChipFromEvent(e);
+    if (!chip) return;
+    gpGdPinSessionHintsFromChip(chip);
+    scheduleGpGdInspectorOpenBurst();
   }
 
   function gpGdConsumePinnedSessionHints() {
