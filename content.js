@@ -6834,9 +6834,15 @@
 
       const obs = new MutationObserver(() => {
         if (!gpGdShouldRunDetailScan()) return;
-        if (gpGdDetailBlockReady() && Date.now() < _gpGdHydrateQuietUntil) return;
+        if (gpGdDetailBlockReady()) {
+          if (Date.now() < _gpGdHydrateQuietUntil) return;
+        } else if (gpGdIsGoalPlannerInspectorStillOpen()) {
+          gpGdRefreshPinnedSessionLease();
+        } else {
+          return;
+        }
         window.clearTimeout(_gpGdDomObsDebounce);
-        const debounceMs = gpGdDetailBlockReady() ? 200 : 48;
+        const debounceMs = gpGdDetailBlockReady() ? 200 : 56;
         _gpGdDomObsDebounce = window.setTimeout(() => scheduleGpGdDialogScan(), debounceMs);
       });
       obs.observe(document.documentElement || document.body, {
