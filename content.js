@@ -5773,6 +5773,7 @@
       }
     }
     __gpGdBlockEl = null;
+    if (!gpGdShouldRunDetailScan()) gpGdStopInspectorOpenWatch();
   }
 
   function scheduleGpGdDialogScan() {
