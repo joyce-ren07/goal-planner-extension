@@ -6075,9 +6075,15 @@
   /** Re-parent into the inspector card when the block escaped a wide calendar/grid ancestor. */
   function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
     if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
+    const now = Date.now();
+    if (now - _gpGdLastAlignAt < 450 && gpGdComposedSubtreeContains(dialogShell, wrap)) {
+      return true;
+    }
     const card = gpGdResolveInspectorCardRoot(dialogShell, wrap.dataset.gpGoalId || '');
     if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
-    return gpGdForceMountIntoCard(wrap, card, null);
+    const ok = gpGdForceMountIntoCard(wrap, card, null);
+    if (ok) _gpGdLastAlignAt = now;
+    return ok;
   }
 
   /** Walk up from a row parent until width matches the card (not the full overlay flex row). */
