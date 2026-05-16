@@ -6024,33 +6024,25 @@
 
     const barHintsCached = gpGdCollectLocationBarEventHints();
 
-    /** First dialog that yields a Planner hit wins (multi-open edge). */
-    for (const host of natives) {
-      const hintDedup = new Set();
-      const hints = [];
-      const pushHint = (h) => {
-        const s = h == null || h === '' ? '' : String(h).trim();
-        if (!s || hintDedup.has(s)) return;
-        hintDedup.add(s);
-        hints.push(s);
-      };
-      for (const h of pinnedExpanded) pushHint(h);
-      for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
-      for (const h of barHintsCached) pushHint(h);
+    const hintDedup = new Set();
+    const hints = [];
+    const pushHint = (h) => {
+      const s = h == null || h === '' ? '' : String(h).trim();
+      if (!s || hintDedup.has(s)) return;
+      hintDedup.add(s);
+      hints.push(s);
+    };
+    for (const h of pinnedExpanded) pushHint(h);
+    for (const h of gpCollectEventIdHintsFromRoot(host)) pushHint(h);
+    for (const h of barHintsCached) pushHint(h);
 
-      for (let hi = 0; hi < hints.length; hi++) {
-        const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
+    for (let hi = 0; hi < hints.length; hi++) {
+      const hit = gpFindUnifiedSessionForDomEventKey(unified, hints[hi]);
+      if (!hit?.goal?.id || !hit.session?.eventId) continue;
 
-        /** Only decorate Goal-managed sessions carrying 🎯 linkage (unified GoalSession hit). */
-        if (!hit?.goal?.id || !hit.session?.eventId) continue;
-
-        /** Mount into native metadata column; `dialogShell` used for repair observer + orphan cleanup. */
-        if (!(host instanceof HTMLElement)) continue;
-
-        gpGdTrace('session hit', hints[hi], hit.goal.id);
-        gpGdRenderDetailBlock(hit, hints[hi], host);
-        return;
-      }
+      gpGdTrace('session hit', hints[hi], hit.goal.id);
+      gpGdRenderDetailBlock(hit, hints[hi], host);
+      return;
     }
     teardownGpGdBlock();
     gpGdTrace('no unified session match', pinnedExpanded.slice(0, 3));
