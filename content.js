@@ -572,30 +572,50 @@
   }
 
   function paintGhostSessionsOnGrid(sessions, finalLabel, ghostFlags) {
-    removeGhostEvents();
-    if (!sessions || !sessions.length) return false;
+    if (!sessions || !sessions.length) {
+      removeGhostEvents();
+      return false;
+    }
+
+    if (_ghostScrollEl && _ghostScrollHandler) {
+      _ghostScrollEl.removeEventListener('scroll', _ghostScrollHandler);
+      _ghostScrollEl = null;
+      _ghostScrollHandler = null;
+    }
 
     const scrollCont = findCalendarScrollContainer();
-    if (!scrollCont) return false;
+    if (!scrollCont) {
+      removeGhostEvents();
+      return false;
+    }
 
     const hourPositions = findHourAbsolutePositions(scrollCont);
-    if (hourPositions.length < 2) return false;
+    if (hourPositions.length < 2) {
+      removeGhostEvents();
+      return false;
+    }
 
     hourPositions.sort((a, b) => a.hour - b.hour);
     const first = hourPositions[0];
     const last = hourPositions[hourPositions.length - 1];
     const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
-    if (pxPerHour <= 0) return false;
+    if (pxPerHour <= 0) {
+      removeGhostEvents();
+      return false;
+    }
     const absYAtHour0 = first.absY - first.hour * pxPerHour;
 
     const dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
-    if (!dayColumns.length) return false;
+    if (!dayColumns.length) {
+      removeGhostEvents();
+      return false;
+    }
 
     const goalLabel = finalLabel.length > 34 ? `${finalLabel.slice(0, 33)}…` : finalLabel;
-
+    /** Single layout read burst before patching preview DOM. */
     const contRect = scrollCont.getBoundingClientRect();
-    const ghostData = [];
 
+    const layouts = [];
     for (const session of sessions) {
       const start = new Date(session.isoStart);
       const end = new Date(session.isoEnd);
@@ -612,37 +632,81 @@
       const durationMin = (end - start) / 60000;
       const absTop = absYAtHour0 + (startMins / 60) * pxPerHour;
       const height = Math.max(20, (durationMin / 60) * pxPerHour);
-      const left = col.left + 2;
+      const leftPx = col.left + 2;
       const width = Math.max(10, col.width - 4);
-      const fixedTop = contRect.top + absTop - scrollCont.scrollTop;
-
-      const ghost = document.createElement('div');
-      ghost.className = 'goal-ghost-event';
-      ghost.setAttribute('data-gp-ghost-preview', 'true');
-      if (ghostFlags?.markNonPersisted) ghost.setAttribute('data-gp-ghost-ephemeral', 'true');
-      ghost.setAttribute('aria-hidden', 'true');
-      ghost.style.cssText =
-        `left:${left}px;top:${fixedTop}px;width:${width}px;height:${height}px;`;
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'goal-ghost-event-name';
-      nameEl.textContent = goalLabel;
-      ghost.appendChild(nameEl);
-      document.body.appendChild(ghost);
-      ghostData.push({ el: ghost, absTop, left, width, height });
+      const topPx = contRect.top + absTop - scrollCont.scrollTop;
+      layouts.push({
+        key: ghostPreviewSlotKey(session),
+        absTop,
+        left: leftPx,
+        width,
+        height,
+        topPx,
+      });
     }
 
-    if (!ghostData.length) return false;
+    if (!layouts.length) {
+      removeGhostEvents();
+      return false;
+    }
 
-    let _raf = null;
+    const overlayRoot = ensureGpGhostPreviewRoot();
+    const nextKeys = new Set(layouts.map((x) => x.key));
+    [...overlayRoot.children].forEach((child) => {
+      const slot = child.dataset?.gpGhostSlot;
+      if (!slot || !nextKeys.has(slot)) child.remove();
+    });
+
+    const scrollSlots = [];
+
+    layouts.forEach((L) => {
+      let ghost = [...overlayRoot.children].find((c) => c.dataset.gpGhostSlot === L.key) || null;
+      const created = !ghost;
+      if (!ghost) {
+        ghost = document.createElement('div');
+        ghost.dataset.gpGhostSlot = L.key;
+        ghost.className = 'goal-ghost-event';
+        ghost.setAttribute('data-gp-ghost-preview', 'true');
+        ghost.setAttribute('aria-hidden', 'true');
+        const span = document.createElement('span');
+        span.className = 'goal-ghost-event-name';
+        ghost.appendChild(span);
+        overlayRoot.appendChild(ghost);
+      }
+
+      if (ghostFlags?.markNonPersisted) ghost.setAttribute('data-gp-ghost-ephemeral', 'true');
+      else ghost.removeAttribute('data-gp-ghost-ephemeral');
+
+      const nameEl = ghost.querySelector('.goal-ghost-event-name');
+      if (nameEl && nameEl.textContent !== goalLabel) nameEl.textContent = goalLabel;
+
+      ghost.style.left = '0';
+      ghost.style.top = '0';
+      ghost.style.width = `${L.width}px`;
+      ghost.style.height = `${L.height}px`;
+      ghost.style.transform = `translate3d(${L.left}px,${L.topPx}px,0)`;
+
+      if (created) {
+        ghost.classList.add('gp-ghost-new-mount');
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => ghost.classList.remove('gp-ghost-new-mount'));
+        });
+      }
+
+      scrollSlots.push({ el: ghost, absTop: L.absTop, left: L.left });
+    });
+
     _ghostScrollEl = scrollCont;
+    let scrollRaf = null;
     _ghostScrollHandler = () => {
-      if (_raf) return;
-      _raf = requestAnimationFrame(() => {
-        _raf = null;
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = null;
         const ct = scrollCont.getBoundingClientRect().top;
         const st = scrollCont.scrollTop;
-        for (const g of ghostData) g.el.style.top = `${ct + g.absTop - st}px`;
+        for (const g of scrollSlots) {
+          g.el.style.transform = `translate3d(${g.left}px,${ct + g.absTop - st}px,0)`;
+        }
       });
     };
     scrollCont.addEventListener('scroll', _ghostScrollHandler, { passive: true });
