@@ -27,15 +27,18 @@
     },
   };
   const FOLDER_LABELS = {
+    overdue: 'Overdue',
     today: 'Due Today',
     tomorrow: 'Due Tomorrow',
     later: 'Due Later',
     completed: 'Completed',
   };
+
+  const SIDEBAR_FOLDER_ORDER = ['overdue', 'today', 'tomorrow', 'later', 'completed'];
   const KANBAN_STORAGE_KEY = 'gpKanbanBoardState';
   const FORCE_CLEAR_KANBAN_MARKER = 'gpForceClearKanbanBoard';
   const KANBAN_COLUMN_DEFS = [
-    { id: 'todo', label: 'TO-DO' },
+    { id: 'todo', label: 'PLANNED' },
     { id: 'progress', label: 'IN PROGRESS' },
     { id: 'done', label: 'DONE' },
   ];
@@ -87,7 +90,7 @@
   const MYTASKS_MESSAGE_SOURCE = 'mytasks-kanban-extension';
   const KANBAN_LIST_MATCHERS = [
     { id: 'all', pattern: /^\s*my tasks?\s*$/i },
-    { id: 'todo', pattern: /\bto[\s-]*do\b/i },
+    { id: 'todo', pattern: /\bplanned\b|\bto[\s-]*do\b/i },
     { id: 'progress', pattern: /\bin progress\b/i },
     { id: 'done', pattern: /^\s*done\s*$/i },
   ];
@@ -433,8 +436,9 @@
   const SIDEBAR_MARKUP = `
 <div id="gp-panel" class="mytasks-sidebar" aria-hidden="true">
   <div class="gp-card" id="gp-card">
-    <header class="gp-header gp-header--tasks">
-      <h2 class="gp-header-title">My Tasks</h2>
+    <div class="gp-sidebar-sticky-head">
+      <header class="gp-header gp-header--tasks">
+        <h2 class="gp-header-title">My Tasks</h2>
       <button class="gp-icon-btn" id="gp-close-btn" type="button" title="Close" aria-label="Close tasks panel">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -451,9 +455,24 @@
         </svg>
       </span>
       <span class="gp-create-task-label">Create task</span>
-    </button>
+      </button>
+    </div>
 
     <div class="gp-tasks-accordion" id="gp-tasks-accordion">
+      <section class="gp-task-folder open" data-folder="overdue">
+        <div class="gp-task-folder-header">
+          <button class="gp-task-folder-toggle" type="button" aria-expanded="true" aria-label="Toggle Overdue tasks">
+            <svg class="gp-task-folder-chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"></polyline>
+            </svg>
+          </button>
+          <span class="gp-task-folder-label">Overdue (0)</span>
+        </div>
+        <div class="gp-task-folder-panel">
+          <div class="gp-task-folder-panel-inner"></div>
+        </div>
+      </section>
+
       <section class="gp-task-folder open" data-folder="today">
         <div class="gp-task-folder-header">
           <button class="gp-task-folder-toggle" type="button" aria-expanded="true" aria-label="Toggle Due Today tasks">
@@ -969,7 +988,7 @@
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    if (dueDay < today) return 'today';
+    if (dueDay < today) return 'overdue';
     if (dueDay.getTime() === today.getTime()) return 'today';
     if (dueDay.getTime() === tomorrow.getTime()) return 'tomorrow';
     return 'later';
@@ -1781,6 +1800,108 @@
     return gpMkDueEditorTarget?.scheduleEl || null;
   }
 
+  /** Find schedule UI nodes whether they live in the card or the body portal. */
+  function queryMkDueSchedulePart(scheduleEl, selector) {
+    if (!scheduleEl || !selector) return null;
+    const inCard = scheduleEl.querySelector(selector);
+    if (inCard) return inCard;
+    return document.getElementById('gp-mk-due-portal')?.querySelector(selector) || null;
+  }
+
+  function getMkDuePortal() {
+    let portal = document.getElementById('gp-mk-due-portal');
+    if (!portal) {
+      portal = document.createElement('div');
+      portal.id = 'gp-mk-due-portal';
+      portal.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(portal);
+    }
+    return portal;
+  }
+
+  function mountMkDueDropdownToPortal(el, mountKey) {
+    const target = gpMkDueEditorTarget;
+    if (!el || !target) return;
+    if (!target[mountKey]) {
+      target[mountKey] = { parent: el.parentElement, next: el.nextSibling };
+    }
+    const portal = getMkDuePortal();
+    if (el.parentElement !== portal) portal.appendChild(el);
+  }
+
+  function restoreMkDueDropdownFromPortal(el, mountKey) {
+    const target = gpMkDueEditorTarget;
+    const mount = target?.[mountKey];
+    if (!el || !mount?.parent) return;
+    if (el.parentElement === mount.parent) return;
+    if (mount.next && mount.next.parentNode === mount.parent) {
+      mount.parent.insertBefore(el, mount.next);
+    } else {
+      mount.parent.appendChild(el);
+    }
+    el.style.position = '';
+    el.style.left = '';
+    el.style.top = '';
+    el.style.right = '';
+    el.style.width = '';
+    el.style.zIndex = '';
+  }
+
+  function positionMkDueDateDropdown(cal, dateLink) {
+    if (!cal || !dateLink) return;
+    const r = dateLink.getBoundingClientRect();
+    const w = Math.min(288, window.innerWidth - 16);
+    let left = r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    cal.style.position = 'fixed';
+    cal.style.left = `${left}px`;
+    cal.style.top = `${r.bottom + 4}px`;
+    cal.style.right = 'auto';
+    cal.style.width = `${w}px`;
+    cal.style.zIndex = '2147483647';
+  }
+
+  function positionMkDueTimeDropdown(timeDropdown, timeLink) {
+    if (!timeDropdown || !timeLink) return;
+    const r = timeLink.getBoundingClientRect();
+    const w = Math.min(320, window.innerWidth - 16);
+    let left = r.right - w;
+    if (left < 8) left = Math.max(8, r.left);
+    if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+    timeDropdown.style.position = 'fixed';
+    timeDropdown.style.left = `${left}px`;
+    timeDropdown.style.top = `${r.bottom + 4}px`;
+    timeDropdown.style.right = 'auto';
+    timeDropdown.style.width = `${w}px`;
+    timeDropdown.style.zIndex = '2147483647';
+  }
+
+  function syncMkDueDropdownPortal() {
+    const scheduleEl = getActiveInlineSchedule();
+    const target = gpMkDueEditorTarget;
+    if (!scheduleEl || !target) return;
+
+    const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
+    const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
+    const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
+    const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
+
+    if (target.dateDropdownOpen && cal && dateLink) {
+      mountMkDueDropdownToPortal(cal, 'calMount');
+      positionMkDueDateDropdown(cal, dateLink);
+    } else if (cal) {
+      restoreMkDueDropdownFromPortal(cal, 'calMount');
+    }
+
+    if (target.timeDropdownOpen && timeDropdown && timeLink) {
+      mountMkDueDropdownToPortal(timeDropdown, 'timeMount');
+      positionMkDueTimeDropdown(timeDropdown, timeLink);
+      scrollMkDueTimeListsToDraft();
+    } else if (timeDropdown) {
+      restoreMkDueDropdownFromPortal(timeDropdown, 'timeMount');
+    }
+  }
+
   function fillInlineTimeList(listEl) {
     if (!listEl || listEl.dataset.gpBuilt) return;
     const frag = document.createDocumentFragment();
@@ -1906,10 +2027,19 @@
     calNext.className = 'gp-ct-cal-nav-btn gp-inline-schedule-cal-next';
     calNext.setAttribute('aria-label', 'Next month');
     calNext.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    const calClose = document.createElement('button');
+    calClose.type = 'button';
+    calClose.className = 'gp-ct-cal-nav-btn gp-inline-schedule-cal-close';
+    calClose.setAttribute('aria-label', 'Close calendar');
+    calClose.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    const calHeadActions = document.createElement('div');
+    calHeadActions.className = 'gp-ct-cal-head-actions';
     calNav.appendChild(calPrev);
     calNav.appendChild(calNext);
+    calHeadActions.appendChild(calNav);
+    calHeadActions.appendChild(calClose);
     calHead.appendChild(calMo);
-    calHead.appendChild(calNav);
+    calHead.appendChild(calHeadActions);
     const weekdays = document.createElement('div');
     weekdays.className = 'gp-ct-cal-weekdays';
     weekdays.setAttribute('aria-hidden', 'true');
@@ -1988,9 +2118,9 @@
     if (!scheduleEl || !target) return;
     const dateOpen = Boolean(target.dateDropdownOpen);
     const timeOpen = Boolean(target.timeDropdownOpen);
-    const cal = scheduleEl.querySelector('.gp-inline-schedule-cal');
+    const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
     const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
-    const timeDropdown = scheduleEl.querySelector('.gp-inline-schedule-time-dropdown');
+    const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
     const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
     if (cal) {
       if (dateOpen) {
@@ -2023,6 +2153,7 @@
     const allDay = Boolean(gpMkDueEditorDraft?.allDay);
     if (timeLink) timeLink.hidden = false;
     scheduleEl.classList.toggle('is-all-day', allDay);
+    syncMkDueDropdownPortal();
   }
 
   function closeInlineScheduleDropdowns(scheduleEl) {
@@ -2038,6 +2169,10 @@
     if (!target) return;
     const { dueBtn, scheduleEl } = target;
     closeInlineScheduleDropdowns(scheduleEl);
+    const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
+    const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
+    if (cal) restoreMkDueDropdownFromPortal(cal, 'calMount');
+    if (timeDropdown) restoreMkDueDropdownFromPortal(timeDropdown, 'timeMount');
     if (scheduleEl && gpMkDueEditorDraft) {
       syncScheduleElFromDraft(scheduleEl, gpMkDueEditorDraft);
     }
@@ -2064,8 +2199,8 @@
   function renderMkDueCalendar() {
     const scheduleEl = getActiveInlineSchedule();
     if (!scheduleEl) return;
-    const grid = scheduleEl.querySelector('.gp-inline-schedule-cal-grid');
-    const mo = scheduleEl.querySelector('.gp-inline-schedule-cal-month-label');
+    const grid = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal-grid');
+    const mo = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal-month-label');
     if (!grid || !mo) return;
 
     const selIso = getMkDueCalSelectedIso();
@@ -2114,10 +2249,20 @@
       b.dataset.iso = iso;
       grid.appendChild(b);
     }
+
+    const target = gpMkDueEditorTarget;
+    const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
+    const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
+    if (target?.dateDropdownOpen && cal && dateLink) {
+      positionMkDueDateDropdown(cal, dateLink);
+    }
   }
 
   function highlightMkDueTimeListSelection(scheduleEl, field, hm) {
-    const list = scheduleEl?.querySelector(`.gp-inline-schedule-time-list[data-time-field="${field}"]`);
+    const list = queryMkDueSchedulePart(
+      scheduleEl,
+      `.gp-inline-schedule-time-list[data-time-field="${field}"]`,
+    );
     if (!list) return;
     list.querySelectorAll('.gp-ct-time-opt').forEach((opt) => {
       const sel = opt.dataset.hm === hm;
@@ -2127,7 +2272,10 @@
   }
 
   function scrollMkDueTimeListToHm(scheduleEl, field, hm) {
-    const list = scheduleEl?.querySelector(`.gp-inline-schedule-time-list[data-time-field="${field}"]`);
+    const list = queryMkDueSchedulePart(
+      scheduleEl,
+      `.gp-inline-schedule-time-list[data-time-field="${field}"]`,
+    );
     if (!list) return;
     const opt = list.querySelector(`.gp-ct-time-opt[data-hm="${hm}"]`);
     if (!opt) return;
@@ -2155,13 +2303,13 @@
     target.timeDropdownOpen = false;
     const opening = !target.dateDropdownOpen;
     target.dateDropdownOpen = opening;
+    applyMkDueDropdownUi();
     if (opening) {
       const iso = gpMkDueEditorDraft?.dueDate || '';
       const base = parseDueDateIsoLocal(iso) || new Date();
       gpMkDueCalViewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
       renderMkDueCalendar();
     }
-    applyMkDueDropdownUi();
   }
 
   function openMkDueTimeDropdown() {
@@ -2170,7 +2318,6 @@
     target.dateDropdownOpen = false;
     const opening = !target.timeDropdownOpen;
     target.timeDropdownOpen = opening;
-    if (opening) scrollMkDueTimeListsToDraft();
     applyMkDueDropdownUi();
   }
 
@@ -2211,13 +2358,29 @@
     if (!target) return;
     target.timeDropdownOpen = false;
     target.dateDropdownOpen = open;
+    applyMkDueDropdownUi();
     if (open) {
       const iso = gpMkDueEditorDraft?.dueDate || '';
       const base = parseDueDateIsoLocal(iso) || new Date();
       gpMkDueCalViewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
       renderMkDueCalendar();
     }
-    applyMkDueDropdownUi();
+  }
+
+  function closeMkDueDateDropdown(revertDraft = true) {
+    const target = gpMkDueEditorTarget;
+    if (!target) return;
+    if (revertDraft && gpMkDueEditorDraft && target.host) {
+      const host = target.host;
+      const restored = host.dataset.dueDate
+        || formatDueDateIso(parseTaskDueDate(
+          host.querySelector('.gp-inline-schedule-date-label')?.textContent,
+        ))
+        || gpMkDueEditorDraft.dueDate;
+      gpMkDueEditorDraft.dueDate = restored;
+      syncMkDueEditorUi();
+    }
+    setMkDueDateDropdownOpen(false);
   }
 
   function setMkDueTimeDropdownOpen(open) {
@@ -2231,8 +2394,22 @@
 
   async function commitMkDueEditorDraft() {
     if (!gpMkDueEditorTarget || !gpMkDueEditorDraft) return;
-    const { taskId } = gpMkDueEditorTarget;
+    const { taskId, host } = gpMkDueEditorTarget;
     const draft = gpMkDueEditorDraft;
+    if (host) {
+      if (draft.dueDate) host.dataset.dueDate = draft.dueDate;
+      if (draft.allDay) {
+        host.dataset.allDay = 'true';
+        delete host.dataset.dueTimeStart;
+        delete host.dataset.dueTimeEnd;
+      } else {
+        delete host.dataset.allDay;
+        if (draft.dueTimeStart) host.dataset.dueTimeStart = draft.dueTimeStart;
+        else delete host.dataset.dueTimeStart;
+        if (draft.dueTimeEnd) host.dataset.dueTimeEnd = draft.dueTimeEnd;
+        else delete host.dataset.dueTimeEnd;
+      }
+    }
     await updateKanbanTaskSchedule(taskId, {
       dueDate: draft.dueDate,
       dueTimeStart: draft.dueTimeStart,
@@ -2280,7 +2457,10 @@
     document.documentElement.dataset.gpMkDueEditorWired = 'true';
 
     document.addEventListener('click', (e) => {
-      const scheduleEl = e.target.closest('.gp-inline-schedule');
+      let scheduleEl = e.target.closest('.gp-inline-schedule');
+      if (!scheduleEl && e.target.closest('#gp-mk-due-portal') && gpMkDueEditorTarget?.scheduleEl) {
+        scheduleEl = gpMkDueEditorTarget.scheduleEl;
+      }
       if (!scheduleEl) return;
 
       const dueBtn = scheduleEl.closest('.mk-card-due-btn, .gp-task-due-btn');
@@ -2303,7 +2483,11 @@
         return;
       }
 
-      if (scheduleEl !== gpMkDueEditorTarget?.scheduleEl) return;
+      const inMkDuePortal = Boolean(e.target.closest('#gp-mk-due-portal'));
+      if (!inMkDuePortal && scheduleEl !== gpMkDueEditorTarget?.scheduleEl) return;
+      if (inMkDuePortal && !gpMkDueEditorTarget?.dateDropdownOpen && !gpMkDueEditorTarget?.timeDropdownOpen) {
+        return;
+      }
 
       if (e.target.closest('.gp-inline-schedule-cal-prev')) {
         e.preventDefault();
@@ -2323,22 +2507,24 @@
         return;
       }
 
+      if (e.target.closest('.gp-inline-schedule-cal-close')) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeMkDueDateDropdown(true);
+        return;
+      }
+
       const cell = e.target.closest('.gp-inline-schedule-cal-grid .gp-ct-cal-cell');
-      if (cell?.dataset?.iso && gpMkDueEditorDraft) {
+      if (cell?.dataset?.iso && gpMkDueEditorDraft && gpMkDueEditorTarget) {
         e.preventDefault();
         e.stopPropagation();
         const iso = cell.dataset.iso;
-        const picked = parseDueDateIsoLocal(iso);
-        if (picked) {
-          gpMkDueCalViewMonth = new Date(picked.getFullYear(), picked.getMonth(), 1);
-        }
         gpMkDueEditorDraft.dueDate = iso;
-        syncMkDueEditorUi();
-        renderMkDueCalendar();
-        if (gpMkDueEditorTarget) {
-          gpMkDueEditorTarget.dateDropdownOpen = false;
-          applyMkDueDropdownUi();
+        if (gpMkDueEditorTarget.host) {
+          gpMkDueEditorTarget.host.dataset.dueDate = iso;
         }
+        syncMkDueEditorUi();
+        closeMkDueDateDropdown(false);
         void commitMkDueEditorDraft();
         return;
       }
@@ -2358,13 +2544,29 @@
         gpMkDueEditorDraft.allDay = false;
         syncMkDueEditorUi();
         highlightMkDueTimeListSelection(scheduleEl, timeField, hm);
+        if (gpMkDueEditorTarget) {
+          gpMkDueEditorTarget.timeDropdownOpen = false;
+          applyMkDueDropdownUi();
+        }
         void commitMkDueEditorDraft();
       }
     });
 
+    const repositionMkDueDropdowns = () => {
+      if (!gpMkDueEditorTarget) return;
+      if (gpMkDueEditorTarget.dateDropdownOpen || gpMkDueEditorTarget.timeDropdownOpen) {
+        syncMkDueDropdownPortal();
+      }
+    };
+    window.addEventListener('resize', repositionMkDueDropdowns);
+    window.addEventListener('scroll', repositionMkDueDropdowns, true);
+
     document.addEventListener('change', (e) => {
       if (!e.target.classList?.contains('gp-inline-schedule-allday')) return;
-      if (e.target.closest('.gp-inline-schedule') !== gpMkDueEditorTarget?.scheduleEl) return;
+      if (!gpMkDueEditorTarget?.scheduleEl) return;
+      const inSchedule = e.target.closest('.gp-inline-schedule') === gpMkDueEditorTarget.scheduleEl;
+      const inPortal = Boolean(e.target.closest('#gp-mk-due-portal'));
+      if (!inSchedule && !inPortal) return;
       if (!gpMkDueEditorDraft) return;
       gpMkDueEditorDraft.allDay = Boolean(e.target.checked);
       syncMkDueEditorUi();
@@ -2755,6 +2957,7 @@
     if (isSidebarTitleEditActive() || isMkDueEditorActive()) return;
 
     const buckets = {
+      overdue: [],
       today: [],
       tomorrow: [],
       later: [],
@@ -2773,17 +2976,25 @@
         }
 
         const folderKey = getDeadlineFolderKey(getTaskDueDateFromCard(task));
-        buckets[folderKey].push({ task, columnId: id });
+        if (buckets[folderKey]) {
+          buckets[folderKey].push({ task, columnId: id });
+        }
       });
     });
 
-    ['today', 'tomorrow', 'later', 'completed'].forEach((folderKey) => {
+    buckets.overdue.sort((a, b) => {
+      const aDate = getTaskDueDateFromCard(a.task)?.getTime() || 0;
+      const bDate = getTaskDueDateFromCard(b.task)?.getTime() || 0;
+      return aDate - bDate;
+    });
+
+    SIDEBAR_FOLDER_ORDER.forEach((folderKey) => {
       const folder = accordion.querySelector(`[data-folder="${folderKey}"]`);
       const inner = folder?.querySelector('.gp-task-folder-panel-inner');
       if (!inner) return;
 
       inner.innerHTML = '';
-      buckets[folderKey].forEach(({ task, columnId }) => {
+      (buckets[folderKey] || []).forEach(({ task, columnId }) => {
         inner.appendChild(renderSidebarTaskRow(task, columnId, state.tags));
       });
     });
@@ -3870,7 +4081,7 @@
           closeCreateTaskCalendar();
         }
         if (e.target.closest(
-          '.gp-inline-schedule-date-link, .gp-inline-schedule-time-link, .gp-inline-schedule-dropdown',
+          '.gp-inline-schedule-date-link, .gp-inline-schedule-time-link, .gp-inline-schedule-dropdown, #gp-mk-due-portal',
         )) {
           return;
         }
@@ -3882,7 +4093,7 @@
           const inDueLine = e.target.closest('.mk-card-due-btn, .gp-task-due-btn');
           const inDateZone = e.target.closest('.gp-inline-schedule-date-wrap');
           const inTimeZone = e.target.closest('.gp-inline-schedule-time-wrap');
-          const inDropdown = e.target.closest('.gp-inline-schedule-dropdown');
+          const inDropdown = e.target.closest('.gp-inline-schedule-dropdown, #gp-mk-due-portal');
           if (!inHost) {
             closeMkDueEditor();
           } else if (inDueLine && (inDateZone || inTimeZone || inDropdown)) {
@@ -3908,6 +4119,9 @@
       if (cal && !cal.hidden) positionCreateTaskCalendar();
       const timePop = document.getElementById('gp-ct-time-pop');
       if (timePop && !timePop.hidden) positionCreateTaskTimePop();
+      if (gpMkDueEditorTarget?.dateDropdownOpen || gpMkDueEditorTarget?.timeDropdownOpen) {
+        syncMkDueDropdownPortal();
+      }
     });
 
     document.querySelector('.gp-ct-segmented')?.addEventListener('click', (e) => {
@@ -4118,7 +4332,12 @@
       }
       if (gpMkDueEditorTarget?.scheduleEl) {
         const { dateDropdownOpen, timeDropdownOpen, scheduleEl } = gpMkDueEditorTarget;
-        if (dateDropdownOpen || timeDropdownOpen) {
+        if (dateDropdownOpen) {
+          closeMkDueDateDropdown(true);
+          e.preventDefault();
+          return;
+        }
+        if (timeDropdownOpen) {
           closeInlineScheduleDropdowns(scheduleEl);
           e.preventDefault();
           return;
