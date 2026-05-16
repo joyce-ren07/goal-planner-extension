@@ -964,7 +964,7 @@
   background: rgba(255, 215, 211, 0.36);
   border-left-color: rgba(211, 86, 75, 0.48);
   outline-color: rgba(211, 86, 75, 0.32);
-  animation-name: gp-ghost-enter-fade-ephemeral;
+  animation: gp-ghost-enter-fade-ephemeral 240ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 .goal-ghost-event[data-gp-ghost-ephemeral='true'] .goal-ghost-event-name {
   color: rgba(211, 86, 75, 0.78);
