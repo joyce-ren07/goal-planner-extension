@@ -3784,7 +3784,7 @@
     document.getElementById('gp-confirm-add').textContent = 'Save changes';
 
     // Skip form screen — jump straight to review/suggestions screen
-    goToSuggestions();
+    await goToSuggestions();
   }
 
   // ── Pre-fill the recurrence modal with stored values ──
