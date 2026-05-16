@@ -5063,6 +5063,7 @@
     add(chip.dataset.gpChipKey);
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
+    gpGdMarkDetailScanActive(15000);
     const r = chip.getBoundingClientRect();
     _gpGdAnchorX = r.left + r.width / 2;
     _gpGdAnchorY = r.top + r.height / 2;
