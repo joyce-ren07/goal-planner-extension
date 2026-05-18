@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   'use strict';
 
   const PANEL_WIDTH_PX = 341;
@@ -1023,7 +1023,18 @@
   }
 
   function setupRailObserver() {
-    // Goals branch owns the Calendar right-rail button (#gp-sidebar-btn).
+    const scheduleMount = () => {
+      if (railMountDebounce) clearTimeout(railMountDebounce);
+      railMountDebounce = setTimeout(() => {
+        railMountDebounce = null;
+        mountRailButton();
+      }, 120);
+    };
+
+    const observer = new MutationObserver(scheduleMount);
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', scheduleMount);
+    scheduleMount();
   }
 
   function getCalendarMainEl() {
@@ -1977,8 +1988,8 @@
     const base = formatKanbanDueLabel(isoDate);
     const a = formatTimeCompact12(normalizeDueHm(startHm));
     const b = formatTimeCompact12(normalizeDueHm(endHm));
-    if (a && b) return `${base} ┬╖ ${a}ΓÇô${b}`;
-    if (a) return `${base} ┬╖ ${a}`;
+    if (a && b) return `${base} · ${a}–${b}`;
+    if (a) return `${base} · ${a}`;
     return base;
   }
 
@@ -2510,7 +2521,7 @@
     if (layout === 'single') return start || end || '6:30pm';
     const a = start || '6:30pm';
     const b = end || '7:30pm';
-    return `${a}ΓÇô${b}`;
+    return `${a}–${b}`;
   }
 
   function getDraftTimeLayout(draft) {
@@ -4863,7 +4874,7 @@
     starBtn.draggable = false;
     starBtn.setAttribute('aria-label', 'Star task');
     starBtn.setAttribute('aria-pressed', task.starred ? 'true' : 'false');
-    starBtn.textContent = task.starred ? 'Γÿà' : 'Γÿå';
+    starBtn.textContent = task.starred ? '★' : '☆';
     starBtn.classList.toggle('is-starred', Boolean(task.starred));
 
     const headerActions = document.createElement('div');
@@ -5079,7 +5090,7 @@
       dismiss.className = 'mytasks-kanban__filter-pill-dismiss';
       dismiss.dataset.filterPillDismiss = 'true';
       dismiss.setAttribute('aria-label', `Remove ${pill.label} filter`);
-      dismiss.textContent = '├ù';
+      dismiss.textContent = '×';
 
       item.appendChild(label);
       item.appendChild(dismiss);
@@ -5387,7 +5398,7 @@
                   <div class="gp-ct-cal-grid" id="gp-ct-cal-grid"></div>
                 </div>
               </div>
-              <span class="gp-ct-time-dash" aria-hidden="true">ΓÇö</span>
+              <span class="gp-ct-time-dash" aria-hidden="true">—</span>
               <div class="gp-ct-time-slot">
                 <input type="hidden" name="dueTimeStart" id="gp-ct-time-start" value="">
                 <button type="button" class="gp-ct-time-btn" id="gp-ct-time-start-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="Start time">
@@ -5422,7 +5433,7 @@
             <span class="gp-ct-new-tag-dot" id="gp-ct-new-tag-dot"></span>
             <input type="text" id="gp-ct-new-tag-input" class="gp-ct-new-tag-input" maxlength="40" placeholder="Tag name" aria-label="New tag name">
             <button type="button" class="gp-ct-btn gp-ct-btn--primary gp-ct-btn--small" id="gp-ct-new-tag-add">Add</button>
-            <button type="button" class="gp-ct-icon-btn gp-ct-icon-btn--small" id="gp-ct-new-tag-cancel" aria-label="Cancel new tag">├ù</button>
+            <button type="button" class="gp-ct-icon-btn gp-ct-icon-btn--small" id="gp-ct-new-tag-cancel" aria-label="Cancel new tag">×</button>
             <div id="gp-ct-color-pop" class="gp-ct-color-pop" hidden role="listbox" aria-label="Tag color"></div>
           </div>
         </div>
@@ -5799,7 +5810,7 @@
     del.type = 'button';
     del.className = 'gp-ct-swatch-delete';
     del.setAttribute('aria-label', 'Remove color');
-    del.textContent = '├ù';
+    del.textContent = '×';
 
     const tip = document.createElement('span');
     tip.className = 'gp-ct-swatch-delete-tip';
@@ -6296,7 +6307,7 @@
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
         </button>
-        <button type="button" class="gp-mt-icon-btn" data-action="del" aria-label="Delete tag">├ù</button>
+        <button type="button" class="gp-mt-icon-btn" data-action="del" aria-label="Delete tag">×</button>
       `;
       const hit = row.querySelector('.gp-mt-color-hit');
       const dot = hit?.querySelector('.gp-mt-dot');
@@ -6866,7 +6877,7 @@
     if (task?.allDay) return '';
     const start = formatTimeCompact12(normalizeDueHm(task?.dueTimeStart));
     const end = formatTimeCompact12(normalizeDueHm(task?.dueTimeEnd));
-    if (start && end) return `${start}ΓÇô${end}`;
+    if (start && end) return `${start}–${end}`;
     if (start) return start;
     return '';
   }
@@ -8227,7 +8238,7 @@
 
   function isExtensionTasksControl(el) {
     return Boolean(
-      el?.closest('#gp-tasks-panel, #gp-panel, .mytasks-sidebar, #gp-sidebar-btn, .gp-sidebar-btn-shell, #gp-sidebar-rail')
+      el?.closest('#gp-panel, .mytasks-sidebar, #gp-sidebar-btn, .gp-sidebar-btn-shell, #gp-sidebar-rail')
       || /\bmy tasks\b/i.test(getElementLabel(el)),
     );
   }
@@ -8410,7 +8421,7 @@
   function isNativeTasksManagedElement(el) {
     if (!(el instanceof Element)) return false;
     return Boolean(
-      el.closest('.mytasks-kanban, .mytasks-native-tasks-nav, .mytasks-native-tasks-layout, #gp-tasks-panel, .mytasks-sidebar'),
+      el.closest('.mytasks-kanban, .mytasks-native-tasks-nav, .mytasks-native-tasks-layout, #gp-tasks-panel, #gp-panel, .mytasks-sidebar'),
     );
   }
 
@@ -9840,7 +9851,7 @@
     if (fromField) return fromField;
     const dueText = String(task?.due || '');
     const range = dueText.match(
-      /(\d{1,2}(?::\d{2})?\s*(?:am|pm))(?:\s*[ΓÇô-]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm))?/i,
+      /(\d{1,2}(?::\d{2})?\s*(?:am|pm))(?:\s*[–-]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm))?/i,
     );
     if (range?.[1]) return parseFlexibleTimeToHm(range[1]);
     return '';
@@ -10066,7 +10077,7 @@
     mountSidebar();
     setupCalendarDueFolderRefreshListeners();
     await ensurePaletteCaches();
-    // Rail button: use extension toolbar (background.js); goals use #gp-sidebar-btn.
+    setupRailObserver();
     setupNativeTasksKanbanObserver();
     setupCalendarWeekTaskOverlay();
     void syncTaskViewsFromStorage();
