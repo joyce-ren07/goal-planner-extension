@@ -1191,7 +1191,12 @@
       wrap.id = 'gp-rail-fallback';
       document.body.appendChild(wrap);
     }
-    wrap.style.display = 'flex';
+    // Only show the wrap if there's actually a rail to anchor against.
+    // positionRailFallback would otherwise immediately hide it again when
+    // no rail is present (e.g. GCal Tasks view), causing a visible flicker.
+    const hasRail = !!findRailByStructure();
+    const desiredDisplay = hasRail ? 'flex' : 'none';
+    if (wrap.style.display !== desiredDisplay) wrap.style.display = desiredDisplay;
     if (btn.parentElement !== wrap) wrap.replaceChildren(btn);
     positionRailFallback();
   }
@@ -1223,16 +1228,16 @@
     const shell = document.getElementById('gp-rail-slot');
     const wrap = document.getElementById('gp-rail-fallback');
     if (shell?.isConnected && findRailByStructure()?.contains(shell)) {
-      if (wrap) wrap.style.display = 'none';
+      if (wrap && wrap.style.display !== 'none') wrap.style.display = 'none';
       return;
     }
     if (!wrap) return;
-    wrap.style.display = 'flex';
 
     const btn = document.getElementById('gp-sidebar-btn');
     const btnH = btn?.offsetHeight || 40;
     const gap = 6;
     const rail = findRailByStructure();
+    let desiredCss;
     if (rail) {
       const r = rail.getBoundingClientRect();
       const rightPx = window.innerWidth - r.right;
@@ -1242,15 +1247,22 @@
         const tr = tips.getBoundingClientRect();
         topPx = Math.max(r.top + 4, tr.top - btnH - gap);
       }
-      wrap.style.cssText =
+      desiredCss =
         `position:fixed;right:${rightPx}px;top:${topPx}px;width:${r.width}px;z-index:10000;` +
         'display:flex;flex-direction:column;align-items:center;padding:0;pointer-events:none;';
+    } else {
+      // No rail in the current view (e.g. GCal Tasks view, settings, etc.).
+      // Hide the fallback entirely instead of positioning it relative to the
+      // header — the button has no business floating in a non-calendar view,
+      // and chasing a moving header makes the button visibly jump as other
+      // scripts (like shannon's kanban) reflow the page.
+      if (wrap.style.display !== 'none') wrap.style.display = 'none';
       return;
     }
-    const hdrH = getGCalHeaderBottom();
-    wrap.style.cssText =
-      `position:fixed;right:0;top:${hdrH}px;z-index:10000;display:flex;flex-direction:column;` +
-      'align-items:center;padding:0;pointer-events:none;';
+    // Idempotency: skip the style write if the cssText is already correct.
+    // Setting style.cssText is an attribute change, but the broader concern
+    // is downstream layout work — when nothing changed, we want a true no-op.
+    if (wrap.style.cssText !== desiredCss) wrap.style.cssText = desiredCss;
   }
 
   function setupRailFallbackPositioner() {
