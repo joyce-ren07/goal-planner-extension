@@ -4909,37 +4909,45 @@
 
   // ── Color labels (GCal-style "Your color labels" picker) ──
   const GP_COLOR_LABELS_KEY = 'gp_color_labels';
-  /**
-   * Google Calendar dual-rendering palette:
-   * - `swatch` = saturated Material color (used in the picker dots / calendar list)
-   * - `dot`    = softer event-palette color (used inside the chip and on calendar grid)
-   * Both map to the same GCal Calendar API `colorId`.
-   */
+  /** Google Calendar saturated Material palette — used for both chip dots and picker swatches. */
   const GP_COLOR_LABEL_PALETTE = [
-    { colorId: '11', name: 'Tomato',    swatch: '#d50000', dot: '#dc2127' },
-    { colorId: '6',  name: 'Tangerine', swatch: '#f4511e', dot: '#ffb878' },
-    { colorId: '5',  name: 'Banana',    swatch: '#f6c026', dot: '#fbd75b' },
-    { colorId: '10', name: 'Basil',     swatch: '#0b8043', dot: '#51b749' },
-    { colorId: '2',  name: 'Sage',      swatch: '#33b679', dot: '#7ae7bf' },
-    { colorId: '7',  name: 'Peacock',   swatch: '#039be5', dot: '#46d6db' },
-    { colorId: '9',  name: 'Blueberry', swatch: '#3f51b5', dot: '#5484ed' },
-    { colorId: '1',  name: 'Lavender',  swatch: '#7986cb', dot: '#a4bdfc' },
-    { colorId: '3',  name: 'Grape',     swatch: '#8e24aa', dot: '#dbadff' },
-    { colorId: '4',  name: 'Flamingo',  swatch: '#e67c73', dot: '#ff887c' },
-    { colorId: '8',  name: 'Graphite',  swatch: '#616161', dot: '#e1e1e1' },
+    { colorId: '11', name: 'Tomato',    hex: '#d50000' },
+    { colorId: '6',  name: 'Tangerine', hex: '#f4511e' },
+    { colorId: '5',  name: 'Banana',    hex: '#f6c026' },
+    { colorId: '10', name: 'Basil',     hex: '#0b8043' },
+    { colorId: '2',  name: 'Sage',      hex: '#33b679' },
+    { colorId: '7',  name: 'Peacock',   hex: '#039be5' },
+    { colorId: '9',  name: 'Blueberry', hex: '#3f51b5' },
+    { colorId: '1',  name: 'Lavender',  hex: '#7986cb' },
+    { colorId: '3',  name: 'Grape',     hex: '#8e24aa' },
+    { colorId: '4',  name: 'Flamingo',  hex: '#e67c73' },
+    { colorId: '8',  name: 'Graphite',  hex: '#616161' },
   ];
   const GP_DEFAULT_COLOR_LABELS = [
-    { id: 'lbl_work',     name: 'Work',     color: '#5484ed', colorId: '9' },
-    { id: 'lbl_personal', name: 'Personal', color: '#ff887c', colorId: '4' },
-    { id: 'lbl_health',   name: 'Health',   color: '#7ae7bf', colorId: '2' },
-    { id: 'lbl_study',    name: 'Study',    color: '#fbd75b', colorId: '5' },
+    { id: 'lbl_work',     name: 'Work',     color: '#3f51b5', colorId: '9' },
+    { id: 'lbl_personal', name: 'Personal', color: '#e67c73', colorId: '4' },
+    { id: 'lbl_health',   name: 'Health',   color: '#33b679', colorId: '2' },
+    { id: 'lbl_study',    name: 'Study',    color: '#f6c026', colorId: '5' },
   ];
+
+  /** Snap any stored label color to the current saturated palette using its `colorId`. */
+  function migrateColorLabelsToCurrentPalette(labels) {
+    if (!Array.isArray(labels)) return labels;
+    return labels.map((l) => {
+      const match = GP_COLOR_LABEL_PALETTE.find((p) => p.colorId === l.colorId);
+      if (match && l.color !== match.hex) return { ...l, color: match.hex };
+      return l;
+    });
+  }
 
   function getColorLabels() {
     return new Promise((r) =>
       chrome.storage.local.get([GP_COLOR_LABELS_KEY], (d) => {
-        const labels = Array.isArray(d[GP_COLOR_LABELS_KEY]) ? d[GP_COLOR_LABELS_KEY] : null;
-        r(labels && labels.length ? labels : GP_DEFAULT_COLOR_LABELS.map((l) => ({ ...l })));
+        const raw = Array.isArray(d[GP_COLOR_LABELS_KEY]) ? d[GP_COLOR_LABELS_KEY] : null;
+        const labels = raw && raw.length
+          ? migrateColorLabelsToCurrentPalette(raw)
+          : GP_DEFAULT_COLOR_LABELS.map((l) => ({ ...l }));
+        r(labels);
       })
     );
   }
