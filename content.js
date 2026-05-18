@@ -5044,7 +5044,7 @@
       const newLabel = {
         id: 'lbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         name,
-        color: '#5484ed',
+        color: '#3f51b5',
         colorId: '9',
       };
       state.colorLabels.push(newLabel);
