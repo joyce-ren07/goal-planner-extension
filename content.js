@@ -10788,10 +10788,6 @@
           );
           if (canonicalPlannerId) chip.dataset.gpChipKey = canonicalPlannerId;
           GoalInteractionController.applyGoalSessionCompletionUI(chip, isDone);
-          const accentRow = goalRowForChip
-            ? getGoalChipAccentColor(goalRowForChip)
-            : GP_GOAL_DEFAULT_UI_COLOR;
-          applyGoalChipTheme(chip, accentRow, isDone);
           const ec = chip.closest('[data-eventid]');
           requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
           return;
