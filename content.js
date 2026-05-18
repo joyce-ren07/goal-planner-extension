@@ -5394,30 +5394,48 @@
     return false;
   }
 
-  /** Goal Planner sessions are created with a 🎯 prefix in the calendar summary. */
+  /** Goal Planner sessions use a 🎯 summary prefix; title match is enough when opened from a goal chip. */
   function gpGdInspectorShowsGoalPlannerSession(shell, goalTitle) {
     if (!(shell instanceof HTMLElement)) return false;
     const text = String(shell.innerText || '').slice(0, 2400);
     if (text.includes('🎯')) return true;
     const t = String(goalTitle || '').trim();
     if (!t) return false;
+    if (text.toLowerCase().includes(t.toLowerCase())) return true;
     return (
       text.toLowerCase().includes(t.toLowerCase()) &&
       (/\bGoal\b/i.test(text) || text.includes('My goals'))
     );
   }
 
+  /** True when event id hints resolve to a row in gp_goals (native tasks never match). */
+  function gpGdHintsBelongToPlannerGoal(legacyGoals, goalId, hintList) {
+    const gid = goalId != null && goalId !== '' ? String(goalId) : '';
+    if (!gid) return false;
+    const legacy = (Array.isArray(legacyGoals) ? legacyGoals : []).find(
+      (g) => String(g.id) === gid
+    );
+    if (!legacy) return false;
+    const hints = (hintList || []).filter((h) => h != null && h !== '');
+    if (!hints.length) return true;
+    const owner = legacyGoalIdForPlannerEventCandidates(legacyGoals, ...hints);
+    return owner !== '' && String(owner) === gid;
+  }
+
   /**
-   * Allow goal detail injection only for sessions that exist in gp_goals and were opened
-   * from a decorated goal chip (or an inspector that matches the pinned chip event).
+   * Allow goal detail injection only for sessions in gp_goals opened from a decorated goal chip.
+   * Native calendar tasks fail gp_goals ownership / inspector checks.
    */
   function gpGdMayInjectGoalDetailForHit(hit, legacyGoals, hints, inspectorShell) {
     if (!hit?.goal?.id || !hit?.session?.eventId) return false;
+    if (!gpGdHasRecentGoalChipOpenIntent()) return false;
+
     const gid = String(hit.goal.id);
     const legacy = (Array.isArray(legacyGoals) ? legacyGoals : []).find(
       (g) => String(g.id) === gid
     );
     if (!legacy) return false;
+
     const ids = legacy.calEventIds || [];
     const eid = String(hit.session.eventId);
     const inPlan = ids.some(
@@ -5428,30 +5446,27 @@
     );
     if (!inPlan) return false;
 
-    if (
-      inspectorShell instanceof HTMLElement &&
-      !gpGdInspectorShowsGoalPlannerSession(inspectorShell, hit.goal.title)
-    ) {
-      return false;
-    }
+    const hintList = [
+      ..._gpGdPinnedHints,
+      ...(Array.isArray(hints) ? hints.filter(Boolean) : []),
+    ];
+    const hostHints =
+      inspectorShell instanceof HTMLElement
+        ? gpCollectEventIdHintsFromRoot(inspectorShell)
+        : [];
+    const mergedHints = [...hintList, ...hostHints];
 
-    const hintList = Array.isArray(hints) ? hints.filter(Boolean) : [];
+    if (!gpGdHintsBelongToPlannerGoal(legacyGoals, gid, mergedHints)) return false;
 
-    if (gpGdHasRecentGoalChipOpenIntent() && String(_gpGdPinnedGoalId) === gid) {
-      if (!(inspectorShell instanceof HTMLElement)) return true;
-      const hostHints = gpCollectEventIdHintsFromRoot(inspectorShell);
-      const pinHints = hintList.length ? hintList : _gpGdPinnedHints;
-      return gpGdEventHintsOverlap(pinHints, hostHints);
-    }
+    if (!(inspectorShell instanceof HTMLElement)) return true;
 
-    for (const h of hintList) {
-      const chip = gpFindChipForPlannerEventFlexible(h);
-      if (!chip || !gpGdChipIsDecoratedGoalSession(chip)) continue;
-      const chipGid = chip.dataset.gpGoalId ? String(chip.dataset.gpGoalId) : '';
-      if (!chipGid || chipGid === gid) return true;
-    }
+    if (gpGdInspectorShowsGoalPlannerSession(inspectorShell, hit.goal.title)) return true;
 
-    return false;
+    if (gpGdEventHintsOverlap(_gpGdPinnedHints, hostHints)) return true;
+
+    return hostHints.some((hh) =>
+      ids.some((ce) => ce != null && ce !== '' && gpChipDoneKeyMatchesCalEventId(String(ce), hh))
+    );
   }
 
   function gpGdPinSessionHintsFromChip(chip) {
