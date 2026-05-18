@@ -983,30 +983,188 @@
     }) || null;
   }
 
-  // ── Rail button positioning ──
-  // The button is always mounted as a fixed-position child of document.body so it is
-  // outside GCal's stacking context (preventing click interception by GCal backdrops).
-  // positionRailFallback() measures the live rail bounding rect and aligns the wrapper.
+  // ── Rail button: in-stack above Tips (preferred) or fixed fallback ──
   let _railPositionTimer = null;
+  let _railStackMountTimer = null;
+  let _gpRailStackMo = null;
+
+  function findRailIconControl(rail, labelRe) {
+    if (!(rail instanceof HTMLElement) || !labelRe) return null;
+    for (const node of rail.querySelectorAll('[role="button"], button, a[href]')) {
+      if (node.closest('#gp-rail-fallback, #gp-rail-slot')) continue;
+      const al = (node.getAttribute('aria-label') || '').trim();
+      if (al && labelRe.test(al)) return node;
+      const tip = node.getAttribute('data-tooltip') || node.getAttribute('title') || '';
+      if (tip && labelRe.test(tip)) return node;
+    }
+    for (const el of rail.querySelectorAll('[aria-label], [title], [data-tooltip]')) {
+      if (el.closest('#gp-rail-fallback, #gp-rail-slot')) continue;
+      const label = String(
+        el.getAttribute('aria-label') || el.getAttribute('title') || el.getAttribute('data-tooltip') || ''
+      ).trim();
+      if (!label || !labelRe.test(label)) continue;
+      const btn = el.closest('[role="button"], button');
+      if (btn instanceof HTMLElement && rail.contains(btn)) return btn;
+    }
+    return null;
+  }
+
+  /** Direct child of the rail column that wraps one icon row. */
+  function resolveRailStackSlot(iconEl, rail) {
+    if (!(iconEl instanceof HTMLElement) || !(rail instanceof HTMLElement)) return null;
+    let cur = iconEl;
+    while (cur?.parentElement && cur.parentElement !== rail) {
+      cur = cur.parentElement;
+    }
+    if (cur?.parentElement === rail) return cur;
+    const p = iconEl.parentElement;
+    return p && rail.contains(p) ? p : iconEl;
+  }
+
+  function createRailSlotShell(btn, referenceSlot) {
+    let shell = document.getElementById('gp-rail-slot');
+    if (!shell) {
+      shell = document.createElement('motion-replacement');
+      shell.id = 'gp-rail-slot';
+      shell.dataset.gpRailSlot = '1';
+    }
+    if (referenceSlot instanceof HTMLElement && referenceSlot.className) {
+      shell.className = referenceSlot.className;
+    } else {
+      shell.className = '';
+    }
+    shell.style.cssText =
+      'display:flex;align-items:center;justify-content:center;flex:0 0 auto;width:100%;' +
+      'min-height:48px;box-sizing:border-box;pointer-events:none;';
+    shell.replaceChildren(btn);
+    return shell;
+  }
+
+  function gpRailStackOrderOk(shell, rail) {
+    if (!(shell instanceof HTMLElement) || !(rail instanceof HTMLElement)) return false;
+    if (shell.parentElement !== rail) return false;
+    const tips = findRailIconControl(rail, /^Tips$/i);
+    if (!tips) return shell === rail.firstElementChild;
+    const tipsSlot = resolveRailStackSlot(tips, rail);
+    return shell.nextElementSibling === tipsSlot;
+  }
+
+  /** Insert Goal Planner into the native right rail above Tips (pushes Tips down). */
+  function tryMountRailButtonInStack(btn) {
+    const rail = findRailByStructure();
+    if (!(rail instanceof HTMLElement) || !(btn instanceof HTMLElement)) return false;
+
+    const tips = findRailIconControl(rail, /^Tips$/i);
+    const insertBeforeSlot = tips
+      ? resolveRailStackSlot(tips, rail)
+      : rail.firstElementChild;
+    const refSlot =
+      insertBeforeSlot instanceof HTMLElement
+        ? insertBeforeSlot
+        : (() => {
+            const any = findRailIconControl(rail, /Tasks|Keep|Contacts/i);
+            return any ? resolveRailStackSlot(any, rail) : null;
+          })();
+
+    const shell = createRailSlotShell(btn, refSlot);
+    if (gpRailStackOrderOk(shell, rail)) {
+      const wrap = document.getElementById('gp-rail-fallback');
+      if (wrap) wrap.style.display = 'none';
+      return true;
+    }
+
+    try {
+      if (insertBeforeSlot && insertBeforeSlot.parentElement === rail) {
+        rail.insertBefore(shell, insertBeforeSlot);
+      } else {
+        rail.insertBefore(shell, rail.firstChild);
+      }
+    } catch (_) {
+      return false;
+    }
+
+    const wrap = document.getElementById('gp-rail-fallback');
+    if (wrap) wrap.style.display = 'none';
+    return shell.isConnected && gpRailStackOrderOk(shell, rail);
+  }
+
+  function mountRailButtonFallback(btn) {
+    let wrap = document.getElementById('gp-rail-fallback');
+    if (!wrap) {
+      wrap = document.createElement('motion-replacement');
+      wrap.id = 'gp-rail-fallback';
+      document.body.appendChild(wrap);
+    }
+    wrap.style.display = 'flex';
+    if (btn.parentElement !== wrap) wrap.replaceChildren(btn);
+    positionRailFallback();
+  }
+
+  function ensureGoalPlannerRailButtonMounted(btn) {
+    if (!(btn instanceof HTMLElement)) return;
+    if (tryMountRailButtonInStack(btn)) return;
+    mountRailButtonFallback(btn);
+  }
+
+  function setupRailMountWatcher() {
+    if (_gpRailStackMo) return;
+    const run = () => {
+      const btn = document.getElementById('gp-sidebar-btn');
+      if (btn) ensureGoalPlannerRailButtonMounted(btn);
+    };
+    run();
+    const schedule = () => {
+      clearTimeout(_railStackMountTimer);
+      _railStackMountTimer = setTimeout(run, 180);
+    };
+    _gpRailStackMo = new MutationObserver(schedule);
+    _gpRailStackMo.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', run);
+    setupRailFallbackPositioner();
+  }
 
   function positionRailFallback() {
+    const shell = document.getElementById('gp-rail-slot');
     const wrap = document.getElementById('gp-rail-fallback');
+    if (shell?.isConnected && findRailByStructure()?.contains(shell)) {
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
     if (!wrap) return;
+    wrap.style.display = 'flex';
+
+    const btn = document.getElementById('gp-sidebar-btn');
+    const btnH = btn?.offsetHeight || 40;
+    const gap = 6;
     const rail = findRailByStructure();
     if (rail) {
       const r = rail.getBoundingClientRect();
       const rightPx = window.innerWidth - r.right;
-      wrap.style.cssText = `position:fixed;right:${rightPx}px;top:${r.top + 4}px;width:${r.width}px;z-index:10000;display:flex;flex-direction:column;align-items:center;padding:4px 0;pointer-events:none;`;
-    } else {
-      const hdrH = getGCalHeaderBottom();
-      wrap.style.cssText = `position:fixed;right:0;top:${hdrH}px;z-index:10000;display:flex;flex-direction:column;align-items:center;padding:4px 0;pointer-events:none;`;
+      const tips = findRailIconControl(rail, /^Tips$/i);
+      let topPx = r.top + 4;
+      if (tips) {
+        const tr = tips.getBoundingClientRect();
+        topPx = Math.max(r.top + 4, tr.top - btnH - gap);
+      }
+      wrap.style.cssText =
+        `position:fixed;right:${rightPx}px;top:${topPx}px;width:${r.width}px;z-index:10000;` +
+        'display:flex;flex-direction:column;align-items:center;padding:0;pointer-events:none;';
+      return;
     }
+    const hdrH = getGCalHeaderBottom();
+    wrap.style.cssText =
+      `position:fixed;right:0;top:${hdrH}px;z-index:10000;display:flex;flex-direction:column;` +
+      'align-items:center;padding:0;pointer-events:none;';
   }
 
   function setupRailFallbackPositioner() {
     const schedule = () => {
       clearTimeout(_railPositionTimer);
-      _railPositionTimer = setTimeout(positionRailFallback, 200);
+      _railPositionTimer = setTimeout(() => {
+        const shell = document.getElementById('gp-rail-slot');
+        if (shell?.isConnected && findRailByStructure()?.contains(shell)) return;
+        positionRailFallback();
+      }, 200);
     };
     new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
     window.addEventListener('resize', positionRailFallback);
