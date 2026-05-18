@@ -6717,7 +6717,7 @@
     const minTop = cr.top + cr.height * 0.45;
     /** @type {HTMLElement | null} */
     let anchor = null;
-    let anchorTop = Infinity;
+    let anchorTop = -1;
     gpGdWalkComposedElements(cardRoot, (el) => {
       if (!(el instanceof HTMLElement)) return;
       if (el === footer || footer.contains(el)) return;
@@ -6728,7 +6728,7 @@
       const row = gpGdElevateToMetadataRow(cardRoot, el);
       if (!(row instanceof HTMLElement) || row === footer) return;
       const rr = row.getBoundingClientRect();
-      if (rr.top >= anchorTop) return;
+      if (rr.top <= anchorTop) return;
       anchor = row;
       anchorTop = rr.top;
     });
