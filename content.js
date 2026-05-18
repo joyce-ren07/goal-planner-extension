@@ -10408,7 +10408,15 @@
     }
   }
 
-  function injectGoalChipContent(chip, goalData, isDone) {
+  function injectGoalChipContent(chip, goalData, isDone, goals) {
+    const goalList = goals || _gpGoalsCache || [];
+    let accent = goalData.accentColor;
+    if (!accent && goalData.id) {
+      const row = goalList.find((g) => String(g.id) === String(goalData.id));
+      if (row) accent = getGoalChipAccentColor(row);
+    }
+    if (!accent) accent = GP_GOAL_DEFAULT_UI_COLOR;
+    const checkboxSvg = goalCheckboxSvg(accent, isDone);
     // Idempotent: patch in place when overlay exists; never clear native chip children.
     // Suppress the per-chip MutationObserver during intentional reinjection so
     // removing/re-adding .ext-goal-root does not schedule restoreChip (which
