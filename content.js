@@ -960,10 +960,46 @@
   }
 
   function setCalendarPushed(open) {
-    const mainEl = getCalendarMainEl();
-    if (!mainEl) return;
-    mainEl.style.transition = `margin-right ${GP_PUSH_EASING}`;
-    mainEl.style.marginRight = open ? `${GP_PANEL_W}px` : '';
+    const root = getCalendarPushRoot();
+    if (!(root instanceof HTMLElement)) return;
+
+    const amount = open ? getGoalPanelPushWidthPx() : 0;
+    const trans = `margin-right ${GP_PUSH_EASING}, max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
+
+    if (open) {
+      if (!_gpCalendarPushSnapshot || _gpCalendarPushSnapshot.el !== root) {
+        _gpCalendarPushSnapshot = {
+          el: root,
+          marginRight: root.style.marginRight,
+          maxWidth: root.style.maxWidth,
+          width: root.style.width,
+          transition: root.style.transition,
+          boxSizing: root.style.boxSizing,
+        };
+      }
+      root.style.transition = trans;
+      root.style.boxSizing = root.style.boxSizing || 'border-box';
+      root.style.marginRight = `${amount}px`;
+      root.style.maxWidth = `calc(100% - ${amount}px)`;
+      root.style.width = `calc(100% - ${amount}px)`;
+      return;
+    }
+
+    const snap = _gpCalendarPushSnapshot;
+    if (snap?.el === root) {
+      root.style.marginRight = snap.marginRight;
+      root.style.maxWidth = snap.maxWidth;
+      root.style.width = snap.width;
+      root.style.transition = snap.transition;
+      root.style.boxSizing = snap.boxSizing;
+      _gpCalendarPushSnapshot = null;
+      return;
+    }
+
+    root.style.marginRight = '';
+    root.style.maxWidth = '';
+    root.style.width = '';
+    root.style.transition = '';
   }
 
   let calendarPushDebounce = null;
