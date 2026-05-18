@@ -1024,7 +1024,7 @@
   function createRailSlotShell(btn, referenceSlot) {
     let shell = document.getElementById('gp-rail-slot');
     if (!shell) {
-      shell = document.createElement('motion-replacement');
+      shell = document.createElement('div');
       shell.id = 'gp-rail-slot';
       shell.dataset.gpRailSlot = '1';
     }
