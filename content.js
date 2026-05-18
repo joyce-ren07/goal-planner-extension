@@ -1249,7 +1249,30 @@
   }
 
   function createGpToastElement() {
-    const toast = document.createElement('motion-replacement');
+    const toast = document.createElement('div');
+    toast.className = 'gp-toast';
+    toast.id = 'gp-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.innerHTML =
+      '<span class="gp-toast-message">Sessions added to your calendar!</span>' +
+      '<button type="button" class="gp-toast-close" id="gp-toast-close" aria-label="Dismiss">' +
+      '<span class="material-symbols-outlined gp-ms-icon">close</span></button>';
+    return toast;
+  }
+
+  function ensureGpToastMounted() {
+    const legacy = document.querySelector('#gp-panel #gp-toast');
+    if (legacy) legacy.remove();
+    if (!document.getElementById('gp-toast')) {
+      document.body.appendChild(createGpToastElement());
+    }
+  }
+
+  // ── Panel HTML ──
+  function createPanel() {
+    const panel = document.createElement('div');
+    panel.id = 'gp-panel';
     panel.innerHTML = `
       <div class="gp-card" id="gp-card">
 
@@ -1365,8 +1388,6 @@
       </div>`;
     return panel;
   }
-
-  // ── Recurrence modal (appended to document.body so it centers over the full page) ──
   function createRecurrenceModal() {
     const overlay = document.createElement('div');
     overlay.id = 'gp-recurrence-overlay';
