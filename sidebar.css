@@ -38,6 +38,11 @@
   --m3-outline-variant: #e2e3e1;
   --m3-surface-container-low: #f8f9fa;
   --md-sys-color-surface-container: var(--m3-surface-container-low);
+  --m3-surface-container-highest: #e3e2e6;
+  --md-sys-color-surface-container-highest: var(--m3-surface-container-highest);
+  --md-sys-color-on-surface: var(--m3-on-surface);
+  --md-sys-color-outline-variant: var(--m3-outline-variant);
+  --md-sys-color-primary: #1a73e8;
   --m3-surface-container-lowest: #ffffff;
   --md-sys-elevation-level2:
     0 2px 4px color-mix(in srgb, var(--m3-on-surface) 30%, transparent),
@@ -2027,7 +2032,7 @@ body.mytasks-kanban-dragging .mk-column-cards:has(> .mk-ghost[data-empty-adopted
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 0 12px 8px;
   padding: 12px 16px;
   box-sizing: border-box;
   overflow: visible;
@@ -5775,3 +5780,216 @@ body.gp-sidebar-open .gp-mt-layer {
   width: 18px;
   height: 18px;
 }
+
+/* Sidebar — show tasks on calendar week view (M3) */
+.gp-calendar-view-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 0.5px solid var(--md-sys-color-outline-variant);
+  border-bottom: 0.5px solid var(--md-sys-color-outline-variant);
+}
+
+.gp-calendar-view-toggle-label {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  color: var(--md-sys-color-on-surface);
+}
+
+.gp-toggle-switch {
+  position: relative;
+  flex: none;
+  width: 52px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: var(--md-sys-color-surface-container-highest);
+  cursor: pointer;
+  transition: background 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.gp-toggle-switch.is-on {
+  background: var(--md-sys-color-primary);
+}
+
+.gp-toggle-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: none;
+  transform: translateX(0);
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gp-toggle-switch.is-on .gp-toggle-switch__thumb {
+  transform: translateX(20px);
+}
+
+.gp-toggle-switch__state-layer {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: currentColor;
+  color: var(--md-sys-color-on-surface);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.gp-toggle-switch:hover .gp-toggle-switch__state-layer,
+.gp-toggle-switch:focus-visible .gp-toggle-switch__state-layer {
+  opacity: 0.08;
+}
+
+.gp-toggle-switch.is-on .gp-toggle-switch__state-layer {
+  color: var(--md-sys-color-primary);
+}
+
+/* Calendar week view — compact M3 task title pills */
+.gp-cal-task-overlay-col {
+  position: absolute;
+  top: 0;
+  z-index: 200;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.gp-cal-task-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 201;
+  box-sizing: border-box;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.gp-cal-task-card--hover {
+  z-index: 202;
+}
+
+.gp-cal-task-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  box-sizing: border-box;
+  border-radius: var(--m3-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--gp-cal-pill-fg, var(--m3-on-secondary-container, #185abc)) 24%, transparent);
+  background: var(--gp-cal-pill-bg, var(--m3-secondary-container, #d3e3fd));
+  color: var(--gp-cal-pill-fg, var(--m3-on-secondary-container, #185abc));
+  box-shadow: var(--md-sys-elevation-level1, var(--m3-elevation-1));
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.1px;
+  overflow: hidden;
+  transition:
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+
+.gp-cal-task-card--hover .gp-cal-task-pill,
+.gp-cal-task-pill:focus-visible {
+  box-shadow: var(--md-sys-elevation-level2, var(--m3-elevation-1));
+}
+
+.gp-cal-task-pill:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary, #1a73e8);
+  outline-offset: 1px;
+}
+
+.gp-cal-task-pill__status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  color: var(--gp-cal-pill-fg, var(--m3-on-secondary-container, #185abc));
+}
+
+.gp-cal-task-pill__status svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.gp-cal-task-pill__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gp-cal-task-pill--completed .gp-cal-task-pill__title {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--gp-cal-pill-fg, #5f6368) 65%, transparent);
+  opacity: 0.82;
+}
+
+.gp-cal-task-pill--blue {
+  --gp-cal-pill-bg: #e8f0fe;
+  --gp-cal-pill-fg: #185abc;
+}
+
+.gp-cal-task-pill--red {
+  --gp-cal-pill-bg: #fce8e6;
+  --gp-cal-pill-fg: #b3261e;
+}
+
+.gp-cal-task-pill--green {
+  --gp-cal-pill-bg: #e6f4ea;
+  --gp-cal-pill-fg: #137333;
+}
+
+.gp-cal-task-pill--yellow {
+  --gp-cal-pill-bg: #fef7e0;
+  --gp-cal-pill-fg: #7c4a03;
+}
+
+.gp-cal-task-pill--purple {
+  --gp-cal-pill-bg: #f3e8fd;
+  --gp-cal-pill-fg: #7b1fa2;
+}
+
+.gp-cal-task-pill--orange {
+  --gp-cal-pill-bg: #feefe3;
+  --gp-cal-pill-fg: #b06000;
+}
+
+.gp-cal-task-pill--teal {
+  --gp-cal-pill-bg: #e0f2f1;
+  --gp-cal-pill-fg: #00695c;
+}
+
+.gp-cal-task-pill--grey {
+  --gp-cal-pill-bg: #f1f3f4;
+  --gp-cal-pill-fg: #5f6368;
+}
+
+.gp-cal-task-pill--custom {
+  --gp-cal-pill-bg: color-mix(in srgb, var(--gp-cal-pill-fg, #5f6368) 16%, #ffffff);
+}
+

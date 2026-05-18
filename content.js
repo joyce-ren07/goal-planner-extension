@@ -670,6 +670,15 @@
       </span>
       <span class="gp-create-task-label">Add tasks</span>
       </button>
+
+      <div class="gp-calendar-view-toggle-row">
+        <span class="gp-calendar-view-toggle-label" id="gp-calendar-view-toggle-label">Show on calendar view:</span>
+        <button type="button" class="gp-toggle-switch" id="gp-calendar-view-toggle" role="switch" aria-labelledby="gp-calendar-view-toggle-label" aria-checked="false">
+          <span class="gp-toggle-switch__thumb" aria-hidden="true">
+            <span class="gp-toggle-switch__state-layer"></span>
+          </span>
+        </button>
+      </div>
     </div>
 
     <div class="gp-tasks-accordion" id="gp-tasks-accordion">
@@ -4625,6 +4634,7 @@
 
   function refreshLinkedTaskViews(state, options = {}) {
     const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
+    scheduleCalendarWeekTaskOverlayRefresh(normalized);
     const panel = document.getElementById('gp-panel');
     if (panel && !isSidebarTitleEditActive() && !options.skipSidebarRender) {
       renderSidebarTasks(panel, normalized);
@@ -9377,6 +9387,7 @@
     initTaskCompletion(panel.querySelector('#gp-tasks-accordion'));
     syncFolderCounts(panel.querySelector('#gp-tasks-accordion'));
     wireTaskCardDeleteAndSubtaskInteractions(panel);
+    wireSidebarCalendarViewToggle(panel);
   }
 
   function mountSidebar() {
@@ -9467,6 +9478,582 @@
     });
   }
 
+  const GP_SHOW_ON_CALENDAR_STORAGE_KEY = 'gpShowTasksOnCalendar';
+  const GP_CAL_DEFAULT_HOUR_HEIGHT_PX = 48;
+  const GP_CAL_TASK_CARD_HEIGHT_ESTIMATE_PX = 24;
+  const GP_CAL_TASK_CARD_STACK_GAP_PX = 4;
+
+  /** @type {{ enabled: boolean, mount: object | null, refreshTimer: number | null, observer: MutationObserver | null, wired: boolean }} */
+  let gpCalOverlayCtx = {
+    enabled: false,
+    mount: null,
+    refreshTimer: null,
+    observer: null,
+    wired: false,
+  };
+
+  function parseCalendarDateKey(dateKey) {
+    if (dateKey == null || dateKey === '') return null;
+    const raw = String(dateKey).trim();
+
+    if (/^\d{8}$/.test(raw)) {
+      const year = Number(raw.slice(0, 4));
+      const month = Number(raw.slice(4, 6)) - 1;
+      const day = Number(raw.slice(6, 8));
+      const parsed = new Date(year, month, day);
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+
+    const encoded = Number(raw);
+    if (!Number.isFinite(encoded) || encoded <= 0) return null;
+
+    const day = encoded & 31;
+    const month = (encoded >> 5) & 15;
+    const year = 1970 + (encoded >> 9);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+    const parsed = new Date(year, month - 1, day);
+    if (Number.isNaN(parsed.getTime())) return null;
+    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+      return null;
+    }
+    return parsed;
+  }
+
+  function isValidCalendarDateKey(dateKey) {
+    return Boolean(parseCalendarDateKey(dateKey));
+  }
+
+  function sortCalendarDateKeys(keys) {
+    return [...keys].sort((left, right) => {
+      const a = parseCalendarDateKey(left);
+      const b = parseCalendarDateKey(right);
+      if (!a || !b) return String(left).localeCompare(String(right));
+      return a.getTime() - b.getTime();
+    });
+  }
+
+  function dateKeyToIso(dateKey) {
+    const parsed = parseCalendarDateKey(dateKey);
+    return parsed ? formatDueDateIso(parsed) : '';
+  }
+
+  function collectCalendarDateKeyElements(root) {
+    const seen = new Set();
+    const matches = [];
+
+    const visitRoot = (scope) => {
+      if (!(scope instanceof Element || scope instanceof DocumentFragment)) return;
+      try {
+        scope.querySelectorAll('[data-datekey]').forEach((el) => {
+          if (!(el instanceof Element) || seen.has(el)) return;
+          const key = el.getAttribute('data-datekey');
+          if (!isValidCalendarDateKey(key)) return;
+          seen.add(el);
+          matches.push(el);
+        });
+        scope.querySelectorAll('*').forEach((el) => {
+          if (el.shadowRoot) visitRoot(el.shadowRoot);
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+
+    visitRoot(root);
+    return matches;
+  }
+
+  function queryCalendarDateKeyElements() {
+    const main = getCalendarMainEl();
+    let matches = main ? collectCalendarDateKeyElements(main) : [];
+    if (matches.length < 3) {
+      matches = collectCalendarDateKeyElements(document.body);
+    }
+    return matches;
+  }
+
+  function loadShowOnCalendarEnabled() {
+    try {
+      return localStorage.getItem(GP_SHOW_ON_CALENDAR_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  function setShowOnCalendarEnabled(enabled) {
+    gpCalOverlayCtx.enabled = Boolean(enabled);
+    try {
+      localStorage.setItem(
+        GP_SHOW_ON_CALENDAR_STORAGE_KEY,
+        gpCalOverlayCtx.enabled ? 'true' : 'false',
+      );
+    } catch {
+      /* ignore quota errors */
+    }
+    syncSidebarCalendarViewToggle();
+    void loadKanbanState().then((loaded) => {
+      scheduleCalendarWeekTaskOverlayRefresh(loaded);
+    });
+  }
+
+  function syncSidebarCalendarViewToggle() {
+    const toggle = document.getElementById('gp-calendar-view-toggle');
+    if (!toggle) return;
+    toggle.setAttribute('aria-checked', gpCalOverlayCtx.enabled ? 'true' : 'false');
+    toggle.classList.toggle('is-on', gpCalOverlayCtx.enabled);
+  }
+
+  function ensureSidebarCalendarViewToggle(panel) {
+    if (!panel || panel.querySelector('#gp-calendar-view-toggle')) return;
+    const stickyHead = panel.querySelector('.gp-sidebar-sticky-head');
+    const createBtn = panel.querySelector('#gp-create-task-btn');
+    if (!stickyHead || !createBtn) return;
+
+    const row = document.createElement('div');
+    row.className = 'gp-calendar-view-toggle-row';
+    row.innerHTML = `
+      <span class="gp-calendar-view-toggle-label" id="gp-calendar-view-toggle-label">Show on calendar view:</span>
+      <button type="button" class="gp-toggle-switch" id="gp-calendar-view-toggle" role="switch" aria-labelledby="gp-calendar-view-toggle-label" aria-checked="false">
+        <span class="gp-toggle-switch__thumb" aria-hidden="true">
+          <span class="gp-toggle-switch__state-layer"></span>
+        </span>
+      </button>
+    `;
+    createBtn.insertAdjacentElement('afterend', row);
+  }
+
+  function wireSidebarCalendarViewToggle(panel) {
+    ensureSidebarCalendarViewToggle(panel);
+    const toggle = panel?.querySelector('#gp-calendar-view-toggle');
+    if (!toggle || toggle.dataset.wired === 'true') return;
+    toggle.dataset.wired = 'true';
+    toggle.addEventListener('click', () => {
+      setShowOnCalendarEnabled(!gpCalOverlayCtx.enabled);
+    });
+    syncSidebarCalendarViewToggle();
+  }
+
+  function collectKanbanTasks(state) {
+    const out = [];
+    const seen = new Set();
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      (state?.columns?.[id] || []).forEach((task) => {
+        if (!task?.id || seen.has(task.id)) return;
+        seen.add(task.id);
+        out.push(task);
+      });
+    });
+    return out;
+  }
+
+  function getTasksForDateIso(tasks, dateIso) {
+    return tasks.filter((task) => {
+      const due = getTaskDueDateFromCard(task);
+      if (!due) return false;
+      return formatDueDateIso(due) === dateIso;
+    });
+  }
+
+  function areConsecutiveDateKeys(keys) {
+    for (let i = 1; i < keys.length; i += 1) {
+      const prev = parseCalendarDateKey(keys[i - 1]);
+      const next = parseCalendarDateKey(keys[i]);
+      if (!prev || !next) return false;
+      const expected = normalizeDateOnly(prev);
+      expected.setDate(expected.getDate() + 1);
+      if (normalizeDateOnly(next).getTime() !== expected.getTime()) return false;
+    }
+    return true;
+  }
+
+  function pickVisibleWeekDateKeys(keys) {
+    const sortedKeys = sortCalendarDateKeys(keys);
+    if (!sortedKeys.length) return [];
+    if (sortedKeys.length === 1) return sortedKeys;
+    if (sortedKeys.length <= 7 && areConsecutiveDateKeys(sortedKeys)) return sortedKeys;
+    for (let len = 7; len >= 3; len -= 1) {
+      for (let i = 0; i <= sortedKeys.length - len; i += 1) {
+        const slice = sortedKeys.slice(i, i + len);
+        if (areConsecutiveDateKeys(slice)) return slice;
+      }
+    }
+    return sortedKeys.length >= 3 ? sortedKeys.slice(0, Math.min(7, sortedKeys.length)) : [];
+  }
+
+  function isCalendarWeekViewUrl() {
+    const href = `${window.location.pathname}${window.location.search}${window.location.hash}`.toLowerCase();
+    return /\bweek\b/.test(href) || /mode=week/.test(href);
+  }
+
+  function isCalendarTimeGridView() {
+    if (isCalendarWeekViewUrl()) return true;
+    const main = getCalendarMainEl();
+    if (!main) return false;
+    const text = (main.textContent || '').slice(0, 4000);
+    return /\b\d{1,2}\s*(am|pm)\b/i.test(text) && queryCalendarDateKeyElements().length >= 3;
+  }
+
+  function detectCalendarHourHeight(main) {
+    const hourLabels = [...main.querySelectorAll('*')].filter((el) => {
+      if (!(el instanceof Element) || el.children.length > 0) return false;
+      const text = (el.textContent || '').trim();
+      return /^(1[0-2]|[1-9])\s*(AM|PM)$/i.test(text);
+    });
+
+    if (hourLabels.length >= 2) {
+      const first = hourLabels[0].getBoundingClientRect();
+      const second = hourLabels[1].getBoundingClientRect();
+      const delta = Math.round(second.top - first.top);
+      if (delta >= 24 && delta <= 120) return delta;
+    }
+
+    return GP_CAL_DEFAULT_HOUR_HEIGHT_PX;
+  }
+
+  function findDayColumnContainer(gridEl, mainRect) {
+    const targetWidth = mainRect.width / 7;
+    let best = gridEl;
+    let bestHeight = 0;
+    let node = gridEl;
+    while (node && node !== document.body) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width >= targetWidth * 0.3 && rect.height > bestHeight) {
+        bestHeight = rect.height;
+        best = node;
+      }
+      node = node.parentElement;
+    }
+    return best;
+  }
+
+  function getColumnBoundsFromCells(cells) {
+    if (!cells?.length) return null;
+    const rects = cells.map((cell) => cell.rect);
+    const minLeft = Math.min(...rects.map((rect) => rect.left));
+    const maxRight = Math.max(...rects.map((rect) => rect.right));
+    const width = Math.max(32, maxRight - minLeft);
+    return {
+      minLeft,
+      maxRight,
+      width,
+      centerX: minLeft + width / 2,
+    };
+  }
+
+  function findCalendarScrollHost(anchorEl, mainRect) {
+    let scrollHost = null;
+    let node = anchorEl;
+    while (node && node !== document.body) {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      if (
+        /(auto|scroll|overlay)/.test(style.overflowY)
+        && rect.height >= 160
+        && node.scrollHeight > node.clientHeight + 16
+      ) {
+        scrollHost = node;
+      }
+      node = node.parentElement;
+    }
+    if (scrollHost) return scrollHost;
+    return findDayColumnContainer(anchorEl, mainRect);
+  }
+
+  function discoverCalendarWeekView() {
+    const main = getCalendarMainEl();
+    if (!main) return null;
+
+    const keyedEls = queryCalendarDateKeyElements();
+    if (keyedEls.length < 1) return null;
+    if (keyedEls.length < 2 && !isCalendarTimeGridView()) return null;
+
+    const mainRect = main.getBoundingClientRect();
+    const byKey = new Map();
+
+    keyedEls.forEach((el) => {
+      const key = el.getAttribute('data-datekey');
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const entry = byKey.get(key) || { key, cells: [] };
+      entry.cells.push({ el, rect, area: rect.width * rect.height });
+      byKey.set(key, entry);
+    });
+
+    const weekKeys = pickVisibleWeekDateKeys([...byKey.keys()]);
+    if (!weekKeys.length) return null;
+
+    const hourHeightPx = detectCalendarHourHeight(main);
+    const days = weekKeys.map((key) => {
+      const entry = byKey.get(key);
+      const cellPick = (entry?.cells || []).sort((a, b) => b.area - a.area)[0];
+      if (!cellPick) return null;
+      const columnBounds = getColumnBoundsFromCells(entry.cells);
+      const columnEl = findCalendarScrollHost(cellPick.el, mainRect);
+      if (!columnEl || !columnBounds) return null;
+      return {
+        dateKey: key,
+        dateIso: dateKeyToIso(key),
+        columnEl,
+        columnBounds,
+      };
+    }).filter(Boolean);
+
+    if (!days.length) return null;
+
+    return {
+      days,
+      hourHeightPx,
+      main,
+    };
+  }
+
+  function ensureCalendarTaskOverlayColumn(scrollHost, dateIso, columnBounds) {
+    const computed = window.getComputedStyle(scrollHost);
+    if (computed.position === 'static') {
+      scrollHost.style.position = 'relative';
+    }
+    let layer = scrollHost.querySelector(`:scope > .gp-cal-task-overlay-col[data-date="${dateIso}"]`);
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'gp-cal-task-overlay-col';
+      layer.dataset.date = dateIso;
+      scrollHost.appendChild(layer);
+    }
+    const scrollHeight = scrollHost.scrollHeight || scrollHost.clientHeight;
+    layer.style.top = '0';
+    if (columnBounds) {
+      const hostRect = scrollHost.getBoundingClientRect();
+      const inset = 2;
+      const left = Math.max(0, columnBounds.minLeft - hostRect.left + inset);
+      const width = Math.max(28, columnBounds.width - inset * 2);
+      layer.style.left = `${left}px`;
+      layer.style.width = `${width}px`;
+      layer.style.right = 'auto';
+    } else {
+      layer.style.left = '0';
+      layer.style.right = '0';
+      layer.style.width = '100%';
+    }
+    layer.style.minHeight = scrollHeight > 0 ? `${scrollHeight}px` : '100%';
+    return layer;
+  }
+
+  function getTaskScheduleStartHm(task) {
+    const fromField = normalizeDueHm(task?.dueTimeStart || '');
+    if (fromField) return fromField;
+    const dueText = String(task?.due || '');
+    const range = dueText.match(
+      /(\d{1,2}(?::\d{2})?\s*(?:am|pm))(?:\s*[–-]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm))?/i,
+    );
+    if (range?.[1]) return parseFlexibleTimeToHm(range[1]);
+    return '';
+  }
+
+  function taskHasScheduledTime(task) {
+    return !task?.allDay && Boolean(getTaskScheduleStartHm(task));
+  }
+
+  function getCalendarTaskTopPx(task, hourHeightPx, stackIndex) {
+    const startHm = getTaskScheduleStartHm(task);
+    if (!taskHasScheduledTime(task)) {
+      return 4 + stackIndex * GP_CAL_TASK_CARD_STACK_GAP_PX;
+    }
+    const [h, m] = startHm.split(':').map(Number);
+    return ((h * 60) + m) * (hourHeightPx / 60);
+  }
+
+  function buildCalendarOverlayTaskCard(task, state) {
+    const shell = document.createElement('div');
+    shell.className = 'gp-cal-task-card';
+    shell.dataset.cardId = task.id;
+
+    const taskTitle = (task.title || 'Untitled task').trim() || 'Untitled task';
+    const isCompleted = findTaskColumnId(state, task.id) === 'done';
+    const chipColor = resolveKanbanChipColor(task.chip, task.chipColor, task.courseKey);
+    const pill = document.createElement('div');
+    pill.className = `gp-cal-task-pill gp-cal-task-pill--${chipClassForColorKey(chipColor)}`;
+    if (isCompleted) {
+      pill.classList.add('gp-cal-task-pill--completed');
+    }
+    pill.setAttribute('role', 'button');
+    pill.setAttribute('tabindex', '0');
+    pill.setAttribute(
+      'aria-label',
+      isCompleted ? `Completed task: ${taskTitle}` : `Task: ${taskTitle}`,
+    );
+    if (chipColor === 'custom' && task.chipCustomHex) {
+      pill.classList.add('gp-cal-task-pill--custom');
+      pill.style.setProperty('--gp-cal-pill-fg', task.chipCustomHex);
+    }
+
+    const statusIcon = document.createElement('span');
+    statusIcon.className = 'gp-cal-task-pill__status';
+    statusIcon.setAttribute('aria-hidden', 'true');
+    statusIcon.innerHTML = isCompleted
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" fill="currentColor"></circle>
+          <path d="M8.5 12.2 10.8 14.5 15.5 9.8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
+        </svg>`;
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'gp-cal-task-pill__title';
+    titleEl.textContent = taskTitle;
+
+    pill.appendChild(statusIcon);
+    pill.appendChild(titleEl);
+    shell.appendChild(pill);
+    return shell;
+  }
+
+  function stackCalendarOverlayCard(layer, shell, topPx, stackIndex) {
+    const offset = stackIndex * (GP_CAL_TASK_CARD_HEIGHT_ESTIMATE_PX + GP_CAL_TASK_CARD_STACK_GAP_PX);
+    shell.style.top = `${topPx + offset}px`;
+    layer.appendChild(shell);
+  }
+
+  function renderCalendarDayTaskOverlays(day, tasks, hourHeightPx, isActive, state) {
+    const layer = ensureCalendarTaskOverlayColumn(day.columnEl, day.dateIso, day.columnBounds);
+    layer.innerHTML = '';
+    layer.hidden = !isActive;
+    if (!isActive || !tasks.length) return;
+
+    const timed = [];
+    const untimed = [];
+    tasks.forEach((task) => {
+      if (taskHasScheduledTime(task)) {
+        timed.push(task);
+      } else {
+        untimed.push(task);
+      }
+    });
+
+    untimed.forEach((task, index) => {
+      const shell = buildCalendarOverlayTaskCard(task, state);
+      stackCalendarOverlayCard(
+        layer,
+        shell,
+        getCalendarTaskTopPx(task, hourHeightPx, 0),
+        index,
+      );
+    });
+
+    const timedStacks = new Map();
+    timed
+      .sort((a, b) => sidebarTaskDueSortMs(a) - sidebarTaskDueSortMs(b))
+      .forEach((task) => {
+        const topPx = getCalendarTaskTopPx(task, hourHeightPx, 0);
+        const stackIndex = timedStacks.get(topPx) || 0;
+        timedStacks.set(topPx, stackIndex + 1);
+        const shell = buildCalendarOverlayTaskCard(task, state);
+        stackCalendarOverlayCard(layer, shell, topPx, stackIndex);
+      });
+  }
+
+  function teardownCalendarTaskOverlays() {
+    document.getElementById('gp-cal-global-task-toggle')?.remove();
+    document.querySelectorAll('.gp-cal-day-task-toggle, .gp-cal-day-header-toggle-host').forEach((el) => el.remove());
+    document.querySelectorAll('.gp-cal-task-overlay-col').forEach((el) => el.remove());
+    document.querySelectorAll('[data-gp-cal-day-header]').forEach((el) => {
+      el.removeAttribute('data-gp-cal-day-header');
+    });
+    gpCalOverlayCtx.mount = null;
+  }
+
+  async function refreshCalendarWeekTaskOverlay(state = kanbanStateCache) {
+    teardownCalendarTaskOverlays();
+
+    if (!gpCalOverlayCtx.enabled) return;
+
+    const mount = discoverCalendarWeekView();
+    if (!mount) return;
+
+    let resolvedState = state;
+    if (!resolvedState?.columns) {
+      resolvedState = kanbanStateCache || await loadKanbanState();
+    }
+
+    gpCalOverlayCtx.mount = mount;
+    const normalized = normalizeKanbanState(resolvedState || getDefaultKanbanState());
+    const allTasks = collectKanbanTasks(normalized);
+
+    mount.days.forEach((day) => {
+      const dayTasks = getTasksForDateIso(allTasks, day.dateIso);
+      renderCalendarDayTaskOverlays(day, dayTasks, mount.hourHeightPx, true, normalized);
+    });
+  }
+
+  function scheduleCalendarWeekTaskOverlayRefresh(state) {
+    if (gpCalOverlayCtx.refreshTimer) {
+      window.clearTimeout(gpCalOverlayCtx.refreshTimer);
+    }
+    gpCalOverlayCtx.refreshTimer = window.setTimeout(() => {
+      gpCalOverlayCtx.refreshTimer = null;
+      void refreshCalendarWeekTaskOverlay(state);
+    }, 80);
+  }
+
+  function handleCalendarWeekOverlayClick(event) {
+    const shell = event.target.closest?.('.gp-cal-task-card');
+    if (!shell) return;
+
+    const taskId = shell.dataset.cardId;
+    if (!taskId) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    openTaskDetailPopup(shell, taskId);
+  }
+
+  function handleCalendarWeekOverlayPointer(event) {
+    const shell = event.target.closest?.('.gp-cal-task-card');
+    document.querySelectorAll('.gp-cal-task-card--hover').forEach((el) => {
+      if (el !== shell) el.classList.remove('gp-cal-task-card--hover');
+    });
+    if (shell) shell.classList.add('gp-cal-task-card--hover');
+  }
+
+  function setupCalendarWeekTaskOverlay() {
+    gpCalOverlayCtx.enabled = loadShowOnCalendarEnabled();
+    syncSidebarCalendarViewToggle();
+
+    if (gpCalOverlayCtx.wired) {
+      scheduleCalendarWeekTaskOverlayRefresh();
+      return;
+    }
+    gpCalOverlayCtx.wired = true;
+
+    document.addEventListener('click', handleCalendarWeekOverlayClick, true);
+    document.addEventListener('mouseover', handleCalendarWeekOverlayPointer, true);
+    document.addEventListener('mouseout', (event) => {
+      const shell = event.target.closest?.('.gp-cal-task-card');
+      if (!shell) return;
+      const related = event.relatedTarget;
+      if (related instanceof Node && shell.contains(related)) return;
+      shell.classList.remove('gp-cal-task-card--hover');
+    }, true);
+
+    gpCalOverlayCtx.observer = new MutationObserver(() => {
+      scheduleCalendarWeekTaskOverlayRefresh();
+    });
+    gpCalOverlayCtx.observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-datekey', 'hidden', 'aria-hidden', 'class'],
+    });
+
+    window.addEventListener('resize', () => scheduleCalendarWeekTaskOverlayRefresh());
+    window.addEventListener('popstate', () => scheduleCalendarWeekTaskOverlayRefresh());
+    window.addEventListener('hashchange', () => scheduleCalendarWeekTaskOverlayRefresh());
+
+    scheduleCalendarWeekTaskOverlayRefresh();
+  }
+
   async function bootstrapCalendarTasksUi() {
     primeKanbanFiltersFromLocalStorage();
     await maybeClearKanbanBoardStorageOnce();
@@ -9477,6 +10064,7 @@
     await ensurePaletteCaches();
     setupRailObserver();
     setupNativeTasksKanbanObserver();
+    setupCalendarWeekTaskOverlay();
     void syncTaskViewsFromStorage();
   }
 
