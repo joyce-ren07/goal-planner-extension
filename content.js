@@ -1013,6 +1013,9 @@
       calendarPushDebounce = setTimeout(() => {
         calendarPushDebounce = null;
         if (cachedCalendarMainEl && !document.contains(cachedCalendarMainEl)) cachedCalendarMainEl = null;
+        if (cachedCalendarPushRoot && !document.contains(cachedCalendarPushRoot)) {
+          cachedCalendarPushRoot = null;
+        }
         reapply();
       }, 120);
     };
