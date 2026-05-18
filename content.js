@@ -1529,6 +1529,16 @@
     const chipsRoot = document.getElementById('gp-color-chips');
     if (chipsRoot) {
       chipsRoot.addEventListener('click', (e) => {
+        const removeEl = e.target.closest('[data-remove="1"]');
+        if (removeEl) {
+          const chip = removeEl.closest('.gp-color-chip');
+          if (chip?.dataset.labelId) {
+            e.preventDefault();
+            e.stopPropagation();
+            deleteColorLabel(chip.dataset.labelId);
+          }
+          return;
+        }
         const addBtn = e.target.closest('#gp-color-chip-add-btn');
         if (addBtn) { beginAddColorLabel(); return; }
         const chip = e.target.closest('.gp-color-chip');
