@@ -1544,7 +1544,7 @@
       swRoot.addEventListener('click', (e) => {
         const sw = e.target.closest('.gp-color-swatch');
         if (!sw) return;
-        handleColorSwatchClick(sw.dataset.colorId, sw.dataset.hex);
+        handleColorSwatchClick(sw.dataset.colorId, sw.dataset.dot);
       });
     }
 
