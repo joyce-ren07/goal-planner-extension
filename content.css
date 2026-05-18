@@ -1165,7 +1165,12 @@
 /* ─────────────────────────────────────────
    Screen 3 — Preferred time section (replaces old Standardize time chips)
 ───────────────────────────────────────── */
-.gp-pref-time-section { margin-top: 16px; }
+.gp-pref-time-section {
+  margin-top: 16px;
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+}
 .gp-pref-time-header {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
 }
@@ -1173,18 +1178,29 @@
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 11px; font-weight: 400; color: #9aa0a6; letter-spacing: 0.3px;
 }
-.gp-pref-time-input {
+#gp-pref-time-trigger {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  background: none; border: none; outline: none;
+  background: #f1f3f4;
+  border: none;
+  border-radius: 8px;
+  outline: none;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #9aa0a6;
+  font-size: 13px; font-weight: 400;
+  color: #9aa0a6;
   cursor: pointer;
-  padding: 0;
+  padding: 11px 14px;
+  min-height: 40px;
   text-align: left;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+  touch-action: manipulation;
+  transition: background 0.12s;
 }
-.gp-pref-time-input.has-value { color: #3c4043; }
+#gp-pref-time-trigger:hover { background: #e8edf6; }
+#gp-pref-time-trigger.has-value { color: #3c4043; }
 
 /* ── Per-card remove button ── */
 .gp-session-remove {
