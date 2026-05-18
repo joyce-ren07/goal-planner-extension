@@ -2085,7 +2085,7 @@
     const border = accent;
     let text = accent;
     if (contrastRatioRgb(accentRgb, fillRgb) < 4.5) {
-      text = darkenHexHslLightness(accent, 0.8);
+      text = darkenHexHslLightness(accent, 0.75);
     }
     const textRgb = parseHexToRgb(text);
     const badgeBg = accent;
