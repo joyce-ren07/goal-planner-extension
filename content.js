@@ -858,6 +858,7 @@
     document.body.appendChild(modal);
     document.body.appendChild(deleteModal);
     document.body.appendChild(ctxMenu);
+    ensureGpToastMounted();
     migrateGoals();
 
     // Prefer in-stack mount above Tips on the native right rail; fixed fallback only if needed.
