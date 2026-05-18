@@ -2219,7 +2219,7 @@
 
   function goalCheckboxSvg(accentHex, isDone) {
     const theme = buildGoalSessionChipTheme(accentHex, isDone);
-    const stroke = isDone ? theme.accentDone : theme.accent;
+    const stroke = isDone ? theme.borderDone : theme.border;
     if (isDone) {
       return (
         '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">' +
