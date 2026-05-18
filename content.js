@@ -2203,10 +2203,10 @@
   function applyGhostEventTheme(ghost, accentHex) {
     if (!(ghost instanceof HTMLElement)) return;
     const theme = buildGoalSessionChipTheme(accentHex, false);
-    const accentRgb = parseHexToRgb(theme.accent);
+    const accentRgb = parseHexToRgb(theme.border);
     const fillRgb = parseHexToRgb(theme.fill);
     ghost.style.setProperty('--gp-chip-fill', theme.fill);
-    ghost.style.setProperty('--gp-chip-accent', theme.accent);
+    ghost.style.setProperty('--gp-chip-accent', theme.border);
     ghost.style.setProperty('--gp-chip-text', theme.text);
     ghost.style.background = `rgba(${fillRgb.r}, ${fillRgb.g}, ${fillRgb.b}, 0.42)`;
     ghost.style.borderLeft = `4px solid rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.55)`;
