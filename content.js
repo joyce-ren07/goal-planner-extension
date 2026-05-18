@@ -4759,6 +4759,10 @@
         return data;
       }
 
+      const selectedLabel = findColorLabelById(state.selectedColorLabelId);
+      const goalColor = selectedLabel?.color || GP_GOAL_DEFAULT_UI_COLOR;
+      const goalColorId = selectedLabel?.colorId || '9';
+
       // One recurring master per suggestion slot; GCal expands instances across future weeks.
       const eventIds = [];
       for (const s of state.suggestions) {
@@ -4767,7 +4771,7 @@
           description: `Goal Planner session for: "${state.goalTitle}"`,
           start: { dateTime: s.isoStart, timeZone: tz },
           end: { dateTime: s.isoEnd, timeZone: tz },
-          colorId: '9',
+          colorId: goalColorId,
         };
         const rrules = buildRecurrenceRrulesForSession(r, s.isoStart);
         if (rrules.length) eventBody.recurrence = rrules;
