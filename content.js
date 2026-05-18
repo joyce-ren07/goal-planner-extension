@@ -2465,12 +2465,15 @@
     }
 
     let root = document.getElementById('gp-gcal-sidebar-goals-root');
-    if (root && root.isConnected) {
+    const scroll = findGCalLeftSidebarScrollEl();
+    if (root && root.isConnected && scroll) {
+      if (gpGoalsSidebarNeedsReposition(scroll, root)) {
+        insertGoalsSectionIntoSidebarScroll(scroll, root);
+      }
       syncMyGoalsSidebarChromeFromNative();
       return root;
     }
 
-    const scroll = findGCalLeftSidebarScrollEl();
     if (!scroll) return null;
 
     if (root) root.remove();
