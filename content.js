@@ -6674,6 +6674,67 @@
   let _gpGdHydrateQuietUntil = 0;
   let _gpGdLastFullHydrateAt = 0;
   let _gpGdLastAlignAt = 0;
+  let _gpGdLayoutLockUntil = 0;
+
+  function gpGdLayoutLocked() {
+    return Date.now() < _gpGdLayoutLockUntil;
+  }
+
+  function gpGdLockDetailLayout(ms) {
+    _gpGdLayoutLockUntil = Date.now() + (ms || 4000);
+  }
+
+  function gpGdIsMarkFooterWellPlaced(footer, cardRoot) {
+    if (!(footer instanceof HTMLElement) || !footer.isConnected) return false;
+    if (!(cardRoot instanceof HTMLElement) || !cardRoot.isConnected) return false;
+    if (!gpGdComposedSubtreeContains(cardRoot, footer)) return false;
+    const fr = footer.getBoundingClientRect();
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200 || fr.width < 40) return false;
+    if (fr.width > cr.width * 1.1 + 16) return false;
+    if (fr.left < cr.left - 20 || fr.right > cr.right + 28) return false;
+    if (fr.top < cr.top + cr.height * 0.38) return false;
+    return true;
+  }
+
+  /** Mount Mark completed at the bottom of the inspector card (never in the header toolbar). */
+  function gpGdMountFooterAtCardBottom(footer, cardRoot) {
+    if (!(footer instanceof HTMLElement) || !(cardRoot instanceof HTMLElement)) return false;
+    const cr = cardRoot.getBoundingClientRect();
+    if (cr.width < 200) return false;
+    const minTop = cr.top + cr.height * 0.45;
+    /** @type {HTMLElement | null} */
+    let anchor = null;
+    let anchorTop = Infinity;
+    gpGdWalkComposedElements(cardRoot, (el) => {
+      if (!(el instanceof HTMLElement)) return;
+      if (el === footer || footer.contains(el)) return;
+      if (el.closest('#gp-gcal-detail-mark-footer, [data-gp-mark-footer]')) return;
+      if (el.closest('#gp-gcal-detail-goal-extension')) return;
+      const r = el.getBoundingClientRect();
+      if (r.top < minTop || r.height < 10 || r.width < cr.width * 0.35) return;
+      const row = gpGdElevateToMetadataRow(cardRoot, el);
+      if (!(row instanceof HTMLElement) || row === footer) return;
+      const rr = row.getBoundingClientRect();
+      if (rr.top >= anchorTop) return;
+      anchor = row;
+      anchorTop = rr.top;
+    });
+    try {
+      if (anchor?.parentElement instanceof HTMLElement) {
+        anchor.parentElement.insertBefore(footer, anchor.nextSibling);
+      } else {
+        cardRoot.appendChild(footer);
+      }
+    } catch (_) {
+      try {
+        cardRoot.appendChild(footer);
+      } catch (_2) {
+        return false;
+      }
+    }
+    return gpGdForceMountIntoCard(footer, cardRoot, null);
+  }
 
   /** Last mounted extension node (detached automatically when inspector closes). */
   let __gpGdBlockEl = /** @type {HTMLElement | null} */ (null);
