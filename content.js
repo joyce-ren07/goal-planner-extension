@@ -5007,16 +5007,26 @@
     if (!swEl) return;
     const selected = findColorLabelById(state.selectedColorLabelId);
     const selectedColorId = selected?.colorId || '';
+    const usedColorIds = new Set(
+      state.colorLabels
+        .filter((l) => l.id !== state.selectedColorLabelId)
+        .map((l) => l.colorId)
+    );
     const frag = document.createDocumentFragment();
     for (const c of GP_COLOR_LABEL_PALETTE) {
+      const isUsed = usedColorIds.has(c.colorId);
       const sw = document.createElement('button');
       sw.type = 'button';
-      sw.className = 'gp-color-swatch' + (c.colorId === selectedColorId ? ' selected' : '');
+      sw.className =
+        'gp-color-swatch' +
+        (c.colorId === selectedColorId ? ' selected' : '') +
+        (isUsed ? ' used' : '');
+      sw.disabled = isUsed;
       sw.style.background = c.hex;
       sw.dataset.colorId = c.colorId;
       sw.dataset.hex = c.hex;
-      sw.title = c.name;
-      sw.setAttribute('aria-label', c.name);
+      sw.title = isUsed ? `${c.name} (in use)` : c.name;
+      sw.setAttribute('aria-label', sw.title);
       sw.innerHTML = '<span class="material-symbols-outlined gp-color-swatch-check">check</span>';
       frag.appendChild(sw);
     }
