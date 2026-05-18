@@ -4712,8 +4712,19 @@
 
   /** Resolve session from the chip the user clicked (avoids waiting on DOM event-id ↔ API id matching). */
   function gpGdHitFromPinnedChip(unified, pinnedEventHints) {
-    const gid = _gpGdPinnedGoalId;
-    if (!gid || !unified?.goals) return null;
+    if (!unified?.goals) return null;
+    const hints = Array.isArray(pinnedEventHints) ? pinnedEventHints : [];
+    let gid = _gpGdPinnedGoalId ? String(_gpGdPinnedGoalId) : '';
+    if (!gid) {
+      for (const h of hints) {
+        const u = gpFindUnifiedSessionForDomEventKey(unified, h);
+        if (u?.goal?.id) {
+          gid = String(u.goal.id);
+          break;
+        }
+      }
+    }
+    if (!gid) return null;
     const gi = unified.goals.findIndex((g) => String(g.id) === String(gid));
     if (gi < 0) return null;
     const g = unified.goals[gi];
