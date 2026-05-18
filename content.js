@@ -4999,9 +4999,9 @@
       const sw = document.createElement('button');
       sw.type = 'button';
       sw.className = 'gp-color-swatch' + (c.colorId === selectedColorId ? ' selected' : '');
-      sw.style.background = c.swatch;
+      sw.style.background = c.hex;
       sw.dataset.colorId = c.colorId;
-      sw.dataset.dot = c.dot;
+      sw.dataset.hex = c.hex;
       sw.title = c.name;
       sw.setAttribute('aria-label', c.name);
       sw.innerHTML = '<span class="material-symbols-outlined gp-color-swatch-check">check</span>';
