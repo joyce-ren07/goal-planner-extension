@@ -7295,15 +7295,15 @@
 
     return `
       <header class="gp-task-detail-header">
+        <div class="gp-task-detail-title-row">
+          <span class="gp-task-detail-category-dot" style="background:${categoryColor};"></span>
+          <h2 id="gp-task-detail-title" class="gp-task-detail-title">${title}</h2>
+        </div>
         <button type="button" class="gp-m3-icon-btn gp-task-detail-close-btn" data-gp-task-detail-close aria-label="Close">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </header>
       <div class="gp-task-detail-body" style="--gp-task-detail-category:${categoryColor};">
-        <div class="gp-task-detail-title-row">
-          <span class="gp-task-detail-category-dot" style="background:${categoryColor};"></span>
-          <h2 id="gp-task-detail-title" class="gp-task-detail-title">${title}</h2>
-        </div>
         <p class="gp-task-detail-date">${dateOnly}</p>
         ${timeHtml}
         ${recurrenceLine}

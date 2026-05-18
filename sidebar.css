@@ -5219,19 +5219,29 @@ body.gp-sidebar-open .gp-mt-layer {
 
 .gp-task-detail-header {
   display: flex;
-  justify-content: flex-end;
-  padding: 4px 4px 0 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 12px 4px 0 12px;
+  box-sizing: border-box;
+}
+
+.gp-task-detail-close-btn {
+  flex: none;
+  margin: -8px -4px 0 0;
 }
 
 .gp-task-detail-body {
-  padding: 0 16px 16px;
+  padding: 8px 16px 16px;
 }
 
 .gp-task-detail-title-row {
   display: flex;
+  flex: 1;
   align-items: flex-start;
   gap: 12px;
-  margin-top: 0;
+  min-width: 0;
+  margin: 0;
 }
 
 .gp-task-detail-category-dot {
