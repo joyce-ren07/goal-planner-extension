@@ -1204,6 +1204,17 @@
 
   function setupRailMountWatcher() {
     if (_gpRailStackMo) return;
+    // Watch for GCal route changes via the URL bar instead of by listening to
+    // every body mutation. The body-subtree observer was the original way to
+    // know when GCal rebuilt its rail (e.g. SPA navigation between views), but
+    // it also fires on every DOM change anyone else makes — when shannon's
+    // kanban is also injected, that's a constant stream of mutations and the
+    // button visibly thrashes as we re-evaluate mount state for each one.
+    //
+    // GCal is an SPA — view switches change the URL via history.pushState
+    // without triggering navigation events. So we override the history API
+    // and dispatch a custom event we can listen to.
+    let lastHref = location.href;
     const run = () => {
       const btn = document.getElementById('gp-sidebar-btn');
       if (btn) ensureGoalPlannerRailButtonMounted(btn);
@@ -1211,11 +1222,43 @@
     run();
     const schedule = () => {
       clearTimeout(_railStackMountTimer);
-      _railStackMountTimer = setTimeout(run, 180);
+      _railStackMountTimer = setTimeout(() => {
+        if (location.href === lastHref) {
+          // Same view — only re-run if the rail mount state changed (rare;
+          // can happen if GCal lazy-loads the rail after initial load).
+          const shell = document.getElementById('gp-rail-slot');
+          const rail = findRailByStructure();
+          if (shell?.isConnected && rail?.contains(shell)) return;
+        }
+        lastHref = location.href;
+        run();
+      }, 180);
     };
-    _gpRailStackMo = new MutationObserver(schedule);
-    _gpRailStackMo.observe(document.body, { childList: true, subtree: true });
+    // Hook pushState / replaceState so GCal's SPA navigation triggers a remount.
+    const wrap = (orig) => function (...args) {
+      const ret = orig.apply(this, args);
+      schedule();
+      return ret;
+    };
+    history.pushState = wrap(history.pushState);
+    history.replaceState = wrap(history.replaceState);
+    window.addEventListener('popstate', schedule);
+    window.addEventListener('hashchange', schedule);
     window.addEventListener('resize', run);
+    // Light, throttled fallback: poll every 2s for the case where GCal mounts
+    // the rail well after initial document_idle. Stop polling once mounted.
+    const pollHandle = setInterval(() => {
+      const shell = document.getElementById('gp-rail-slot');
+      const rail = findRailByStructure();
+      if (shell?.isConnected && rail?.contains(shell)) {
+        clearInterval(pollHandle);
+        return;
+      }
+      run();
+    }, 2000);
+    // Sentinel so we can detect old wiring in dev tools. We deliberately do
+    // not assign a body-subtree MutationObserver here.
+    _gpRailStackMo = { disconnect() {} };
     setupRailFallbackPositioner();
   }
 
@@ -1261,15 +1304,13 @@
   }
 
   function setupRailFallbackPositioner() {
-    const schedule = () => {
-      clearTimeout(_railPositionTimer);
-      _railPositionTimer = setTimeout(() => {
-        const shell = document.getElementById('gp-rail-slot');
-        if (shell?.isConnected && findRailByStructure()?.contains(shell)) return;
-        positionRailFallback();
-      }, 200);
-    };
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    // Originally this watched document.body subtree mutations to reposition
+    // the fallback wrap as GCal's layout shifted. With shannon's kanban also
+    // mutating the body, that observer fires constantly, and the button
+    // visibly chases the layout. Switch to resize-only triggering — the
+    // fallback uses constants for top/right, so we don't need to reposition
+    // on every layout shift anyway. We still position once on initial mount.
+    positionRailFallback();
     window.addEventListener('resize', positionRailFallback);
   }
 
