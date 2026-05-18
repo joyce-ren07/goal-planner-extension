@@ -2128,32 +2128,99 @@
     el.style.zIndex = '';
   }
 
-  function positionMkDueFixedDropdown(el, anchorRect, preferredWidth) {
+  function getMkDueDropdownBoundaryRect() {
+    const host = gpMkDueEditorTarget?.host;
+    if (!host) return null;
+    const rect = host.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return null;
+    return rect;
+  }
+
+  function positionMkDueFixedDropdown(el, anchorRect, options = {}) {
     if (!el || !anchorRect) return;
-    const w = Math.min(preferredWidth, window.innerWidth - 16);
-    let left = anchorRect.left;
-    if (preferredWidth > 288) {
-      left = anchorRect.right - w;
+
+    const {
+      preferredWidth = 288,
+      minHeightEstimate = 300,
+    } = options;
+
+    const boundary = getMkDueDropdownBoundaryRect();
+    const boundaryMargin = 4;
+    let width = preferredWidth;
+    if (boundary) {
+      width = Math.min(width, Math.max(200, boundary.width - boundaryMargin * 2));
     }
-    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+    width = Math.min(width, window.innerWidth - 16);
+
+    let left = anchorRect.left;
+    if (boundary) {
+      if (left + width > boundary.right - boundaryMargin) {
+        left = boundary.right - width - boundaryMargin;
+      }
+      if (left < boundary.left + boundaryMargin) {
+        left = boundary.left + boundaryMargin;
+      }
+    }
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
 
     const gap = 4;
-    const margin = 8;
+    const viewportMargin = 8;
     el.style.position = 'fixed';
     el.style.left = `${left}px`;
     el.style.right = 'auto';
-    el.style.width = `${w}px`;
+    el.style.width = `${width}px`;
     el.style.zIndex = '2147483647';
 
     const measuredHeight = el.getBoundingClientRect().height || el.offsetHeight || 0;
-    const dropdownHeight = Math.max(measuredHeight, 300);
+    const dropdownHeight = Math.max(measuredHeight, minHeightEstimate);
     let top = anchorRect.bottom + gap;
-    if (top + dropdownHeight > window.innerHeight - margin) {
+    if (top + dropdownHeight > window.innerHeight - viewportMargin) {
       const aboveTop = anchorRect.top - gap - dropdownHeight;
-      if (aboveTop >= margin) {
+      if (aboveTop >= viewportMargin) {
         top = aboveTop;
       } else {
-        top = Math.max(margin, window.innerHeight - dropdownHeight - margin);
+        top = Math.max(viewportMargin, window.innerHeight - dropdownHeight - viewportMargin);
+      }
+    }
+    el.style.top = `${top}px`;
+  }
+
+  function getMkDueTimeAnchorRect(timeLink) {
+    if (!timeLink) return null;
+    const wrap = timeLink.closest('.gp-inline-schedule-time-wrap');
+    const el = wrap || timeLink;
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 1 && rect.height < 1) return timeLink.getBoundingClientRect();
+    return rect;
+  }
+
+  function applyMkDueDropdownPosition(el, anchorRect, layout) {
+    if (!el || !anchorRect) return;
+
+    const {
+      left,
+      width,
+      minHeightEstimate = 220,
+    } = layout;
+
+    const gap = 4;
+    const viewportMargin = 8;
+    el.style.position = 'fixed';
+    el.style.left = `${left}px`;
+    el.style.right = 'auto';
+    el.style.width = `${width}px`;
+    el.style.zIndex = '2147483647';
+    el.style.opacity = '1';
+
+    const measuredHeight = el.getBoundingClientRect().height || el.offsetHeight || 0;
+    const dropdownHeight = Math.max(measuredHeight, minHeightEstimate);
+    let top = anchorRect.bottom + gap;
+    if (top + dropdownHeight > window.innerHeight - viewportMargin) {
+      const aboveTop = anchorRect.top - gap - dropdownHeight;
+      if (aboveTop >= viewportMargin) {
+        top = aboveTop;
+      } else {
+        top = Math.max(viewportMargin, window.innerHeight - dropdownHeight - viewportMargin);
       }
     }
     el.style.top = `${top}px`;
@@ -2161,12 +2228,48 @@
 
   function positionMkDueDateDropdown(cal, dateLink) {
     if (!cal || !dateLink) return;
-    positionMkDueFixedDropdown(cal, dateLink.getBoundingClientRect(), 288);
+    positionMkDueFixedDropdown(cal, dateLink.getBoundingClientRect(), {
+      preferredWidth: 288,
+      minHeightEstimate: 300,
+    });
   }
 
   function positionMkDueTimeDropdown(timeDropdown, timeLink) {
     if (!timeDropdown || !timeLink) return;
-    positionMkDueFixedDropdown(timeDropdown, timeLink.getBoundingClientRect(), 320);
+
+    const anchorRect = getMkDueTimeAnchorRect(timeLink);
+    if (!anchorRect) return;
+
+    const inSidebar = isMkDueEditorInSidebar();
+    const columnWidth = 132;
+    const preferredWidth = inSidebar ? columnWidth : 320;
+    const boundary = getMkDueDropdownBoundaryRect();
+    const margin = 8;
+
+    let width = preferredWidth;
+    let left = anchorRect.left;
+
+    if (boundary) {
+      const maxWidth = boundary.right - margin - left;
+      if (maxWidth < width) {
+        width = Math.max(columnWidth, maxWidth);
+      }
+      if (left + width > boundary.right - margin) {
+        left = anchorRect.right - width;
+      }
+      if (left < boundary.left + margin) {
+        left = Math.max(boundary.left + margin, boundary.right - margin - width);
+      }
+    }
+
+    width = Math.min(width, window.innerWidth - 16);
+    left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+
+    applyMkDueDropdownPosition(timeDropdown, anchorRect, {
+      left,
+      width,
+      minHeightEstimate: inSidebar ? 240 : 220,
+    });
   }
 
   function isMkDueEditorInSidebar() {
@@ -2177,11 +2280,17 @@
     return document.querySelector('#gp-panel .gp-card');
   }
 
-  function ensureMkDueDropdownVisibleInSidebar() {
-    if (!isMkDueEditorInSidebar()) return;
+  function getMkDueDropdownScrollContainer() {
+    if (isMkDueEditorInSidebar()) {
+      return getSidebarDueScrollContainer();
+    }
+    const host = gpMkDueEditorTarget?.host;
+    return host?.closest('.mk-column-cards') || null;
+  }
 
+  function ensureMkDueDropdownVisibleInScrollContainer() {
     const target = gpMkDueEditorTarget;
-    const scrollEl = getSidebarDueScrollContainer();
+    const scrollEl = getMkDueDropdownScrollContainer();
     if (!target?.scheduleEl || !scrollEl) return;
 
     const scheduleEl = target.scheduleEl;
@@ -2220,13 +2329,13 @@
     }
   }
 
-  function queueMkDueSidebarScrollAdjust() {
-    if (!isMkDueEditorInSidebar()) return;
+  function queueMkDueDropdownScrollAdjust() {
+    if (!getMkDueDropdownScrollContainer()) return;
     if (gpMkDueSidebarScrollRaf) cancelAnimationFrame(gpMkDueSidebarScrollRaf);
     gpMkDueSidebarScrollRaf = requestAnimationFrame(() => {
       gpMkDueSidebarScrollRaf = requestAnimationFrame(() => {
         gpMkDueSidebarScrollRaf = null;
-        ensureMkDueDropdownVisibleInSidebar();
+        ensureMkDueDropdownVisibleInScrollContainer();
         if (!gpMkDueEditorTarget) return;
         const scheduleEl = gpMkDueEditorTarget.scheduleEl;
         if (!scheduleEl) return;
@@ -2261,15 +2370,19 @@
     }
 
     if (target.timeDropdownOpen && timeDropdown && timeLink) {
+      timeDropdown.classList.toggle(
+        'gp-inline-schedule-time-dropdown--sidebar',
+        isMkDueEditorInSidebar(),
+      );
       mountMkDueDropdownToPortal(timeDropdown, 'timeMount');
       positionMkDueTimeDropdown(timeDropdown, timeLink);
-      scrollMkDueTimeListsToDraft();
     } else if (timeDropdown) {
+      timeDropdown.classList.remove('gp-inline-schedule-time-dropdown--sidebar');
       restoreMkDueDropdownFromPortal(timeDropdown, 'timeMount');
     }
 
     if (target.dateDropdownOpen || target.timeDropdownOpen) {
-      queueMkDueSidebarScrollAdjust();
+      queueMkDueDropdownScrollAdjust();
     }
   }
 
@@ -2449,9 +2562,13 @@
     ['start', 'end'].forEach((field) => {
       const section = document.createElement('div');
       section.className = 'gp-inline-schedule-time-section';
+      section.setAttribute('role', 'group');
       const sectionLabel = document.createElement('span');
       sectionLabel.className = 'gp-inline-schedule-time-section-label';
-      sectionLabel.textContent = field === 'start' ? 'Start' : 'End';
+      const labelId = `gp-inline-schedule-time-${field}-label`;
+      sectionLabel.id = labelId;
+      sectionLabel.textContent = field === 'start' ? 'Start time' : 'End time';
+      section.setAttribute('aria-labelledby', labelId);
       const list = document.createElement('div');
       list.className = 'gp-ct-time-list gp-inline-schedule-time-list';
       list.dataset.timeField = field;
@@ -2626,7 +2743,7 @@
     const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
     if (target?.dateDropdownOpen && cal && dateLink) {
       positionMkDueDateDropdown(cal, dateLink);
-      queueMkDueSidebarScrollAdjust();
+      queueMkDueDropdownScrollAdjust();
     }
   }
 
@@ -2651,8 +2768,12 @@
     if (!list) return;
     const opt = list.querySelector(`.gp-ct-time-opt[data-hm="${hm}"]`);
     if (!opt) return;
-    const targetTop = opt.offsetTop - (list.clientHeight - opt.offsetHeight) / 2;
-    list.scrollTop = Math.max(0, targetTop);
+    if (list.clientHeight > 0) {
+      const targetTop = opt.offsetTop - (list.clientHeight - opt.offsetHeight) / 2;
+      list.scrollTop = Math.max(0, targetTop);
+    } else {
+      opt.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
   }
 
   function scrollMkDueTimeListsToDraft() {
@@ -2691,6 +2812,12 @@
     const opening = !target.timeDropdownOpen;
     target.timeDropdownOpen = opening;
     applyMkDueDropdownUi();
+    if (opening) {
+      requestAnimationFrame(() => {
+        scrollMkDueTimeListsToDraft();
+        queueMkDueDropdownScrollAdjust();
+      });
+    }
   }
 
   function toggleMkDueDateDropdown() {
@@ -2760,8 +2887,10 @@
     if (!target) return;
     target.dateDropdownOpen = false;
     target.timeDropdownOpen = open;
-    if (open) scrollMkDueTimeListsToDraft();
     applyMkDueDropdownUi();
+    if (open) {
+      requestAnimationFrame(() => scrollMkDueTimeListsToDraft());
+    }
   }
 
   async function commitMkDueEditorDraft() {
@@ -2924,10 +3053,27 @@
       }
     });
 
-    const repositionMkDueDropdowns = () => {
+    const repositionMkDueDropdowns = (event) => {
       if (!gpMkDueEditorTarget) return;
-      if (gpMkDueEditorTarget.dateDropdownOpen || gpMkDueEditorTarget.timeDropdownOpen) {
-        syncMkDueDropdownPortal();
+      const scrollTarget = event?.target;
+      if (scrollTarget instanceof Element
+        && scrollTarget.closest('.gp-inline-schedule-time-list, .gp-inline-schedule-cal-grid')) {
+        return;
+      }
+
+      const scheduleEl = getActiveInlineSchedule();
+      if (!scheduleEl) return;
+
+      if (gpMkDueEditorTarget.dateDropdownOpen) {
+        const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
+        const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
+        if (cal && dateLink) positionMkDueDateDropdown(cal, dateLink);
+      }
+
+      if (gpMkDueEditorTarget.timeDropdownOpen) {
+        const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
+        const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
+        if (timeDropdown && timeLink) positionMkDueTimeDropdown(timeDropdown, timeLink);
       }
     };
     window.addEventListener('resize', repositionMkDueDropdowns);
