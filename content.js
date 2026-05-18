@@ -10453,6 +10453,7 @@
             '<span class="ext-goal-time">' + initialTime + '</span>' +
           '</div>';
         boundChipHeight(chip);
+        applyGoalChipTheme(chip, accent, isDone);
         requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
       } finally {
         setTimeout(() => {
