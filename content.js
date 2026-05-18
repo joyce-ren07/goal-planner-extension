@@ -7374,13 +7374,13 @@
     __gpGdBlockEl = wrap;
     gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sess.completed), cardRoot);
     if (dialogShell instanceof HTMLElement) {
-      gpGdAlignMarkFooterToCard(dialogShell);
       gpGdEnsureDialogRepairObserver(dialogShell);
     }
     gpGdEnsureDetailDelegates(wrap, hit);
     const ok = placed;
     if (ok) {
       _gpGdHydrateQuietUntil = Date.now() + 15000;
+      gpGdLockDetailLayout(5000);
       _gpGdRemountCount = 0;
       gpGdMarkDetailScanActive(15000);
     }
