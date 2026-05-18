@@ -899,11 +899,28 @@
     return GP_PANEL_W;
   }
 
-  /** Total right inset: Goal Planner panel + GCal icon rail (matches panel `right` offset). */
-  function getCalendarPushInsetPx() {
-    const panel = document.getElementById('gp-panel');
+  function getKanbanPanelPushWidthPx() {
+    const panel = document.getElementById('gp-kanban-panel');
     if (!panel?.classList.contains('open')) return 0;
-    return getGoalPanelPushWidthPx() + getGCalRailWidth();
+    const w = Math.round(panel.getBoundingClientRect().width);
+    if (w >= 200 && w <= 720) return w + 8;
+    return 341 + 8;
+  }
+
+  /** Total right inset: open panels (goals + kanban) + GCal icon rail. */
+  function getCalendarPushInsetPx() {
+    const goalW = document.getElementById('gp-panel')?.classList.contains('open')
+      ? getGoalPanelPushWidthPx()
+      : 0;
+    const kanbanW = getKanbanPanelPushWidthPx();
+    if (!goalW && !kanbanW) return 0;
+    return goalW + kanbanW + getGCalRailWidth();
+  }
+
+  function reapplyCalendarPush() {
+    const goalOpen = document.getElementById('gp-panel')?.classList.contains('open');
+    const kanbanOpen = document.getElementById('gp-kanban-panel')?.classList.contains('open');
+    setCalendarPushed(!!(goalOpen || kanbanOpen));
   }
 
   function getCalendarPushRoot() {
@@ -1018,10 +1035,9 @@
 
   let calendarPushDebounce = null;
   function setupCalendarPushObserver() {
-    const reapply = () => {
-      const panel = document.getElementById('gp-panel');
-      if (panel && panel.classList.contains('open')) setCalendarPushed(true);
-    };
+    document.addEventListener('gp:sync-calendar-push', reapplyCalendarPush);
+
+    const reapply = () => reapplyCalendarPush();
     const scheduleReapply = () => {
       if (calendarPushDebounce) clearTimeout(calendarPushDebounce);
       calendarPushDebounce = setTimeout(() => {

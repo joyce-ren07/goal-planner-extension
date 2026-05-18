@@ -1,65 +1,55 @@
 /**
- * panelCoordinator.js — keeps the Goal Planner panel (#gp-panel) and the
- * kanban / My Tasks panel (#gp-kanban-panel) mutually exclusive.
+ * panelCoordinator.js — layout sync when Goal Planner (#gp-panel) and
+ * My Tasks / kanban (#gp-kanban-panel) are both open.
  *
- * Both panels live in Google Calendar's right rail and both shrink the
- * calendar main column when open. Letting both be open at once doubles the
- * inset and squashes the calendar, so we enforce: opening one closes the
- * other. The class watched is `.open` on each panel element, which is the
- * activation class both feature modules already use.
- *
- * This file is intentionally tiny and stateless — it observes class changes
- * and dispatches the existing close paths each module exposes.
+ * Both panels share the right side of Calendar. They are placed side-by-side
+ * (kanban left of goals, goals next to the icon rail) and the calendar main
+ * column is inset by the combined width.
  */
 (function () {
   'use strict';
 
   const GOAL_PANEL_ID = 'gp-panel';
   const KANBAN_PANEL_ID = 'gp-kanban-panel';
+  const PANEL_GAP_PX = 8;
 
-  let suppressingMutations = false;
-
-  function isOpen(el) {
-    return !!(el && el.classList && el.classList.contains('open'));
+  function panelIsOpen(id) {
+    const el = document.getElementById(id);
+    return !!(el && el.classList.contains('open'));
   }
 
-  function closeGoalPanel() {
-    const p = document.getElementById(GOAL_PANEL_ID);
-    if (!p || !isOpen(p)) return;
-    suppressingMutations = true;
-    p.classList.remove('open');
-    // Dispatch a synthetic event so the goal module can run its own teardown
-    // (push observer reset, ghost preview cleanup, etc.) if it listens.
-    document.dispatchEvent(new CustomEvent('gp:panel-coordinator-close', { detail: { id: GOAL_PANEL_ID } }));
-    queueMicrotask(() => { suppressingMutations = false; });
+  function panelWidthPx(id, fallback) {
+    const el = document.getElementById(id);
+    if (!el || !el.classList.contains('open')) return 0;
+    const w = Math.round(el.getBoundingClientRect().width);
+    if (w >= 200 && w <= 720) return w;
+    return fallback;
   }
 
-  function closeKanbanPanel() {
-    const p = document.getElementById(KANBAN_PANEL_ID);
-    if (!p || !isOpen(p)) return;
-    suppressingMutations = true;
-    p.classList.remove('open');
-    document.dispatchEvent(new CustomEvent('gp:panel-coordinator-close', { detail: { id: KANBAN_PANEL_ID } }));
-    queueMicrotask(() => { suppressingMutations = false; });
+  function syncDualPanelLayout() {
+    const goalOpen = panelIsOpen(GOAL_PANEL_ID);
+    const kanbanOpen = panelIsOpen(KANBAN_PANEL_ID);
+
+    document.body.classList.toggle('gp-dual-panels-goals-open', goalOpen);
+    document.body.classList.toggle('gp-dual-panels-kanban-open', kanbanOpen);
+
+    const goalW = goalOpen ? panelWidthPx(GOAL_PANEL_ID, 320) : 0;
+    const offset = goalOpen && kanbanOpen ? goalW + PANEL_GAP_PX : 0;
+    document.documentElement.style.setProperty('--gp-dual-goal-offset', `${offset}px`);
+
+    document.dispatchEvent(new CustomEvent('gp:sync-calendar-push'));
   }
 
-  // Hard ceiling on how long we'll keep watching for a panel to mount.
-  // After this, give up so we don't keep a global subtree observer alive
-  // forever — the kanban panel is lazy-loaded, so it may legitimately
-  // never appear in a session.
   const PANEL_WAIT_MS = 60_000;
 
-  function watch(panelId, closeOther) {
-    const observer = new MutationObserver(() => {
-      if (suppressingMutations) return;
-      const panel = document.getElementById(panelId);
-      if (isOpen(panel)) closeOther();
-    });
+  function watch(panelId) {
+    const observer = new MutationObserver(() => syncDualPanelLayout());
 
     function tryAttach() {
       const panel = document.getElementById(panelId);
       if (panel) {
         observer.observe(panel, { attributes: true, attributeFilter: ['class'] });
+        syncDualPanelLayout();
         return true;
       }
       return false;
@@ -67,10 +57,6 @@
 
     if (tryAttach()) return;
 
-    // Either module may mount its panel after our content script runs.
-    // Watch the body for child additions until the panel appears, but
-    // give up after PANEL_WAIT_MS to avoid a perpetual global observer
-    // when the panel is never created.
     const bodyObs = new MutationObserver(() => {
       if (tryAttach()) {
         bodyObs.disconnect();
@@ -80,12 +66,11 @@
     bodyObs.observe(document.documentElement, { childList: true, subtree: true });
 
     const timeoutId = setTimeout(() => {
-      // Re-arm once via direct lookup, then drop the body subtree observer.
       tryAttach();
       bodyObs.disconnect();
     }, PANEL_WAIT_MS);
   }
 
-  watch(GOAL_PANEL_ID, closeKanbanPanel);
-  watch(KANBAN_PANEL_ID, closeGoalPanel);
+  watch(GOAL_PANEL_ID);
+  watch(KANBAN_PANEL_ID);
 })();

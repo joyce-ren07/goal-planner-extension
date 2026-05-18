@@ -1080,10 +1080,17 @@
       height = Math.max(240, Math.round(mainRect.height));
 
       if (panel?.classList.contains('open')) {
+        const goalPanel = document.getElementById('gp-panel');
+        const goalOpen = Boolean(goalPanel?.classList.contains('open'));
+        const goalW = goalOpen
+          ? Math.round(goalPanel.getBoundingClientRect().width) || 320
+          : 0;
+        const goalOffset = goalOpen ? goalW + PANEL_CALENDAR_GAP_PX : 0;
+
         const flushRight = Math.round(
-          window.innerWidth - mainRect.right - PANEL_WIDTH_PX - PANEL_CALENDAR_GAP_PX,
+          window.innerWidth - mainRect.right - PANEL_WIDTH_PX - PANEL_CALENDAR_GAP_PX - goalOffset,
         );
-        const anchoredNearRail = railInset + PANEL_RAIL_GAP_PX;
+        const anchoredNearRail = railInset + PANEL_RAIL_GAP_PX + goalOffset;
         panelRight = flushRight > 0
           ? Math.min(flushRight, anchoredNearRail)
           : anchoredNearRail;
@@ -1100,6 +1107,12 @@
   }
 
   function setCalendarPushed(open) {
+    const goalOpen = document.getElementById('gp-panel')?.classList.contains('open');
+    if (goalOpen) {
+      document.dispatchEvent(new CustomEvent('gp:sync-calendar-push'));
+      return;
+    }
+
     const mainEl = getCalendarMainEl();
     if (!mainEl) return;
 
@@ -1187,6 +1200,13 @@
   }
 
   function setupCalendarPushObserver() {
+    document.addEventListener('gp:sync-calendar-push', () => {
+      setCalendarPushed(
+        Boolean(document.getElementById('gp-kanban-panel')?.classList.contains('open')),
+      );
+      syncGpSidebarLayout();
+    });
+
     const reapply = () => {
       const panel = document.getElementById('gp-kanban-panel');
       if (panel?.classList.contains('open')) {

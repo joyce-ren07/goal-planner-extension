@@ -73,7 +73,7 @@
   position: fixed;
   top: 65px; right: 56px; bottom: 0;
   width: 320px; height: auto;
-  z-index: 1000;
+  z-index: 2147483647;
   display: flex; flex-direction: column;
   pointer-events: none;
   /* hidden: slide fully off-screen to the right (panel width + rail width) */

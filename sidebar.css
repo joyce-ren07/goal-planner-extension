@@ -110,6 +110,11 @@
   min-height: 0;
 }
 
+/* When both panels are open, kanban sits left of the goal panel (offset set in JS). */
+body.gp-dual-panels-goals-open #gp-kanban-panel.mytasks-sidebar.open {
+  right: calc(var(--gp-kanban-panel-right, 56px) + var(--gp-dual-goal-offset, 0px));
+}
+
 #gp-sidebar-rail {
   position: fixed;
   z-index: 2147483645;
