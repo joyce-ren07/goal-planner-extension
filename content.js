@@ -1249,7 +1249,8 @@
   }
 
   // ── Panel HTML ──
-  function createPanel() {
+  function createGpToastElement() {
+    const toast = document.createElement('motion-replacement');
     const panel = document.createElement('div');
     panel.id = 'gp-panel';
     panel.innerHTML = `
