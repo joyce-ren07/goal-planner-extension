@@ -18,6 +18,11 @@
   --m3-radius-full: 9999px;
   --m3-outline-variant: #cac4d0;
   --m3-surface-container-lowest: #ffffff;
+  --m3-surface-container-low: #f8f9fa;
+  --md-sys-color-surface-container-low: var(--m3-surface-container-low);
+  --md-sys-elevation-level1:
+    0 1px 2px color-mix(in srgb, #1d1b20 30%, transparent),
+    0 1px 3px 1px color-mix(in srgb, #1d1b20 15%, transparent);
   --m3-on-surface: #1d1b20;
   /* Match due date/time link horizontal inset (M3 list-style 8dp padding) */
   --gp-sidebar-due-text-inset-x: 8px;
@@ -243,8 +248,9 @@
 .mytasks-native-tasks-layout {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
-  gap: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
   width: 100%;
   min-height: 320px;
   height: 100%;
@@ -260,10 +266,13 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100%;
   align-self: stretch;
+  min-height: 0;
   box-sizing: border-box;
-  background: #fff;
+  border-radius: var(--m3-radius-lg);
+  background: var(--md-sys-color-surface-container-low);
+  border: 0.5px solid var(--m3-outline-variant);
+  box-shadow: var(--md-sys-elevation-level1);
 }
 
 .mytasks-native-tasks-nav__frame {
@@ -806,7 +815,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 
 .mytasks-kanban {
   margin: 0;
-  padding: 0;
+  padding: 0 12px 12px 0;
   --m3-surface: #ffffff;
   --m3-on-surface: #1d1b20;
   --m3-on-surface-variant: #49454f;
@@ -830,13 +839,14 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   min-width: 0;
   min-height: 320px;
   height: 100%;
+  align-self: stretch;
   font-family: 'Google Sans', Roboto, sans-serif;
 }
 
 .mytasks-kanban__board {
   display: flex;
   gap: 8px;
-  padding: 8px 16px 16px 0;
+  padding: 0;
   overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -856,7 +866,8 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 
 .mytasks-kanban__filter-bar {
   display: none;
-  padding: 6px 16px 0 0;
+  flex: 0 0 auto;
+  padding: 0 0 8px;
   box-sizing: border-box;
 }
 
@@ -918,7 +929,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   flex: 0 0 260px;
   width: 260px;
   min-height: 0;
-  padding: 16px;
+  padding: 12px 16px 16px;
   border-radius: 16px;
   background: #eef2fb;
   box-sizing: border-box;

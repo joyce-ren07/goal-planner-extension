@@ -5101,6 +5101,14 @@
       item.appendChild(dismiss);
       pillsHost.appendChild(item);
     });
+
+    const layoutHost = root.closest('.mytasks-native-tasks-layout');
+    if (layoutHost) {
+      requestAnimationFrame(() => {
+        syncKanbanColumnAlignment(layoutHost);
+        syncKanbanHostSize(layoutHost);
+      });
+    }
   }
 
   function buildKanbanColumnHeader(label, filtered) {
@@ -5287,6 +5295,11 @@
 
     updateKanbanFilterBar(root, state);
     applyKanbanBoardFilters(root, state, { animate: false });
+
+    const layoutHost = root.closest('.mytasks-native-tasks-layout');
+    if (layoutHost) {
+      requestAnimationFrame(() => syncKanbanColumnAlignment(layoutHost));
+    }
   }
 
   function createKanbanShell() {
@@ -8862,6 +8875,26 @@
     });
   }
 
+  function syncKanbanColumnAlignment(host) {
+    const createBtn = host?.querySelector('.mytasks-create-btn');
+    const board = host?.querySelector(':scope > .mytasks-kanban .mytasks-kanban__board');
+    if (!createBtn || !board) {
+      if (board) board.style.marginTop = '';
+      return;
+    }
+
+    const header = board.querySelector('.mk-column-header');
+    if (!header) {
+      board.style.marginTop = '';
+      return;
+    }
+
+    const targetTop = createBtn.getBoundingClientRect().top;
+    const headerTop = header.getBoundingClientRect().top;
+    const delta = Math.round((headerTop - targetTop) * 10) / 10;
+    board.style.marginTop = delta ? `${-delta}px` : '';
+  }
+
   function syncKanbanHostSize(host) {
     const kanban = host?.querySelector(':scope > .mytasks-kanban');
     if (!host || !kanban) return;
@@ -8876,6 +8909,7 @@
 
     kanban.style.height = `${innerHeight}px`;
     kanban.style.minHeight = `${innerHeight}px`;
+    syncKanbanColumnAlignment(host);
   }
 
   function observeNativeTasksHost(host) {
