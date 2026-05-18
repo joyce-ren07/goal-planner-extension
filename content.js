@@ -6810,7 +6810,8 @@
       __gpGdBlockEl?.dataset.gpGoalId || ''
     );
     if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
-    return gpGdForceMountIntoCard(footer, card, null);
+    if (gpGdIsMarkFooterWellPlaced(footer, card)) return true;
+    return gpGdMountFooterAtCardBottom(footer, card);
   }
 
   /** Mount Mark completed in the native footer slot at the bottom of the inspector card. */
