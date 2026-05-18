@@ -4874,6 +4874,154 @@
   }
   function saveGoals(g) { return new Promise(r => chrome.storage.local.set({ gp_goals: g }, r)); }
 
+  // ── Color labels (GCal-style "Your color labels" picker) ──
+  const GP_COLOR_LABELS_KEY = 'gp_color_labels';
+  /** GCal calendar event palette — used as the color choices for labels. */
+  const GP_COLOR_LABEL_PALETTE = [
+    { colorId: '4',  hex: '#ff887c' }, // flamingo / salmon
+    { colorId: '6',  hex: '#ffb878' }, // tangerine / orange
+    { colorId: '5',  hex: '#fbd75b' }, // banana / yellow
+    { colorId: '2',  hex: '#7ae7bf' }, // sage / mint
+    { colorId: '10', hex: '#51b749' }, // basil / green
+    { colorId: '7',  hex: '#46d6db' }, // peacock / teal
+    { colorId: '9',  hex: '#5484ed' }, // blueberry / blue
+    { colorId: '1',  hex: '#a4bdfc' }, // lavender
+    { colorId: '3',  hex: '#dbadff' }, // grape / purple
+    { colorId: '11', hex: '#dc2127' }, // tomato / red
+    { colorId: '8',  hex: '#e1e1e1' }, // graphite / gray
+  ];
+  const GP_DEFAULT_COLOR_LABELS = [
+    { id: 'lbl_work',     name: 'Work',     color: '#5484ed', colorId: '9' },
+    { id: 'lbl_personal', name: 'Personal', color: '#ff887c', colorId: '4' },
+    { id: 'lbl_health',   name: 'Health',   color: '#7ae7bf', colorId: '2' },
+    { id: 'lbl_study',    name: 'Study',    color: '#fbd75b', colorId: '5' },
+  ];
+
+  function getColorLabels() {
+    return new Promise((r) =>
+      chrome.storage.local.get([GP_COLOR_LABELS_KEY], (d) => {
+        const labels = Array.isArray(d[GP_COLOR_LABELS_KEY]) ? d[GP_COLOR_LABELS_KEY] : null;
+        r(labels && labels.length ? labels : GP_DEFAULT_COLOR_LABELS.map((l) => ({ ...l })));
+      })
+    );
+  }
+  function saveColorLabels(arr) {
+    return new Promise((r) => chrome.storage.local.set({ [GP_COLOR_LABELS_KEY]: arr }, r));
+  }
+
+  function findColorLabelById(id) {
+    return state.colorLabels.find((l) => l.id === id) || null;
+  }
+
+  function renderColorLabelChips() {
+    const chipsEl = document.getElementById('gp-color-chips');
+    if (!chipsEl) return;
+    const frag = document.createDocumentFragment();
+    for (const lbl of state.colorLabels) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'gp-color-chip' + (lbl.id === state.selectedColorLabelId ? ' selected' : '');
+      chip.dataset.labelId = lbl.id;
+      const dot = document.createElement('span');
+      dot.className = 'gp-color-chip-dot';
+      dot.style.background = lbl.color;
+      const text = document.createElement('span');
+      text.className = 'gp-color-chip-text';
+      text.textContent = lbl.name;
+      chip.appendChild(dot);
+      chip.appendChild(text);
+      frag.appendChild(chip);
+    }
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'gp-color-chip-add';
+    addBtn.id = 'gp-color-chip-add-btn';
+    addBtn.title = 'Add label';
+    addBtn.setAttribute('aria-label', 'Add label');
+    addBtn.innerHTML = '<span class="material-symbols-outlined gp-ms-icon">add</span>';
+    frag.appendChild(addBtn);
+    chipsEl.replaceChildren(frag);
+  }
+
+  function renderColorSwatches() {
+    const swEl = document.getElementById('gp-color-swatches');
+    if (!swEl) return;
+    const selected = findColorLabelById(state.selectedColorLabelId);
+    const selectedHex = (selected?.color || '').toLowerCase();
+    const frag = document.createDocumentFragment();
+    for (const c of GP_COLOR_LABEL_PALETTE) {
+      const sw = document.createElement('button');
+      sw.type = 'button';
+      sw.className = 'gp-color-swatch' + (c.hex.toLowerCase() === selectedHex ? ' selected' : '');
+      sw.style.background = c.hex;
+      sw.dataset.colorId = c.colorId;
+      sw.dataset.hex = c.hex;
+      sw.title = c.hex;
+      sw.innerHTML = '<span class="material-symbols-outlined gp-color-swatch-check">check</span>';
+      frag.appendChild(sw);
+    }
+    swEl.replaceChildren(frag);
+  }
+
+  function renderColorLabelsSection() {
+    renderColorLabelChips();
+    renderColorSwatches();
+  }
+
+  async function loadColorLabelsIntoState(preferredLabelId) {
+    state.colorLabels = await getColorLabels();
+    if (preferredLabelId && state.colorLabels.some((l) => l.id === preferredLabelId)) {
+      state.selectedColorLabelId = preferredLabelId;
+    } else if (!state.selectedColorLabelId || !state.colorLabels.some((l) => l.id === state.selectedColorLabelId)) {
+      state.selectedColorLabelId = state.colorLabels[0]?.id || null;
+    }
+    renderColorLabelsSection();
+  }
+
+  function beginAddColorLabel() {
+    const chipsEl = document.getElementById('gp-color-chips');
+    const addBtn = document.getElementById('gp-color-chip-add-btn');
+    if (!chipsEl || !addBtn) return;
+    if (chipsEl.querySelector('.gp-color-chip-add-input')) return;
+    const wrap = document.createElement('span');
+    wrap.className = 'gp-color-chip-add-input';
+    wrap.innerHTML =
+      '<span class="gp-color-chip-dot" style="background:#5484ed"></span>' +
+      '<input type="text" maxlength="40" placeholder="Label name" autocomplete="off" />';
+    chipsEl.replaceChild(wrap, addBtn);
+    const input = wrap.querySelector('input');
+    input?.focus();
+    const commit = async () => {
+      const name = (input?.value || '').trim();
+      if (!name) { renderColorLabelChips(); return; }
+      const newLabel = {
+        id: 'lbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        name,
+        color: '#5484ed',
+        colorId: '9',
+      };
+      state.colorLabels.push(newLabel);
+      state.selectedColorLabelId = newLabel.id;
+      await saveColorLabels(state.colorLabels);
+      renderColorLabelsSection();
+    };
+    const cancel = () => renderColorLabelChips();
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input?.addEventListener('blur', () => { commit(); });
+  }
+
+  async function handleColorSwatchClick(colorId, hex) {
+    const sel = findColorLabelById(state.selectedColorLabelId);
+    if (!sel) return;
+    sel.color = hex;
+    sel.colorId = colorId;
+    await saveColorLabels(state.colorLabels);
+    renderColorLabelsSection();
+  }
+
   /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
   async function persistGpGoalsAndUnified(goals) {
     if (!Array.isArray(goals)) return;
