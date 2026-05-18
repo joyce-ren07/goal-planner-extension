@@ -4731,8 +4731,6 @@
     const sessions = g.sessions || [];
     if (!sessions.length) return null;
 
-    const hints = Array.isArray(pinnedEventHints) ? pinnedEventHints : [];
-
     if (
       _gpGdPinnedSlotIdx >= 0 &&
       _gpGdPinnedSlotIdx < sessions.length &&
