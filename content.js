@@ -5402,7 +5402,7 @@
     sel.colorId = colorId;
     await saveColorLabels(state.colorLabels);
     renderColorLabelsSection();
-    scheduleGhostPreviewRefreshDebounced();
+    repaintGoalSessionBlocksFromColorPicker();
   }
 
   /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
