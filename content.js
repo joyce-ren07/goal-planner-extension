@@ -4844,8 +4844,9 @@
           created: new Date().toISOString(),
           calEventIds: eventIds,
           sessionAnchors,
-          colorId: '9',
-          color: GP_GOAL_DEFAULT_UI_COLOR,
+          colorId: goalColorId,
+          color: goalColor,
+          colorLabelId: selectedLabel?.id || null,
         });
       }
       await persistGpGoalsAndUnified(goals);
