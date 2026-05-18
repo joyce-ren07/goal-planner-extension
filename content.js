@@ -1549,7 +1549,7 @@
         if (!id) return;
         state.selectedColorLabelId = id;
         renderColorLabelsSection();
-        scheduleGhostPreviewRefreshDebounced();
+        repaintGoalSessionBlocksFromColorPicker();
       });
     }
     const swRoot = document.getElementById('gp-color-swatches');
