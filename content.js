@@ -1100,15 +1100,20 @@
       shell.id = 'gp-rail-slot';
       shell.dataset.gpRailSlot = '1';
     }
-    if (referenceSlot instanceof HTMLElement && referenceSlot.className) {
-      shell.className = referenceSlot.className;
-    } else {
-      shell.className = '';
-    }
-    shell.style.cssText =
+    const desiredClassName = (referenceSlot instanceof HTMLElement && referenceSlot.className)
+      ? referenceSlot.className
+      : '';
+    if (shell.className !== desiredClassName) shell.className = desiredClassName;
+    const desiredCss =
       'display:flex;align-items:center;justify-content:center;flex:0 0 auto;width:100%;' +
       'min-height:48px;box-sizing:border-box;pointer-events:none;';
-    shell.replaceChildren(btn);
+    if (shell.style.cssText !== desiredCss) shell.style.cssText = desiredCss;
+    // Skip replaceChildren if the button is already the only child — replaceChildren
+    // is a childList mutation that fires our own MutationObserver, which would
+    // re-enter this code in a loop once shannon's script wakes up other observers.
+    if (shell.firstElementChild !== btn || shell.childElementCount !== 1) {
+      shell.replaceChildren(btn);
+    }
     return shell;
   }
 
@@ -1125,6 +1130,25 @@
   function tryMountRailButtonInStack(btn) {
     const rail = findRailByStructure();
     if (!(rail instanceof HTMLElement) || !(btn instanceof HTMLElement)) return false;
+
+    // Fast path: if the shell already exists in the rail at the correct position
+    // with the button as its only child, there is nothing to do. Without this
+    // guard the function unconditionally mutates the DOM on every call, which
+    // re-triggers our own MutationObserver and causes the button to visibly
+    // blink/move whenever another script (e.g. shannon's kanban) makes
+    // unrelated DOM changes.
+    const existingShell = document.getElementById('gp-rail-slot');
+    if (
+      existingShell instanceof HTMLElement &&
+      existingShell.parentElement === rail &&
+      existingShell.firstElementChild === btn &&
+      existingShell.childElementCount === 1 &&
+      gpRailStackOrderOk(existingShell, rail)
+    ) {
+      const wrap = document.getElementById('gp-rail-fallback');
+      if (wrap && wrap.style.display !== 'none') wrap.style.display = 'none';
+      return true;
+    }
 
     const tips = findRailIconControl(rail, /^Tips$/i);
     const insertBeforeSlot = tips
