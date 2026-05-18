@@ -4909,19 +4909,24 @@
 
   // ── Color labels (GCal-style "Your color labels" picker) ──
   const GP_COLOR_LABELS_KEY = 'gp_color_labels';
-  /** GCal calendar event palette — used as the color choices for labels. */
+  /**
+   * Google Calendar dual-rendering palette:
+   * - `swatch` = saturated Material color (used in the picker dots / calendar list)
+   * - `dot`    = softer event-palette color (used inside the chip and on calendar grid)
+   * Both map to the same GCal Calendar API `colorId`.
+   */
   const GP_COLOR_LABEL_PALETTE = [
-    { colorId: '4',  hex: '#ff887c' }, // flamingo / salmon
-    { colorId: '6',  hex: '#ffb878' }, // tangerine / orange
-    { colorId: '5',  hex: '#fbd75b' }, // banana / yellow
-    { colorId: '2',  hex: '#7ae7bf' }, // sage / mint
-    { colorId: '10', hex: '#51b749' }, // basil / green
-    { colorId: '7',  hex: '#46d6db' }, // peacock / teal
-    { colorId: '9',  hex: '#5484ed' }, // blueberry / blue
-    { colorId: '1',  hex: '#a4bdfc' }, // lavender
-    { colorId: '3',  hex: '#dbadff' }, // grape / purple
-    { colorId: '11', hex: '#dc2127' }, // tomato / red
-    { colorId: '8',  hex: '#e1e1e1' }, // graphite / gray
+    { colorId: '11', name: 'Tomato',    swatch: '#d50000', dot: '#dc2127' },
+    { colorId: '6',  name: 'Tangerine', swatch: '#f4511e', dot: '#ffb878' },
+    { colorId: '5',  name: 'Banana',    swatch: '#f6c026', dot: '#fbd75b' },
+    { colorId: '10', name: 'Basil',     swatch: '#0b8043', dot: '#51b749' },
+    { colorId: '2',  name: 'Sage',      swatch: '#33b679', dot: '#7ae7bf' },
+    { colorId: '7',  name: 'Peacock',   swatch: '#039be5', dot: '#46d6db' },
+    { colorId: '9',  name: 'Blueberry', swatch: '#3f51b5', dot: '#5484ed' },
+    { colorId: '1',  name: 'Lavender',  swatch: '#7986cb', dot: '#a4bdfc' },
+    { colorId: '3',  name: 'Grape',     swatch: '#8e24aa', dot: '#dbadff' },
+    { colorId: '4',  name: 'Flamingo',  swatch: '#e67c73', dot: '#ff887c' },
+    { colorId: '8',  name: 'Graphite',  swatch: '#616161', dot: '#e1e1e1' },
   ];
   const GP_DEFAULT_COLOR_LABELS = [
     { id: 'lbl_work',     name: 'Work',     color: '#5484ed', colorId: '9' },
