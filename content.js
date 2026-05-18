@@ -6634,11 +6634,11 @@
         gpGdStripNativeMeetingNotes(dialogShell);
         const ext = __gpGdBlockEl;
         if (ext?.isConnected && gpGdComposedSubtreeContains(dialogShell, ext)) {
-          gpGdStabilizeMountedDetailBlock(ext, dialogShell, null);
+          if (!gpGdLayoutLocked()) gpGdStabilizeMountedDetailBlock(ext, dialogShell, null);
           return;
         }
         if (!gpGdDialogsHasInjectedAside(dialogShell)) scheduleGpGdDialogScan();
-      }, 480);
+      }, 960);
     });
     gpGdObserveRepairSubtreeRoot(mo, dialogShell);
     gpGdEnsureDialogRepairShadowWiring(mo, dialogShell);
