@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
 
 :root {
+  --color-text-tertiary: #9aa0a6;
   --gp-panel-width: 341px;
   --gp-panel-calendar-gap: 8px;
   --gp-panel-top: 64px;
@@ -4865,4 +4866,343 @@ body.gp-sidebar-open .gp-mt-layer {
 .mytasks-kanban .mk-chip--grey {
   background: #f1f3f4;
   color: #5f6368;
+}
+
+/* Kanban task card — subtask indicator (bottom-right) */
+.mytasks-kanban .mk-card:has(.mk-subtask-indicator) {
+  padding-bottom: 26px;
+}
+
+.mytasks-kanban .mk-subtask-indicator {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 2px 4px 2px 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  color: #9aa0a6;
+  line-height: 1;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.mytasks-kanban .mk-subtask-indicator:hover,
+.mytasks-kanban .mk-subtask-indicator:focus-visible {
+  color: var(--mk-category-color, #1a73e8);
+  outline: none;
+}
+
+.mytasks-kanban .mk-subtask-indicator:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mk-category-color, #1a73e8) 35%, transparent);
+}
+
+.mytasks-kanban .mk-subtask-indicator--complete {
+  color: var(--mk-category-color, #1a73e8);
+  background: color-mix(in srgb, var(--mk-category-color, #1a73e8) 14%, #fff);
+}
+
+.mytasks-kanban .mk-subtask-indicator--complete:hover,
+.mytasks-kanban .mk-subtask-indicator--complete:focus-visible {
+  background: color-mix(in srgb, var(--mk-category-color, #1a73e8) 22%, #fff);
+}
+
+.mytasks-kanban .mk-subtask-indicator-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mytasks-kanban .mk-subtask-indicator-icon svg {
+  display: block;
+  stroke: currentColor;
+  fill: none;
+  transition: stroke 0.15s ease, fill 0.15s ease;
+}
+
+.mytasks-kanban .mk-subtask-indicator--complete .mk-subtask-indicator-icon svg {
+  stroke: var(--mk-category-color, #1a73e8);
+}
+
+.mytasks-kanban .mk-subtask-indicator-badge {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: inherit;
+  opacity: 0.95;
+}
+
+/* Floating task detail (Google Calendar–style popup) — appended to document.body */
+.gp-task-detail-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+}
+
+.gp-task-detail-root:not([hidden]) {
+  pointer-events: auto;
+}
+
+.gp-task-detail-scrim {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  pointer-events: auto;
+}
+
+.gp-task-detail-card {
+  position: fixed;
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: 0;
+  margin: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 1px 3px rgba(60 64 67 / 0.28),
+    0 4px 12px rgba(60 64 67 / 0.15);
+  border: 1px solid #e8eaed;
+  color: #3c4043;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  pointer-events: auto;
+}
+
+.gp-task-detail-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 6px 6px 0 12px;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+
+.gp-task-detail-header-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.gp-task-detail-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.gp-task-detail-icon-btn:hover {
+  background: #f1f3f4;
+  color: #202124;
+}
+
+.gp-task-detail-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #1a73e8;
+}
+
+.gp-task-detail-body {
+  padding: 0 16px 12px;
+}
+
+.gp-task-detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.gp-task-detail-category-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 6px;
+  border-radius: 3px;
+}
+
+.gp-task-detail-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #202124;
+}
+
+.gp-task-detail-date {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #5f6368;
+}
+
+.gp-task-detail-recurrence {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #5f6368;
+}
+
+.gp-task-detail-divider {
+  height: 1px;
+  margin: 14px 0 12px;
+  background: #e8eaed;
+}
+
+.gp-task-detail-subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gp-task-detail-subtask {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 4px 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.gp-task-detail-subtask-check {
+  position: absolute;
+  opacity: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  top: 5px;
+  left: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.gp-task-detail-subtask-box {
+  flex: none;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  box-sizing: border-box;
+  border: 2px solid #9aa0a6;
+  border-radius: 4px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.gp-task-detail-subtask-check-svg {
+  width: 12px;
+  height: 10px;
+  display: block;
+  color: var(--gp-task-detail-category, #1a73e8);
+}
+
+.gp-task-detail-subtask-check-path {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+}
+
+.gp-task-detail-subtask.is-done .gp-task-detail-subtask-box {
+  border-color: var(--gp-task-detail-category, #1a73e8);
+  background: color-mix(in srgb, var(--gp-task-detail-category, #1a73e8) 10%, #fff);
+}
+
+.gp-task-detail-subtask.is-done .gp-task-detail-subtask-check-path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.gp-task-detail-subtask:not(.is-done) .gp-task-detail-subtask-check-path {
+  transition: none;
+}
+
+.gp-task-detail-subtask-label {
+  flex: 1;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #3c4043;
+  padding-top: 1px;
+}
+
+.gp-task-detail-subtask.is-done .gp-task-detail-subtask-label {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary, #9aa0a6);
+}
+
+.gp-task-detail-subtasks-progress {
+  height: 3px;
+  margin-top: 12px;
+  border-radius: 9999px;
+  background: #e8eaed;
+  overflow: hidden;
+}
+
+.gp-task-detail-subtasks-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+.gp-task-detail-footer {
+  padding: 12px 16px 14px;
+  border-top: 1px solid #f1f3f4;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #5f6368;
+}
+
+.gp-task-detail-footer-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.gp-task-detail-footer-row:first-child {
+  margin-top: 0;
+}
+
+.gp-task-detail-footer-icon {
+  flex: none;
+  display: inline-flex;
+  color: #5f6368;
+  margin-top: 1px;
+}
+
+.gp-task-detail-footer-icon svg {
+  display: block;
 }

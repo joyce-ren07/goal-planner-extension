@@ -4031,6 +4031,11 @@
     if (dueTimeEnd) out.dueTimeEnd = dueTimeEnd;
     if (card?.allDay === true) out.allDay = true;
     if (chipCustomHex) out.chipCustomHex = chipCustomHex;
+    if (card?.recurrence) out.recurrence = String(card.recurrence).trim();
+    if (card?.reminderMinutes != null && !Number.isNaN(Number(card.reminderMinutes))) {
+      out.reminderMinutes = Number(card.reminderMinutes);
+    }
+    if (card?.calendarName) out.calendarName = String(card.calendarName).trim();
     return out;
   }
 
@@ -4907,6 +4912,7 @@
     card.appendChild(top);
     card.appendChild(footer);
     card.appendChild(deleteConfirm);
+    attachMkCardSubtaskIndicator(card, task.subtasks);
 
     return card;
   }
@@ -6780,6 +6786,471 @@
 
   const MK_DELETE_TRASH_ICON_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
 
+  const MK_SUBTASK_CHECKLIST_ICON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"></path><path d="M9 12h6"></path><path d="M9 16h6"></path><path d="m14 11 2 2 4-4"></path></svg>`;
+  const GP_TASK_DETAIL_SUBTASK_CHECK_SVG = `<svg class="gp-task-detail-subtask-check-svg" viewBox="0 0 12 10" fill="none" aria-hidden="true"><path class="gp-task-detail-subtask-check-path" d="M1 5.2 4.4 8.6 11 1.4"></path></svg>`;
+
+  function parseSubtasksJson(raw) {
+    try {
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function getSubtaskStats(subtasks) {
+    const list = Array.isArray(subtasks) ? subtasks : [];
+    const total = list.length;
+    const completed = list.filter((item) => Boolean(item?.done)).length;
+    return {
+      total,
+      completed,
+      allDone: total > 0 && completed === total,
+    };
+  }
+
+  function getTaskCategoryColorHex(task) {
+    if (!task) return TAG_HEX_BY_KEY.grey;
+    if (task.chipCustomHex) {
+      return normalizeHexColor(task.chipCustomHex) || TAG_HEX_BY_KEY.grey;
+    }
+    const colorKey = task.chipColor || resolveKanbanChipColor(task.chip, task.chipColor, task.courseKey);
+    return TAG_HEX_BY_KEY[colorKey] || TAG_HEX_BY_KEY.blue;
+  }
+
+  function findTaskInState(state, taskId) {
+    if (!state || !taskId) return null;
+    for (const { id } of KANBAN_COLUMN_DEFS) {
+      const task = (state.columns[id] || []).find((card) => card.id === taskId);
+      if (task) return { task, columnId: id };
+    }
+    return null;
+  }
+
+  function formatTaskDetailDateLine(task) {
+    const d = parseDueDateIsoLocal(task?.dueDate);
+    if (!d) return 'No due date';
+    const dateStr = d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    if (task?.allDay) return dateStr;
+    const start = formatTimeCompact12(normalizeDueHm(task?.dueTimeStart));
+    const end = formatTimeCompact12(normalizeDueHm(task?.dueTimeEnd));
+    if (start && end) return `${dateStr} · ${start}–${end}`;
+    if (start) return `${dateStr} · ${start}`;
+    return dateStr;
+  }
+
+  function formatReminderLabel(minutes) {
+    const value = Number(minutes);
+    if (!Number.isFinite(value) || value <= 0) return '';
+    if (value === 1) return '1 minute before';
+    if (value < 60) return `${value} minutes before`;
+    if (value === 60) return '1 hour before';
+    if (value % 60 === 0) return `${value / 60} hours before`;
+    const hours = Math.floor(value / 60);
+    const mins = value % 60;
+    return `${hours} hour${hours === 1 ? '' : 's'} ${mins} minutes before`;
+  }
+
+  function syncMkCardSubtaskDataset(cardEl, subtasks) {
+    if (!cardEl) return;
+    const list = Array.isArray(subtasks) ? subtasks : [];
+    if (list.length) {
+      cardEl.dataset.subtasks = JSON.stringify(list);
+    } else {
+      delete cardEl.dataset.subtasks;
+    }
+  }
+
+  function attachMkCardSubtaskIndicator(cardEl, subtasks) {
+    if (!cardEl) return;
+
+    const list = Array.isArray(subtasks) ? subtasks : [];
+    const existing = cardEl.querySelector('.mk-subtask-indicator');
+    if (!list.length) {
+      existing?.remove();
+      return;
+    }
+
+    const stats = getSubtaskStats(list);
+    const categoryColor = cardEl.dataset.chipColor === 'custom' && cardEl.dataset.chipCustomHex
+      ? normalizeHexColor(cardEl.dataset.chipCustomHex) || TAG_HEX_BY_KEY.grey
+      : TAG_HEX_BY_KEY[cardEl.dataset.chipColor] || TAG_HEX_BY_KEY.blue;
+
+    let btn = existing;
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mk-subtask-indicator';
+      btn.setAttribute('aria-label', 'View subtasks');
+      btn.draggable = false;
+      btn.innerHTML = `
+        <span class="mk-subtask-indicator-icon" aria-hidden="true">${MK_SUBTASK_CHECKLIST_ICON_SVG}</span>
+        <span class="mk-subtask-indicator-badge"></span>
+      `;
+      cardEl.appendChild(btn);
+    }
+
+    btn.style.setProperty('--mk-category-color', categoryColor);
+    btn.classList.toggle('mk-subtask-indicator--complete', stats.allDone);
+    btn.querySelector('.mk-subtask-indicator-badge').textContent = `${stats.completed}/${stats.total}`;
+    btn.setAttribute('aria-label', `View subtasks, ${stats.completed} of ${stats.total} complete`);
+  }
+
+  async function persistTaskPatch(taskId, patch) {
+    if (!taskId || !patch) return null;
+    const state = await loadKanbanState();
+    let updated = null;
+
+    KANBAN_COLUMN_DEFS.forEach(({ id }) => {
+      state.columns[id] = (state.columns[id] || []).map((card) => {
+        if (card.id !== taskId) return card;
+        updated = { ...card, ...patch };
+        return updated;
+      });
+    });
+
+    if (!updated) return null;
+    kanbanStateCache = normalizeKanbanState(state);
+    await writeSidebarStorage({ [KANBAN_STORAGE_KEY]: kanbanStateCache });
+    return updated;
+  }
+
+  let gpTaskDetailRoot = null;
+  let gpTaskDetailWired = false;
+  /** @type {null | { taskId: string, anchor: HTMLElement }} */
+  let gpTaskDetailOpenCtx = null;
+  let gpTaskDetailOutsideHandler = null;
+  let gpTaskDetailEscapeHandler = null;
+  let gpTaskDetailPositionCleanup = null;
+
+  function ensureTaskDetailRoot() {
+    if (gpTaskDetailRoot) return gpTaskDetailRoot;
+
+    const root = document.createElement('div');
+    root.id = 'gp-task-detail-root';
+    root.className = 'gp-task-detail-root';
+    root.hidden = true;
+    root.innerHTML = `
+      <div class="gp-task-detail-scrim" data-gp-task-detail-dismiss="true" aria-hidden="true"></div>
+      <div class="gp-task-detail-card" role="dialog" aria-modal="true" aria-labelledby="gp-task-detail-title"></div>
+    `.trim();
+    document.body.appendChild(root);
+    gpTaskDetailRoot = root;
+    wireTaskDetailPopupOnce();
+    return root;
+  }
+
+  function wireTaskDetailPopupOnce() {
+    if (gpTaskDetailWired || !gpTaskDetailRoot) return;
+    gpTaskDetailWired = true;
+
+    gpTaskDetailRoot.addEventListener('click', (event) => {
+      const dismiss = event.target.closest('[data-gp-task-detail-dismiss]');
+      if (dismiss) {
+        event.preventDefault();
+        closeTaskDetailPopup();
+        return;
+      }
+
+      const closeBtn = event.target.closest('[data-gp-task-detail-close]');
+      if (closeBtn) {
+        event.preventDefault();
+        closeTaskDetailPopup();
+        return;
+      }
+
+      const editBtn = event.target.closest('[data-gp-task-detail-edit]');
+      if (editBtn && gpTaskDetailOpenCtx) {
+        event.preventDefault();
+        const card = document.querySelector(`.mk-card[data-card-id="${gpTaskDetailOpenCtx.taskId}"]`);
+        closeTaskDetailPopup();
+        const titleInput = card?.querySelector('.mk-card-title');
+        if (titleInput) {
+          titleInput.focus({ preventScroll: true });
+          titleInput.select();
+        }
+        return;
+      }
+
+      const deleteBtn = event.target.closest('[data-gp-task-detail-delete]');
+      if (deleteBtn && gpTaskDetailOpenCtx) {
+        event.preventDefault();
+        const card = document.querySelector(`.mk-card[data-card-id="${gpTaskDetailOpenCtx.taskId}"]`);
+        closeTaskDetailPopup();
+        if (card) openMkDeleteConfirm(card);
+        return;
+      }
+    });
+
+    gpTaskDetailRoot.addEventListener('change', (event) => {
+      const subtaskCheck = event.target.closest('.gp-task-detail-subtask-check');
+      if (!subtaskCheck || !gpTaskDetailOpenCtx) return;
+      void toggleTaskDetailSubtask(gpTaskDetailOpenCtx.taskId, subtaskCheck.dataset.subtaskId, subtaskCheck.checked);
+    });
+  }
+
+  function clearTaskDetailPopupListeners() {
+    if (gpTaskDetailOutsideHandler) {
+      document.removeEventListener('pointerdown', gpTaskDetailOutsideHandler, true);
+      gpTaskDetailOutsideHandler = null;
+    }
+    if (gpTaskDetailEscapeHandler) {
+      document.removeEventListener('keydown', gpTaskDetailEscapeHandler);
+      gpTaskDetailEscapeHandler = null;
+    }
+    if (gpTaskDetailPositionCleanup) {
+      gpTaskDetailPositionCleanup();
+      gpTaskDetailPositionCleanup = null;
+    }
+  }
+
+  function closeTaskDetailPopup() {
+    if (!gpTaskDetailRoot) return;
+    gpTaskDetailRoot.hidden = true;
+    gpTaskDetailOpenCtx = null;
+    clearTaskDetailPopupListeners();
+    const card = gpTaskDetailRoot.querySelector('.gp-task-detail-card');
+    if (card) card.innerHTML = '';
+  }
+
+  function positionTaskDetailCard(cardEl, anchorEl) {
+    if (!cardEl || !anchorEl) return;
+
+    const hostRect = anchorEl.getBoundingClientRect();
+    const cardWidth = 340;
+    const gap = 8;
+    const margin = 8;
+
+    cardEl.style.position = 'fixed';
+    cardEl.style.width = `${cardWidth}px`;
+    cardEl.style.zIndex = '2147483647';
+
+    let left = hostRect.right + gap;
+    let top = hostRect.top;
+
+    if (left + cardWidth > window.innerWidth - margin) {
+      left = hostRect.left - cardWidth - gap;
+    }
+    if (left < margin) {
+      left = Math.max(margin, Math.min(hostRect.left, window.innerWidth - cardWidth - margin));
+      top = hostRect.bottom + gap;
+    }
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - cardWidth - margin));
+
+    const measuredHeight = cardEl.getBoundingClientRect().height || cardEl.offsetHeight || 0;
+    const cardHeight = Math.max(measuredHeight, 120);
+    if (top + cardHeight > window.innerHeight - margin) {
+      const aboveTop = hostRect.bottom - cardHeight;
+      if (aboveTop >= margin) {
+        top = aboveTop;
+      } else {
+        top = Math.max(margin, window.innerHeight - cardHeight - margin);
+      }
+    }
+
+    cardEl.style.left = `${left}px`;
+    cardEl.style.top = `${top}px`;
+  }
+
+  function renderTaskDetailSubtasksSection(task, categoryColor) {
+    const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
+    const stats = getSubtaskStats(subtasks);
+    const progressPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
+
+    const rows = subtasks.map((subtask) => {
+      const id = escapeHtmlAttr(subtask.id || '');
+      const title = escapeHtmlAttr(subtask.title || 'Subtask');
+      const checked = subtask.done ? 'checked' : '';
+      const doneClass = subtask.done ? ' is-done' : '';
+      return `
+        <label class="gp-task-detail-subtask${doneClass}">
+          <input type="checkbox" class="gp-task-detail-subtask-check" data-subtask-id="${id}" ${checked} aria-label="${title}">
+          <span class="gp-task-detail-subtask-box" aria-hidden="true">${GP_TASK_DETAIL_SUBTASK_CHECK_SVG}</span>
+          <span class="gp-task-detail-subtask-label">${title}</span>
+        </label>
+      `;
+    }).join('');
+
+    return `
+      <div class="gp-task-detail-subtasks">
+        <div class="gp-task-detail-subtasks-list">${rows}</div>
+        <div class="gp-task-detail-subtasks-progress" aria-hidden="true">
+          <div class="gp-task-detail-subtasks-progress-fill" style="width:${progressPct}%; background:${categoryColor};"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTaskDetailCardContent(task) {
+    const categoryColor = getTaskCategoryColorHex(task);
+    const title = escapeHtmlAttr(task.title || 'Untitled task');
+    const dateLine = escapeHtmlAttr(formatTaskDetailDateLine(task));
+    const recurrenceLine = task.recurrence
+      ? `<p class="gp-task-detail-recurrence">${escapeHtmlAttr(task.recurrence)}</p>`
+      : '';
+    const reminderLabel = formatReminderLabel(task.reminderMinutes);
+    const reminderLine = reminderLabel
+      ? `<div class="gp-task-detail-footer-row">
+          <span class="gp-task-detail-footer-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          </span>
+          <span>${escapeHtmlAttr(reminderLabel)}</span>
+        </div>`
+      : '';
+    const calendarName = task.calendarName || 'My Tasks';
+    const subtasksSection = task.subtasks?.length
+      ? `<div class="gp-task-detail-divider"></div>${renderTaskDetailSubtasksSection(task, categoryColor)}`
+      : '';
+
+    return `
+      <header class="gp-task-detail-header">
+        <div class="gp-task-detail-header-actions">
+          <button type="button" class="gp-task-detail-icon-btn" data-gp-task-detail-edit aria-label="Edit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          </button>
+          <button type="button" class="gp-task-detail-icon-btn" data-gp-task-detail-delete aria-label="Delete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+          <button type="button" class="gp-task-detail-icon-btn" aria-label="Email">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+          </button>
+          <button type="button" class="gp-task-detail-icon-btn" aria-label="More options">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
+          </button>
+          <button type="button" class="gp-task-detail-icon-btn" data-gp-task-detail-close aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </header>
+      <div class="gp-task-detail-body" style="--gp-task-detail-category:${categoryColor};">
+        <div class="gp-task-detail-title-row">
+          <span class="gp-task-detail-category-dot" style="background:${categoryColor};"></span>
+          <h2 id="gp-task-detail-title" class="gp-task-detail-title">${title}</h2>
+        </div>
+        <p class="gp-task-detail-date">${dateLine}</p>
+        ${recurrenceLine}
+        ${subtasksSection}
+      </div>
+      <footer class="gp-task-detail-footer">
+        ${reminderLine}
+        <div class="gp-task-detail-footer-row">
+          <span class="gp-task-detail-footer-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </span>
+          <span>${escapeHtmlAttr(calendarName)}</span>
+        </div>
+      </footer>
+    `;
+  }
+
+  function refreshTaskDetailSubtaskUi(cardShell, task) {
+    const subtasksHost = cardShell.querySelector('.gp-task-detail-subtasks');
+    if (!subtasksHost || !task.subtasks?.length) return;
+
+    const categoryColor = getTaskCategoryColorHex(task);
+    const stats = getSubtaskStats(task.subtasks);
+    const progressPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
+    const fill = subtasksHost.querySelector('.gp-task-detail-subtasks-progress-fill');
+    if (fill) {
+      fill.style.width = `${progressPct}%`;
+      fill.style.background = categoryColor;
+    }
+
+    task.subtasks.forEach((subtask) => {
+      const check = subtasksHost.querySelector(`.gp-task-detail-subtask-check[data-subtask-id="${subtask.id}"]`);
+      const row = check?.closest('.gp-task-detail-subtask');
+      if (!row) return;
+      row.classList.toggle('is-done', Boolean(subtask.done));
+      if (check) check.checked = Boolean(subtask.done);
+    });
+  }
+
+  async function toggleTaskDetailSubtask(taskId, subtaskId, done) {
+    if (!taskId || !subtaskId) return;
+
+    const state = kanbanStateCache || await loadKanbanState();
+    const found = findTaskInState(state, taskId);
+    if (!found) return;
+
+    const nextSubtasks = (found.task.subtasks || []).map((subtask) => (
+      subtask.id === subtaskId ? { ...subtask, done: Boolean(done) } : subtask
+    ));
+
+    const updated = await persistTaskPatch(taskId, { subtasks: nextSubtasks });
+    if (!updated) return;
+
+    const cardEl = document.querySelector(`.mk-card[data-card-id="${taskId}"]`);
+    if (cardEl) {
+      syncMkCardSubtaskDataset(cardEl, nextSubtasks);
+      attachMkCardSubtaskIndicator(cardEl, nextSubtasks);
+    }
+
+    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
+    if (detailCard && gpTaskDetailOpenCtx?.taskId === taskId) {
+      refreshTaskDetailSubtaskUi(detailCard, updated);
+    }
+  }
+
+  function openTaskDetailPopup(anchorEl, taskId) {
+    if (!anchorEl || !taskId) return;
+
+    const state = kanbanStateCache || getDefaultKanbanState();
+    const found = findTaskInState(state, taskId);
+    if (!found?.task?.subtasks?.length) return;
+
+    closeMkDueEditor();
+    closeTaskDetailPopup();
+
+    const root = ensureTaskDetailRoot();
+    const cardShell = root.querySelector('.gp-task-detail-card');
+    if (!cardShell) return;
+
+    cardShell.innerHTML = renderTaskDetailCardContent(found.task);
+    root.hidden = false;
+    gpTaskDetailOpenCtx = { taskId, anchor: anchorEl };
+
+    requestAnimationFrame(() => {
+      positionTaskDetailCard(cardShell, anchorEl);
+      requestAnimationFrame(() => {
+        positionTaskDetailCard(cardShell, anchorEl);
+      });
+    });
+
+    gpTaskDetailOutsideHandler = (event) => {
+      if (cardShell.contains(event.target)) return;
+      closeTaskDetailPopup();
+    };
+    document.addEventListener('pointerdown', gpTaskDetailOutsideHandler, true);
+
+    gpTaskDetailEscapeHandler = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeTaskDetailPopup();
+    };
+    document.addEventListener('keydown', gpTaskDetailEscapeHandler);
+
+    const reposition = () => {
+      if (!gpTaskDetailOpenCtx || gpTaskDetailRoot?.hidden) return;
+      const shell = gpTaskDetailRoot.querySelector('.gp-task-detail-card');
+      if (shell && gpTaskDetailOpenCtx.anchor) {
+        positionTaskDetailCard(shell, gpTaskDetailOpenCtx.anchor);
+      }
+    };
+    window.addEventListener('resize', reposition);
+    document.addEventListener('scroll', reposition, true);
+    gpTaskDetailPositionCleanup = () => {
+      window.removeEventListener('resize', reposition);
+      document.removeEventListener('scroll', reposition, true);
+    };
+  }
+
   function clearMkDeleteConfirm() {
     if (mkDeleteConfirmTimeoutId) {
       clearTimeout(mkDeleteConfirmTimeoutId);
@@ -7087,6 +7558,17 @@
         const card = starBtn.closest('.mk-card');
         if (card?.dataset.cardId) {
           toggleKanbanCardStar(root, card.dataset.cardId);
+        }
+        return;
+      }
+
+      const subtaskBtn = event.target.closest('.mk-subtask-indicator');
+      if (subtaskBtn && root.contains(subtaskBtn)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const card = subtaskBtn.closest('.mk-card');
+        if (card?.dataset.cardId) {
+          openTaskDetailPopup(subtaskBtn, card.dataset.cardId);
         }
         return;
       }
@@ -8243,8 +8725,13 @@
     const rect = host.getBoundingClientRect();
     if (!rect.height) return;
 
-    kanban.style.height = `${rect.height}px`;
-    kanban.style.minHeight = `${rect.height}px`;
+    const style = window.getComputedStyle(host);
+    const paddingTop = Number.parseFloat(style.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
+    const innerHeight = Math.max(0, rect.height - paddingTop - paddingBottom);
+
+    kanban.style.height = `${innerHeight}px`;
+    kanban.style.minHeight = `${innerHeight}px`;
   }
 
   function observeNativeTasksHost(host) {
