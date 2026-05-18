@@ -488,7 +488,7 @@
   /* 8px gap bar → stats line (Figma inner column gap). */
   margin: 0 0 8px 0 !important;
   flex-shrink: 0;
-  background-color: color-mix(in srgb, var(--goal-progress-color, #d3564b) 24%, #ffffff) !important;
+  background-color: color-mix(in srgb, var(--goal-progress-color, #d3564b) 10%, #ffffff) !important;
 }
 
 #gp-gcal-sidebar-goals-root .gcal-ext-goals-list .gcal-ext-goal-card {

@@ -3500,7 +3500,7 @@
       color: legacy.color != null && legacy.color !== '' ? legacy.color : g.color,
     };
     const color = getGoalDisplayColor(colorSource);
-    const trackBg = hexToTint(color, 0.76);
+    const trackBg = hexToTint(color, 0.12);
     const plainTitle = String(g.title || 'Untitled goal').trim();
 
     card.setAttribute(
