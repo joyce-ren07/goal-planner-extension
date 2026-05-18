@@ -830,6 +830,7 @@
   // ── Inject once ──
   function inject() {
     if (document.getElementById('gp-panel')) {
+      ensureGpToastMounted();
       ensureExtensionCoreServicesWired();
       const existingBtn = document.getElementById('gp-sidebar-btn');
       if (existingBtn) {
