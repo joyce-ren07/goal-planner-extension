@@ -9199,10 +9199,40 @@
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
-  function positionFloating(el, ref) {
+  /** Date popover must live on `body` so flex/transform ancestors do not break `position: fixed`. */
+  function ensureGpDatePopoverOnBody() {
+    const popover = document.getElementById('gp-date-popover');
+    if (popover && popover.parentElement !== document.body) {
+      document.body.appendChild(popover);
+    }
+    return popover;
+  }
+
+  function positionGpDatePopover(popover, ref) {
+    if (!(popover instanceof HTMLElement) || !(ref instanceof HTMLElement)) return;
+    const gap = 4;
+    const pad = 8;
     const r = ref.getBoundingClientRect();
-    el.style.top  = (r.bottom + 4) + 'px';
-    el.style.left = r.left + 'px';
+    const w = popover.offsetWidth || 280;
+    const h = popover.offsetHeight || 320;
+
+    let top = r.bottom + gap;
+    let left = r.left;
+
+    if (top + h > window.innerHeight - pad) {
+      top = Math.max(pad, r.top - h - gap);
+    }
+    if (left + w > window.innerWidth - pad) {
+      left = Math.max(pad, window.innerWidth - w - pad);
+    }
+    if (left < pad) left = pad;
+
+    popover.style.position = 'fixed';
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.right = 'auto';
+    popover.style.bottom = 'auto';
+    popover.style.transform = 'none';
   }
 
   function closeDropdowns() {
