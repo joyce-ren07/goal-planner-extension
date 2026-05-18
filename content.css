@@ -1521,7 +1521,7 @@
 }
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-badge {
-  background: #e79992;
+  background: var(--gp-chip-badge-bg-done, #e79992);
 }
 
 /* Title & time: shared metrics = native GCal timed-event chip scale (both states identical).
