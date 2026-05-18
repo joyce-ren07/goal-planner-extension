@@ -859,10 +859,7 @@
     document.body.appendChild(ctxMenu);
     migrateGoals();
 
-    // Always mount the button as a fixed-position element at the body level so it
-    // lives OUTSIDE GCal's stacking context. This guarantees pointer-events are never
-    // intercepted by GCal's own overlays/backdrops. positionRailFallback() then
-    // aligns it visually with the native icon rail.
+    // Prefer in-stack mount above Tips on the native right rail; fixed fallback only if needed.
     ensureGoalPlannerRailButtonMounted(btn);
     setupRailMountWatcher();
 
