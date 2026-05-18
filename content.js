@@ -39,6 +39,8 @@
     recurrence: null,   // { every: 1, period: 'week', days: ['MO','WE','FR'], time: '21:00', sessionMins: 60, ends: 'on', endDate: '', occurrences: 13 }
     suggestions: [],    // [{ date, startTime, endTime, isoStart, isoEnd }]
     editingGoalId: null, // null = create mode, string = editing existing goal by id
+    colorLabels: [],    // [{ id, name, color, colorId }]
+    selectedColorLabelId: null,
   };
   let pendingDeleteId = null;
   let ctxMenuGoalId = null;
