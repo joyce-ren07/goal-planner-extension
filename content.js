@@ -899,6 +899,13 @@
     return GP_PANEL_W;
   }
 
+  /** Total right inset: Goal Planner panel + GCal icon rail (matches panel `right` offset). */
+  function getCalendarPushInsetPx() {
+    const panel = document.getElementById('gp-panel');
+    if (!panel?.classList.contains('open')) return 0;
+    return getGoalPanelPushWidthPx() + getGCalRailWidth();
+  }
+
   function getCalendarPushRoot() {
     if (cachedCalendarPushRoot && document.contains(cachedCalendarPushRoot)) {
       return cachedCalendarPushRoot;
@@ -969,8 +976,8 @@
     const root = getCalendarPushRoot();
     if (!(root instanceof HTMLElement)) return;
 
-    const amount = open ? getGoalPanelPushWidthPx() : 0;
-    const trans = `max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
+    const amount = open ? getCalendarPushInsetPx() : 0;
+    const trans = `margin-right ${GP_PUSH_EASING}, max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
 
     if (open) {
       if (!_gpCalendarPushSnapshot || _gpCalendarPushSnapshot.el !== root) {
@@ -985,9 +992,10 @@
       }
       root.style.transition = trans;
       root.style.boxSizing = root.style.boxSizing || 'border-box';
-      const narrow = `calc(100% - ${amount}px)`;
-      root.style.maxWidth = narrow;
-      root.style.width = narrow;
+      // GCal-style: reserve space for panel + right rail so the week grid is not clipped.
+      root.style.marginRight = `${amount}px`;
+      root.style.maxWidth = '';
+      root.style.width = '';
       return;
     }
 
@@ -4643,6 +4651,7 @@
   // ── Recurrence overlay ──
   function openRecurrence() {
     closeDropdowns();
+    ensureGpDatePopoverOnBody();
     document.getElementById('gp-recurrence-overlay').classList.add('open');
     scheduleGhostPreviewRefreshDebounced();
   }
@@ -9191,10 +9200,40 @@
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
-  function positionFloating(el, ref) {
+  /** Date popover must live on `body` so flex/transform ancestors do not break `position: fixed`. */
+  function ensureGpDatePopoverOnBody() {
+    const popover = document.getElementById('gp-date-popover');
+    if (popover && popover.parentElement !== document.body) {
+      document.body.appendChild(popover);
+    }
+    return popover;
+  }
+
+  function positionGpDatePopover(popover, ref) {
+    if (!(popover instanceof HTMLElement) || !(ref instanceof HTMLElement)) return;
+    const gap = 4;
+    const pad = 8;
     const r = ref.getBoundingClientRect();
-    el.style.top  = (r.bottom + 4) + 'px';
-    el.style.left = r.left + 'px';
+    const w = popover.offsetWidth || 280;
+    const h = popover.offsetHeight || 320;
+
+    let top = r.bottom + gap;
+    let left = r.left;
+
+    if (top + h > window.innerHeight - pad) {
+      top = Math.max(pad, r.top - h - gap);
+    }
+    if (left + w > window.innerWidth - pad) {
+      left = Math.max(pad, window.innerWidth - w - pad);
+    }
+    if (left < pad) left = pad;
+
+    popover.style.position = 'fixed';
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.right = 'auto';
+    popover.style.bottom = 'auto';
+    popover.style.transform = 'none';
   }
 
   function closeDropdowns() {
@@ -9206,7 +9245,7 @@
 
   function initDatePicker() {
     const chip    = document.getElementById('gp-end-date-chip');
-    const popover = document.getElementById('gp-date-popover');
+    const popover = ensureGpDatePopoverOnBody();
     const MONTHS  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
     let calY, calM;
@@ -9247,13 +9286,16 @@
 
     chip.addEventListener('click', e => {
       e.stopPropagation();
+      if (!popover) return;
       if (popover.style.display === 'block') { closeDropdowns(); return; }
       const val = document.getElementById('gp-end-date').value || defaultEndDate();
       const d = new Date(val + 'T00:00:00');
       calY = d.getFullYear(); calM = d.getMonth();
       renderCal();
-      positionFloating(popover, chip);
       popover.style.display = 'block';
+      popover.style.visibility = 'hidden';
+      positionGpDatePopover(popover, chip);
+      popover.style.visibility = 'visible';
       chip.classList.add('active');
     });
 
