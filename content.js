@@ -2140,11 +2140,12 @@
       el.style.setProperty('--gp-chip-text-done', theme.textDone);
       el.style.setProperty('--gp-chip-badge-bg-done', theme.badgeBgDone);
     }
-    const root = chip.querySelector('.ext-goal-root');
-    if (root instanceof HTMLElement) {
-      root.style.background = theme.fill;
+    chip.querySelectorAll('.ext-goal-root').forEach((root) => {
+      if (!(root instanceof HTMLElement)) return;
+      root.style.backgroundColor = theme.fillRgba;
+      root.style.background = theme.fillRgba;
       root.style.border = 'none';
-      root.style.borderLeft = `4px solid ${theme.border}`;
+      root.style.borderLeft = `2px solid ${theme.border}`;
       root.style.boxShadow = 'none';
       const titleEl = root.querySelector('.ext-goal-title');
       const timeEl = root.querySelector('.ext-goal-time');
@@ -2155,9 +2156,9 @@
         badgeEl.style.background = theme.badgeBg;
         badgeEl.style.color = theme.badgeFg;
       }
-    }
+    });
     const checkEl = chip.querySelector('.goal-checkbox, .ext-check-circle');
-    if (checkEl) checkEl.innerHTML = goalCheckboxSvg(accentHex, isDone);
+    if (checkEl) checkEl.innerHTML = goalCheckboxSvg(accentNorm, isDone);
   }
 
   function getPickerAccentColor() {
