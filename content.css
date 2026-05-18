@@ -1451,9 +1451,9 @@
   overflow: hidden;
   pointer-events: none;
 
-  background: #ffd7d3;
+  background: var(--gp-chip-fill, #ffd7d3);
   border: none;
-  border-left: 4px solid #d3564b;
+  border-left: 4px solid var(--gp-chip-accent, #d3564b);
   box-shadow: none;
 
   opacity: 1;
@@ -1468,8 +1468,8 @@
 /* State: palette only — left accent color only (no other borders). */
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root,
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root.ext-goal-root--prime {
-  background: #ffe5e2;
-  border-left-color: #e79992;
+  background: var(--gp-chip-fill-done, #ffe5e2);
+  border-left-color: var(--gp-chip-accent-done, #e79992);
 }
 
 [data-eventchip].ext-goal-chip .ext-goal-root .goal-checkbox,
