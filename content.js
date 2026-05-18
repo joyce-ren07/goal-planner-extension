@@ -1266,9 +1266,13 @@
   function ensureGpToastMounted() {
     const legacy = document.querySelector('#gp-panel #gp-toast');
     if (legacy) legacy.remove();
-    if (!document.getElementById('gp-toast')) {
+    let toast = document.getElementById('gp-toast');
+    if (!toast) {
       document.body.appendChild(createGpToastElement());
+      return;
     }
+    const msg = toast.querySelector('.gp-toast-message');
+    if (msg) msg.textContent = 'Goal session added';
   }
 
   // ── Panel HTML ──
