@@ -831,6 +831,11 @@
   function inject() {
     if (document.getElementById('gp-panel')) {
       ensureExtensionCoreServicesWired();
+      const existingBtn = document.getElementById('gp-sidebar-btn');
+      if (existingBtn) {
+        ensureGoalPlannerRailButtonMounted(existingBtn);
+        setupRailMountWatcher();
+      }
       return;
     }
 
