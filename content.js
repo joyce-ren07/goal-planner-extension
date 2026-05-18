@@ -7919,15 +7919,6 @@
 
     const legacyGoals = pref.goals || (await getGoals());
 
-    if (gpGdHasRecentGoalChipOpenIntent() && host instanceof HTMLElement) {
-      const hostHints = gpCollectEventIdHintsFromRoot(host);
-      if (!gpGdEventHintsOverlap(_gpGdPinnedHints, hostHints)) {
-        gpGdTrace('pinned hints do not match open inspector — native event?');
-        gpGdClearPinnedSessionHints();
-        teardownGpGdBlock();
-        return;
-      }
-    }
     const pinnedExpanded = (() => {
       const out = [...pinnedRaw];
       const seen = new Set(out);
