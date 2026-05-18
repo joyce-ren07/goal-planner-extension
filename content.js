@@ -1955,6 +1955,154 @@
     return `rgb(${blend(r)}, ${blend(g)}, ${blend(b)})`;
   }
 
+  /** Calendar chip accent — use stored label color as-is (not sidebar display heuristics). */
+  function getGoalChipAccentColor(goal) {
+    const n = normalizePlannerGoalHex(goal?.color);
+    return n || GP_GOAL_DEFAULT_UI_COLOR;
+  }
+
+  function parseHexToRgb(hex) {
+    const n = normalizePlannerGoalHex(hex);
+    if (!n) return { r: 232, g: 112, b: 90 };
+    const h = n.slice(1);
+    return {
+      r: parseInt(h.slice(0, 2), 16),
+      g: parseInt(h.slice(2, 4), 16),
+      b: parseInt(h.slice(4, 6), 16),
+    };
+  }
+
+  function rgbToHex(rgb) {
+    const c = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return `#${c(rgb.r)}${c(rgb.g)}${c(rgb.b)}`;
+  }
+
+  function blendRgbTowardWhite(rgb, keepFraction) {
+    const t = Math.max(0, Math.min(1, keepFraction));
+    const blend = (c) => Math.round(c + (255 - c) * (1 - t));
+    return { r: blend(rgb.r), g: blend(rgb.g), b: blend(rgb.b) };
+  }
+
+  function relativeLuminanceRgb(rgb) {
+    const f = (x) => {
+      const s = x / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * f(rgb.r) + 0.7152 * f(rgb.g) + 0.0722 * f(rgb.b);
+  }
+
+  function contrastRatioRgb(a, b) {
+    const L1 = relativeLuminanceRgb(a);
+    const L2 = relativeLuminanceRgb(b);
+    const lighter = Math.max(L1, L2);
+    const darker = Math.min(L1, L2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function ensureContrastOnBackground(fgRgb, bgRgb, minRatio) {
+    let fg = { ...fgRgb };
+    for (let i = 0; i < 8 && contrastRatioRgb(fg, bgRgb) < minRatio; i++) {
+      fg = blendRgbTowardWhite(fg, 0.82);
+    }
+    return fg;
+  }
+
+  /** Fill = very light tint; border/text = accent (darkened on fill if needed). */
+  function buildGoalSessionChipTheme(accentHex, isDone) {
+    const accent = normalizePlannerGoalHex(accentHex) || GP_GOAL_DEFAULT_UI_COLOR;
+    const accentRgb = parseHexToRgb(accent);
+    const fillRgb = blendRgbTowardWhite(accentRgb, 0.14);
+    const fill = rgbToHex(fillRgb);
+    let textRgb = ensureContrastOnBackground(accentRgb, fillRgb, 4.5);
+    const borderRgb = textRgb;
+    const badgeBg = accent;
+    const badgeFg = contrastRatioRgb({ r: 255, g: 255, b: 255 }, accentRgb) >= 3
+      ? '#ffffff'
+      : rgbToHex(ensureContrastOnBackground({ r: 255, g: 255, b: 255 }, accentRgb, 3));
+    const doneFillRgb = blendRgbTowardWhite(accentRgb, 0.22);
+    const doneAccentRgb = blendRgbTowardWhite(accentRgb, 0.42);
+    const theme = {
+      fill,
+      accent: rgbToHex(borderRgb),
+      text: rgbToHex(textRgb),
+      badgeBg,
+      badgeFg,
+      fillDone: rgbToHex(doneFillRgb),
+      accentDone: rgbToHex(doneAccentRgb),
+      textDone: rgbToHex(doneAccentRgb),
+      badgeBgDone: rgbToHex(doneAccentRgb),
+    };
+    if (isDone) {
+      theme.fill = theme.fillDone;
+      theme.accent = theme.accentDone;
+      theme.text = theme.textDone;
+      theme.badgeBg = theme.badgeBgDone;
+    }
+    return theme;
+  }
+
+  function applyGoalChipTheme(chip, accentHex, isDone) {
+    if (!(chip instanceof HTMLElement)) return;
+    const theme = buildGoalSessionChipTheme(accentHex, isDone);
+    const targets = [chip];
+    const ec = chip.closest('[data-eventid]');
+    if (ec instanceof HTMLElement) targets.push(ec);
+    for (const el of targets) {
+      el.style.setProperty('--gp-chip-fill', theme.fill);
+      el.style.setProperty('--gp-chip-accent', theme.accent);
+      el.style.setProperty('--gp-chip-text', theme.text);
+      el.style.setProperty('--gp-chip-badge-bg', theme.badgeBg);
+      el.style.setProperty('--gp-chip-badge-fg', theme.badgeFg);
+      el.style.setProperty('--gp-chip-fill-done', theme.fillDone);
+      el.style.setProperty('--gp-chip-accent-done', theme.accentDone);
+      el.style.setProperty('--gp-chip-text-done', theme.textDone);
+      el.style.setProperty('--gp-chip-badge-bg-done', theme.badgeBgDone);
+    }
+  }
+
+  function getActiveGoalCreationAccentColor() {
+    if (state.editingGoalId && Array.isArray(_gpGoalsCache)) {
+      const g = _gpGoalsCache.find((x) => String(x.id) === String(state.editingGoalId));
+      if (g) return getGoalChipAccentColor(g);
+    }
+    const lbl = findColorLabelById(state.selectedColorLabelId);
+    if (lbl?.color) return normalizePlannerGoalHex(lbl.color) || lbl.color;
+    return GP_GOAL_DEFAULT_UI_COLOR;
+  }
+
+  function applyGhostEventTheme(ghost, accentHex) {
+    if (!(ghost instanceof HTMLElement)) return;
+    const theme = buildGoalSessionChipTheme(accentHex, false);
+    const accentRgb = parseHexToRgb(theme.accent);
+    const fillRgb = parseHexToRgb(theme.fill);
+    ghost.style.setProperty('--gp-chip-fill', theme.fill);
+    ghost.style.setProperty('--gp-chip-accent', theme.accent);
+    ghost.style.setProperty('--gp-chip-text', theme.text);
+    ghost.style.background = `rgba(${fillRgb.r}, ${fillRgb.g}, ${fillRgb.b}, 0.42)`;
+    ghost.style.borderLeft = `4px solid rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.55)`;
+    ghost.style.outline = `1px dashed rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.38)`;
+    ghost.style.boxShadow =
+      `inset 1px 0 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(31, 31, 31, 0.06), 0 0 0 0.5px rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.08)`;
+    const nameEl = ghost.querySelector('.goal-ghost-event-name');
+    if (nameEl) nameEl.style.color = `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.88)`;
+  }
+
+  function goalCheckboxSvg(accentHex, isDone) {
+    const theme = buildGoalSessionChipTheme(accentHex, isDone);
+    const stroke = isDone ? theme.accentDone : theme.accent;
+    if (isDone) {
+      return (
+        '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        `<circle cx="10" cy="10" r="8" stroke="${stroke}" stroke-width="1.75" fill="#fff"/>` +
+        `<polyline points="6,10 8.5,12.5 14,7.5" stroke="${stroke}" stroke-width="1.75" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+      );
+    }
+    return (
+      '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      `<circle cx="10" cy="10" r="8" stroke="${stroke}" stroke-width="1.75" fill="none"/></svg>`
+    );
+  }
+
   function gpSkipForSidebarScan(el) {
     return el && el.closest && el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay, #gp-rail-fallback');
   }
