@@ -4963,6 +4963,7 @@
     const chipsEl = document.getElementById('gp-color-chips');
     if (!chipsEl) return;
     const frag = document.createDocumentFragment();
+    const canDelete = state.colorLabels.length > 1;
     for (const lbl of state.colorLabels) {
       const chip = document.createElement('button');
       chip.type = 'button';
@@ -4976,14 +4977,26 @@
       text.textContent = lbl.name;
       chip.appendChild(dot);
       chip.appendChild(text);
+      if (canDelete) {
+        const rm = document.createElement('span');
+        rm.className = 'gp-color-chip-remove';
+        rm.dataset.remove = '1';
+        rm.setAttribute('role', 'button');
+        rm.setAttribute('aria-label', `Delete ${lbl.name}`);
+        rm.title = 'Delete label';
+        rm.innerHTML = '<span class="material-symbols-outlined gp-ms-icon">close</span>';
+        chip.appendChild(rm);
+      }
       frag.appendChild(chip);
     }
     const addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'gp-color-chip-add';
     addBtn.id = 'gp-color-chip-add-btn';
-    addBtn.title = 'Add label';
-    addBtn.setAttribute('aria-label', 'Add label');
+    const allUsed = state.colorLabels.length >= GP_COLOR_LABEL_PALETTE.length;
+    addBtn.disabled = allUsed;
+    addBtn.title = allUsed ? 'All colors are in use' : 'Add label';
+    addBtn.setAttribute('aria-label', addBtn.title);
     addBtn.innerHTML = '<span class="material-symbols-outlined gp-ms-icon">add</span>';
     frag.appendChild(addBtn);
     chipsEl.replaceChildren(frag);
