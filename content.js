@@ -961,7 +961,7 @@
   function findRailByStructure() {
     // Primary: find a known GCal sidebar icon and walk up to its narrow container.
     // GCal renders Tasks, Keep, Contacts etc. with these aria-labels.
-    const knownLabels = ['Tasks', 'Keep', 'Contacts', 'Reminders', 'Google Keep'];
+    const knownLabels = ['Tasks', 'Keep', 'Contacts', 'Reminders', 'Google Keep', 'Tips'];
     for (const label of knownLabels) {
       const btn = document.querySelector(`[aria-label="${label}"]`);
       if (!btn) continue;
