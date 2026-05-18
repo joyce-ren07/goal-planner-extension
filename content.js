@@ -831,7 +831,6 @@
   function inject() {
     if (document.getElementById('gp-panel')) {
       ensureGpToastMounted();
-      ensurePrefTimeControl();
       ensureExtensionCoreServicesWired();
       const existingBtn = document.getElementById('gp-sidebar-btn');
       if (existingBtn) {
@@ -860,7 +859,6 @@
     document.body.appendChild(deleteModal);
     document.body.appendChild(ctxMenu);
     ensureGpToastMounted();
-    ensurePrefTimeControl();
     migrateGoals();
 
     // Prefer in-stack mount above Tips on the native right rail; fixed fallback only if needed.
@@ -1382,8 +1380,7 @@
               <span class="gp-section-label">Set custom time</span>
               <span class="gp-std-time-hint">optional</span>
             </div>
-            <button type="button" id="gp-pref-time-trigger">Select time</button>
-            <input type="hidden" id="gp-pref-time-input" value="" />
+            <input type="time" id="gp-pref-time-input" class="gp-pref-time-input" />
           </div>
           <div class="gp-action-group" style="margin-top:12px;">
             <button class="gp-btn-primary gp-btn-full gp-btn-calendar" id="gp-confirm-add">Create goal</button>
@@ -1661,8 +1658,6 @@
       clearGoalCreationPreview();
       scheduleGhostPreviewRefreshDebounced();
     } else if (name === 'suggestions') {
-      ensurePrefTimeControl();
-      syncPrefTimeTriggerLabel();
       scheduleGhostPreviewRefreshDebounced();
     }
   }
@@ -4597,328 +4592,24 @@
     renderSuggestions();
   }
 
-  let _gpPrefTimeBridgeShell = null;
-
-  function formatPrefTimeTriggerLabel(hm24) {
-    if (!hm24) return 'Select time';
-    const parts = hm24.split(':').map(Number);
-    const d = new Date();
-    d.setHours(parts[0] || 0, parts[1] || 0, 0, 0);
-    return formatTime(d);
-  }
-
-  function syncPrefTimeTriggerLabel() {
-    const trigger = document.getElementById('gp-pref-time-trigger');
-    const hidden = document.getElementById('gp-pref-time-input');
-    if (!trigger || !hidden) return;
-    const hm = hidden.value.trim();
-    trigger.textContent = formatPrefTimeTriggerLabel(hm);
-    trigger.classList.toggle('has-value', !!hm);
-  }
-
-  function parseGCalTimeTextToHM(text) {
-    const t = String(text || '').trim();
-    if (!t) return null;
-    const m24 = /^(\d{1,2}):(\d{2})$/.exec(t);
-    if (m24) {
-      const h = parseInt(m24[1], 10);
-      const min = parseInt(m24[2], 10);
-      if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
-        return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      }
-    }
-    const m12 = t.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
-    if (m12) {
-      let h = parseInt(m12[1], 10);
-      const min = m12[2] ? parseInt(m12[2], 10) : 0;
-      const pm = /pm/i.test(m12[3]);
-      if (h === 12) h = pm ? 12 : 0;
-      else if (pm) h += 12;
-      if (min >= 0 && min <= 59) {
-        return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      }
-    }
-    return null;
-  }
-
-  function isVisibleEl(el) {
-    if (!(el instanceof HTMLElement)) return false;
-    const r = el.getBoundingClientRect();
-    if (!r.width && !r.height) return false;
-    const st = getComputedStyle(el);
-    return st.visibility !== 'hidden' && st.display !== 'none';
-  }
-
-  function findVisibleGCalTimeCombobox() {
-    const candidates = document.querySelectorAll(
-      'input[role="combobox"][jsname="dSO9oc"], input[role="combobox"][aria-label*="time" i]'
-    );
-    for (const el of candidates) {
-      if (!(el instanceof HTMLInputElement)) continue;
-      if (el.closest('#gp-panel, #gp-recurrence-overlay, #gp-delete-overlay')) continue;
-      const label = (el.getAttribute('aria-label') || '').toLowerCase();
-      if (/end\s*time|closes\s*at|to\s*time/i.test(label)) continue;
-      if (!isVisibleEl(el)) continue;
-      return el;
-    }
-    return null;
-  }
-
-  function findGCalTimeListboxForCombobox(combobox) {
-    const parent = combobox.parentElement;
-    if (parent) {
-      const lb = parent.querySelector('[role="listbox"]');
-      if (lb instanceof HTMLElement && isVisibleEl(lb)) return lb;
-    }
-    if (combobox.getAttribute('aria-expanded') === 'true') {
-      for (const lb of document.querySelectorAll('[role="listbox"]')) {
-        if (!(lb instanceof HTMLElement)) continue;
-        if (lb.closest('#gp-panel')) continue;
-        if (isVisibleEl(lb)) return lb;
-      }
-    }
-    return null;
-  }
-
-  function gpDispatchPointerClick(el, clientX, clientY) {
-    const opts = { bubbles: true, cancelable: true, view: window, clientX, clientY };
-    el.dispatchEvent(new MouseEvent('mousedown', opts));
-    el.dispatchEvent(new MouseEvent('mouseup', opts));
-    el.dispatchEvent(new MouseEvent('click', opts));
-  }
-
-  function gpTryOpenGCalGridEventBubble(preferHM) {
-    const scrollCont = findCalendarScrollContainer();
-    if (!scrollCont) return false;
-    const cols = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
-    if (!cols.length) return false;
-    const hourPositions = findHourAbsolutePositions(scrollCont);
-    if (hourPositions.length < 2) return false;
-    hourPositions.sort((a, b) => a.hour - b.hour);
-    const first = hourPositions[0];
-    const last = hourPositions[hourPositions.length - 1];
-    const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
-    if (pxPerHour <= 0) return false;
-    const absYAtHour0 = first.absY - first.hour * pxPerHour;
-    let h = 9;
-    let min = 0;
-    if (preferHM) {
-      const p = preferHM.split(':').map(Number);
-      if (Number.isFinite(p[0])) h = p[0];
-      if (Number.isFinite(p[1])) min = p[1];
-    }
-    const today = new Date();
-    const col =
-      cols.find((c) => c.date.toDateString() === today.toDateString()) || cols[0];
-    const absTop = absYAtHour0 + ((h * 60 + min) / 60) * pxPerHour;
-    const x = col.left + col.width / 2;
-    const contRect = scrollCont.getBoundingClientRect();
-    const y = contRect.top + (absTop - scrollCont.scrollTop);
-    let target = document.elementFromPoint(x, y);
-    if (!target || target.closest('#gp-panel')) return false;
-    target =
-      target.closest('[data-datekey], [data-date], [role="gridcell"]') || target;
-    gpDispatchPointerClick(target, x, y);
-    target.dispatchEvent(
-      new MouseEvent('dblclick', {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-        clientX: x,
-        clientY: y,
-      })
-    );
-    return true;
-  }
-
-  function gpWaitForGCalTimeCombobox(ms) {
-    return new Promise((resolve) => {
-      const existing = findVisibleGCalTimeCombobox();
-      if (existing) {
-        resolve(existing);
-        return;
-      }
-      const deadline = Date.now() + ms;
-      const mo = new MutationObserver(() => {
-        const cb = findVisibleGCalTimeCombobox();
-        if (cb || Date.now() > deadline) {
-          mo.disconnect();
-          resolve(cb || null);
-        }
-      });
-      mo.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['aria-expanded', 'style', 'class'],
-      });
-      setTimeout(() => {
-        mo.disconnect();
-        resolve(findVisibleGCalTimeCombobox());
-      }, ms);
-    });
-  }
-
-  function gpCloseGCalTimeBridge() {
-    if (_gpPrefTimeBridgeShell instanceof HTMLElement) {
-      gpGdCloseNativeEventPopover(_gpPrefTimeBridgeShell);
-      _gpPrefTimeBridgeShell = null;
-    }
-  }
-
-  function gpRepositionGCalTimeListbox(listbox, anchor) {
-    const r = anchor.getBoundingClientRect();
-    listbox.style.position = 'fixed';
-    listbox.style.top = `${r.bottom + 4}px`;
-    listbox.style.left = `${r.left}px`;
-    listbox.style.zIndex = '10002';
-    listbox.style.maxHeight = 'min(320px, calc(100vh - 24px))';
-  }
-
-  async function openGCalNativePrefTimePicker(anchorEl) {
-    if (!(anchorEl instanceof HTMLElement)) return;
-    const hidden = document.getElementById('gp-pref-time-input');
-    const preferHM = hidden?.value?.trim() || prefTimeFromInputHMOrNull() || '';
-
-    let combobox = findVisibleGCalTimeCombobox();
-    let openedBridge = false;
-    if (!combobox) {
-      gpTryOpenGCalGridEventBubble(preferHM || '09:00');
-      combobox = await gpWaitForGCalTimeCombobox(2500);
-      if (combobox) {
-        openedBridge = true;
-        _gpPrefTimeBridgeShell =
-          combobox.closest('[role="dialog"]') ||
-          combobox.closest('[role="presentation"]') ||
-          combobox;
-      }
-    }
-    if (!combobox) return;
-
-    const cbRect = combobox.getBoundingClientRect();
-    combobox.focus();
-    gpDispatchPointerClick(combobox, cbRect.left + 4, cbRect.top + 4);
-
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-    let listbox = findGCalTimeListboxForCombobox(combobox);
-    if (!listbox) {
-      await new Promise((r) => setTimeout(r, 120));
-      listbox = findGCalTimeListboxForCombobox(combobox);
-    }
-    if (listbox) gpRepositionGCalTimeListbox(listbox, anchorEl);
-
-    let settled = false;
-    const finish = (hm) => {
-      if (settled) return;
-      settled = true;
-      if (!hm) {
-        if (openedBridge) gpCloseGCalTimeBridge();
-        return;
-      }
-      if (hidden) hidden.value = hm;
-      syncPrefTimeTriggerLabel();
-      const [h, min] = hm.split(':').map(Number);
-      applyStandardTime(h, min);
-      scheduleGhostPreviewRefreshDebounced();
-      if (openedBridge) gpCloseGCalTimeBridge();
-    };
-
-    const readComboboxHM = () =>
-      parseGCalTimeTextToHM(combobox.value) ||
-      parseGCalTimeTextToHM(combobox.getAttribute('aria-valuetext') || '');
-
-    const onInput = () => {
-      const hm = readComboboxHM();
-      if (hm) {
-        combobox.removeEventListener('input', onInput);
-        combobox.removeEventListener('change', onInput);
-        finish(hm);
-      }
-    };
-    combobox.addEventListener('input', onInput);
-    combobox.addEventListener('change', onInput);
-
-    const watchClose = setInterval(() => {
-      if (combobox.getAttribute('aria-expanded') === 'false') {
-        const hm = readComboboxHM();
-        if (hm) {
-          clearInterval(watchClose);
-          onInput();
-        }
-      }
-    }, 200);
-    setTimeout(() => {
-      clearInterval(watchClose);
-      if (!settled) finish(readComboboxHM());
-    }, 60000);
-
-    if (listbox) {
-      const ro = new MutationObserver(() => {
-        if (isVisibleEl(listbox)) gpRepositionGCalTimeListbox(listbox, anchorEl);
-      });
-      ro.observe(listbox, { attributes: true, attributeFilter: ['style', 'class'] });
-      setTimeout(() => ro.disconnect(), 60000);
-    }
-  }
-
   function resetPrefTimeInput() {
     const input = document.getElementById('gp-pref-time-input');
     if (input) input.value = '';
-    syncPrefTimeTriggerLabel();
-  }
-
-  /** Upgrade legacy `<input type="time">` and ensure trigger + hidden value exist. */
-  function ensurePrefTimeControl() {
-    const section = document.getElementById('gp-pref-time-section');
-    if (!section) return;
-    let trigger = document.getElementById('gp-pref-time-trigger');
-    let hidden = document.getElementById('gp-pref-time-input');
-    const legacy = section.querySelector('input[type="time"]');
-    if (!trigger && legacy instanceof HTMLInputElement) {
-      const saved = legacy.value || '';
-      trigger = document.createElement('button');
-      trigger.type = 'button';
-      trigger.id = 'gp-pref-time-trigger';
-      trigger.textContent = 'Select time';
-      legacy.replaceWith(trigger);
-      if (!(hidden instanceof HTMLInputElement) || hidden.type === 'time') {
-        if (hidden) hidden.remove();
-        hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.id = 'gp-pref-time-input';
-        hidden.value = '';
-        section.appendChild(hidden);
-      }
-      if (saved) hidden.value = saved;
-    }
-    if (hidden?.type === 'time') {
-      const saved = hidden.value || '';
-      hidden.remove();
-      hidden = null;
-    }
-    if (!hidden && trigger) {
-      hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.id = 'gp-pref-time-input';
-      hidden.value = '';
-      section.appendChild(hidden);
-    }
-    syncPrefTimeTriggerLabel();
   }
 
   function initPrefTimePicker() {
-    if (initPrefTimePicker._wired) return;
-    initPrefTimePicker._wired = true;
-    ensurePrefTimeControl();
-    const card = document.getElementById('gp-card');
-    if (!card) return;
-    card.addEventListener('click', (e) => {
-      const trigger = e.target.closest('#gp-pref-time-trigger');
-      if (!trigger) return;
-      e.preventDefault();
-      e.stopPropagation();
-      void openGCalNativePrefTimePicker(trigger);
+    const input = document.getElementById('gp-pref-time-input');
+    if (!input) return;
+    input.addEventListener('input', scheduleGhostPreviewRefreshDebounced);
+    input.addEventListener('change', () => {
+      if (!input.value) {
+        // Restore algorithmically-chosen times
+        state.suggestions = _originalSuggestions.map(s => ({ ...s }));
+        renderSuggestions();
+        return;
+      }
+      const [h, min] = input.value.split(':').map(Number);
+      applyStandardTime(h, min);
     });
   }
 
