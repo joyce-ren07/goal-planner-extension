@@ -7977,31 +7977,8 @@
     }
 
     if (!gpGdHasRecentGoalChipOpenIntent()) {
-      const keepEarly = __gpGdBlockEl;
-      if (keepEarly?.isConnected && host instanceof HTMLElement) {
-        const keepGid = keepEarly.dataset.gpGoalId || '';
-        const keepLegacy = legacyGoals.find((g) => String(g.id) === String(keepGid));
-        const keepTitle = keepLegacy?.title || '';
-        if (
-          !gpGdInspectorShowsGoalPlannerSession(host, keepTitle) ||
-          !gpGdEventHintsOverlap(_gpGdPinnedHints, gpCollectEventIdHintsFromRoot(host))
-        ) {
-          teardownGpGdBlock();
-        } else {
-          for (const h of natives) {
-            if (!gpGdComposedSubtreeContains(h, keepEarly)) continue;
-            if (gpGdIsValidEventDetailInspectorShell(h)) {
-              gpGdStabilizeMountedDetailBlock(keepEarly, h, null);
-              return;
-            }
-          }
-        }
-      } else if (keepEarly?.isConnected) {
-        teardownGpGdBlock();
-      }
-      if (!pinnedRaw.length && !__gpGdBlockEl?.isConnected) {
-        gpGdDiag('inject: SKIP — no recent goal-chip open (native calendar event)');
-      }
+      if (__gpGdBlockEl?.isConnected) teardownGpGdBlock();
+      gpGdDiag('inject: SKIP — no recent goal-chip open (native calendar event)');
       return;
     }
 
