@@ -5410,11 +5410,7 @@
     if (text.includes('🎯')) return true;
     const t = String(goalTitle || '').trim();
     if (!t) return false;
-    if (text.toLowerCase().includes(t.toLowerCase())) return true;
-    return (
-      text.toLowerCase().includes(t.toLowerCase()) &&
-      (/\bGoal\b/i.test(text) || text.includes('My goals'))
-    );
+    return text.toLowerCase().includes(t.toLowerCase());
   }
 
   /** True when event id hints resolve to a row in gp_goals (native tasks never match). */
