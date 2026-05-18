@@ -2165,45 +2165,113 @@
     return getPickerSelectedAccentHex();
   }
 
-  function goalSessionChipBelongsToActivePickerGoal(chip) {
-    if (!(chip instanceof HTMLElement) || !isGoalCalendarChip(chip)) return false;
-    if (state.editingGoalId) {
-      const gid = chip.dataset.gpGoalId;
-      if (gid) return String(gid) === String(state.editingGoalId);
-      const goals = _gpGoalsCache || [];
-      const row = findLegacyGoalForGoalChip(chip, goals);
-      return row && String(row.id) === String(state.editingGoalId);
+  function calEventDomIdMatchesGoalRow(domId, goalRow) {
+    const id = String(domId || '').trim();
+    if (!id || !goalRow) return false;
+    const ids = (goalRow.calEventIds || []).filter(Boolean).map(String);
+    return ids.some(
+      (calId) =>
+        id === calId ||
+        id.startsWith(`${calId}_`) ||
+        id.startsWith(`${calId}:`) ||
+        String(id).includes(calId) ||
+        String(calId).includes(id)
+    );
+  }
+
+  /** All decorated goal-session chips on the grid for the goal tied to the open picker. */
+  function collectGoalSessionChipsForPickerGoal(goalRow, legacyGoals) {
+    const chips = new Set();
+    const add = (chip) => {
+      if (chip instanceof HTMLElement && isGoalCalendarChip(chip)) chips.add(chip);
+    };
+
+    if (goalRow) {
+      collectGoalChipsForGoalRow(goalRow, legacyGoals).forEach(add);
+      document.querySelectorAll('[data-eventid]').forEach((ec) => {
+        if (!(ec instanceof HTMLElement) || !eventContainerLooksLikeGoal(ec)) return;
+        if (!calEventDomIdMatchesGoalRow(ec.getAttribute('data-eventid'), goalRow)) return;
+        ec.querySelectorAll('[data-eventchip]').forEach(add);
+      });
     }
-    if (!document.getElementById('gp-screen-suggestions')?.classList.contains('active')) return false;
-    const title = ghostCreationPreviewTitlePlain();
-    if (!title) return true;
-    const titleEl = chip.querySelector('.ext-goal-title');
-    if (titleEl?.textContent?.trim() === title) return true;
-    const ec = chip.closest('[data-eventid]');
-    const blob = [
-      ec?.getAttribute('aria-label'),
-      ec?.getAttribute('data-tooltip'),
-      ec?.getAttribute('title'),
-      chip.textContent,
-    ]
-      .filter(Boolean)
-      .join('\n');
-    return blob.includes(title) || blob.includes('🎯');
+
+    const goalId = goalRow?.id != null ? String(goalRow.id) : state.editingGoalId ? String(state.editingGoalId) : '';
+    if (goalId) {
+      document.querySelectorAll('[data-eventchip][data-gp-goal-id]').forEach((chip) => {
+        if (String(chip.dataset.gpGoalId) === goalId) add(chip);
+      });
+    }
+
+    if (!goalRow && document.getElementById('gp-screen-suggestions')?.classList.contains('active')) {
+      const title = ghostCreationPreviewTitlePlain().trim();
+      if (title) {
+        document.querySelectorAll('[data-eventchip]').forEach((chip) => {
+          if (!isGoalCalendarChip(chip)) return;
+          const t =
+            chip.querySelector('.ext-goal-title')?.textContent?.replace(/🎯\s*/g, '').trim() || '';
+          if (t === title || (t && (title.startsWith(t) || t.startsWith(title)))) {
+            add(chip);
+            return;
+          }
+          const ec = chip.closest('[data-eventid]');
+          const blob = [
+            ec?.getAttribute('aria-label'),
+            ec?.getAttribute('data-tooltip'),
+            ec?.getAttribute('title'),
+            chip.textContent,
+          ]
+            .filter(Boolean)
+            .join('\n');
+          if (blob.includes(title)) add(chip);
+        });
+      }
+    }
+
+    return [...chips];
+  }
+
+  function resolveGoalRowForActivePicker(goals) {
+    const list = Array.isArray(goals) ? goals : [];
+    if (state.editingGoalId) {
+      const row = list.find((g) => String(g.id) === String(state.editingGoalId));
+      if (row) return row;
+    }
+    const title = ghostCreationPreviewTitlePlain().trim();
+    if (title) {
+      const hits = list.filter((g) => String(g.title || '').trim() === title);
+      if (hits.length === 1) return hits[0];
+    }
+    return null;
+  }
+
+  function repaintGoalSessionChipsWithAccent(accent, goalRow, goals) {
+    const chips = collectGoalSessionChipsForPickerGoal(goalRow, goals);
+    for (const chip of chips) {
+      if (goalRow?.id != null) chip.dataset.gpGoalId = String(goalRow.id);
+      const isDone = chip.classList.contains('ext-goal-completed');
+      applyGoalChipTheme(chip, accent, isDone);
+      const circle = chip.querySelector('.goal-checkbox, .ext-check-circle');
+      if (circle) circle.innerHTML = goalCheckboxSvg(accent, isDone);
+    }
+    document.querySelectorAll('.goal-ghost-event[data-gp-ghost-preview]').forEach((ghost) => {
+      applyGhostEventTheme(ghost, accent);
+    });
   }
 
   /** Repaint every goal session block for the goal being edited/created when picker color changes. */
   function refreshGoalSessionBlocksForPickerColor() {
     const accent = getPickerSelectedAccentHex();
-    document.querySelectorAll('[data-eventchip]').forEach((chip) => {
-      if (!goalSessionChipBelongsToActivePickerGoal(chip)) return;
-      const isDone = chip.classList.contains('ext-goal-completed');
-      applyGoalChipTheme(chip, accent, isDone);
-      const circle = chip.querySelector('.goal-checkbox, .ext-check-circle');
-      if (circle) circle.innerHTML = goalCheckboxSvg(accent, isDone);
-    });
-    document.querySelectorAll('.goal-ghost-event[data-gp-ghost-preview]').forEach((ghost) => {
-      applyGhostEventTheme(ghost, accent);
-    });
+    const goals = Array.isArray(_gpGoalsCache) ? _gpGoalsCache : [];
+    const goalRow = resolveGoalRowForActivePicker(goals);
+    repaintGoalSessionChipsWithAccent(accent, goalRow, goals);
+
+    if (state.editingGoalId && !goalRow) {
+      getGoals().then((loaded) => {
+        _gpGoalsCache = loaded;
+        const row = resolveGoalRowForActivePicker(loaded);
+        if (row) repaintGoalSessionChipsWithAccent(accent, row, loaded);
+      });
+    }
   }
 
   function applyGhostEventTheme(ghost, accentHex) {
