@@ -5061,14 +5061,18 @@
     chipsEl.replaceChild(wrap, addBtn);
     const input = wrap.querySelector('input');
     input?.focus();
+    const seed = pickUnusedPaletteEntry();
+    const seedDot = wrap.querySelector('.gp-color-chip-dot');
+    if (seedDot) seedDot.style.background = seed.hex;
     const commit = async () => {
       const name = (input?.value || '').trim();
       if (!name) { renderColorLabelChips(); return; }
+      const chosen = pickUnusedPaletteEntry();
       const newLabel = {
         id: 'lbl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         name,
-        color: '#3f51b5',
-        colorId: '9',
+        color: chosen.hex,
+        colorId: chosen.colorId,
       };
       state.colorLabels.push(newLabel);
       state.selectedColorLabelId = newLabel.id;
