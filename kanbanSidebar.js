@@ -650,7 +650,7 @@
   }
 
   const SIDEBAR_MARKUP = `
-<div id="gp-tasks-panel" class="mytasks-sidebar" aria-hidden="true">
+<div id="gp-kanban-panel" class="mytasks-sidebar" aria-hidden="true">
   <div class="gp-card" id="gp-card">
     <div class="gp-sidebar-sticky-head">
       <header class="gp-header gp-header--tasks">
@@ -918,14 +918,14 @@
 
   function createRailButton() {
     const shell = document.createElement('div');
-    shell.className = 'gp-sidebar-btn-shell';
+    shell.className = 'gp-kanban-sidebar-btn-shell';
 
     const indicator = document.createElement('span');
-    indicator.className = 'gp-sidebar-btn__indicator';
+    indicator.className = 'gp-kanban-sidebar-btn__indicator';
     indicator.setAttribute('aria-hidden', 'true');
 
     const btn = document.createElement('button');
-    btn.id = 'gp-sidebar-btn';
+    btn.id = 'gp-kanban-sidebar-btn';
     btn.type = 'button';
     btn.title = 'My Tasks';
     btn.setAttribute('aria-label', 'Open My Tasks');
@@ -947,21 +947,21 @@
   }
 
   function getRailButtonShell() {
-    const btn = document.getElementById('gp-sidebar-btn');
-    return btn?.closest('.gp-sidebar-btn-shell') || null;
+    const btn = document.getElementById('gp-kanban-sidebar-btn');
+    return btn?.closest('.gp-kanban-sidebar-btn-shell') || null;
   }
 
   function ensureRailButtonShell(btn) {
     if (!btn) return null;
 
-    const existingShell = btn.closest('.gp-sidebar-btn-shell');
+    const existingShell = btn.closest('.gp-kanban-sidebar-btn-shell');
     if (existingShell) return existingShell;
 
     const shell = document.createElement('div');
-    shell.className = 'gp-sidebar-btn-shell';
+    shell.className = 'gp-kanban-sidebar-btn-shell';
 
     const indicator = document.createElement('span');
-    indicator.className = 'gp-sidebar-btn__indicator';
+    indicator.className = 'gp-kanban-sidebar-btn__indicator';
     indicator.setAttribute('aria-hidden', 'true');
 
     const parent = btn.parentElement;
@@ -973,9 +973,9 @@
   }
 
   function syncRailButtonState() {
-    const btn = document.getElementById('gp-sidebar-btn');
+    const btn = document.getElementById('gp-kanban-sidebar-btn');
     const shell = getRailButtonShell();
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     if (!btn || !panel) return;
 
     const isOpen = panel.classList.contains('open');
@@ -985,9 +985,9 @@
   }
 
   function placeRailButton(rail, buttonNode) {
-    const shell = buttonNode.classList?.contains('gp-sidebar-btn-shell')
+    const shell = buttonNode.classList?.contains('gp-kanban-sidebar-btn-shell')
       ? buttonNode
-      : buttonNode.closest('.gp-sidebar-btn-shell') || buttonNode;
+      : buttonNode.closest('.gp-kanban-sidebar-btn-shell') || buttonNode;
 
     if (shell.parentElement !== rail || rail.firstElementChild !== shell) {
       rail.prepend(shell);
@@ -995,7 +995,7 @@
   }
 
   function mountRailButton() {
-    const existing = document.getElementById('gp-sidebar-btn');
+    const existing = document.getElementById('gp-kanban-sidebar-btn');
     const existingShell = getRailButtonShell();
     const rail = getRailMountTarget();
 
@@ -1043,7 +1043,7 @@
     }
 
     const candidates = [...document.querySelectorAll('[role="main"], main')]
-      .filter((el) => !el.closest('.mytasks-sidebar, .mytasks-native-tasks-layout, #gp-tasks-panel, #gp-panel'))
+      .filter((el) => !el.closest('.mytasks-sidebar, .mytasks-native-tasks-layout, #gp-kanban-panel'))
       .filter((el) => {
         const rect = el.getBoundingClientRect();
         return rect.width >= 280 && rect.height >= 200;
@@ -1067,7 +1067,7 @@
   }
 
   function updateGpPanelChromeMetrics() {
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     const mainEl = getCalendarMainEl();
     const railInset = getGoogleAppRailInset();
     let top = 64;
@@ -1091,12 +1091,12 @@
     }
 
     const root = document.documentElement;
-    root.style.setProperty('--gp-tasks-panel-top', `${top}px`);
-    root.style.setProperty('--gp-tasks-panel-height', `${height}px`);
-    root.style.setProperty('--gp-tasks-panel-right', `${panelRight}px`);
-    root.style.setProperty('--gp-tasks-panel-rail-inset', `${railInset}px`);
-    root.style.setProperty('--gp-tasks-panel-rail-gap', `${PANEL_RAIL_GAP_PX}px`);
-    root.style.setProperty('--gp-tasks-panel-calendar-gap', `${PANEL_CALENDAR_GAP_PX}px`);
+    root.style.setProperty('--gp-kanban-panel-top', `${top}px`);
+    root.style.setProperty('--gp-kanban-panel-height', `${height}px`);
+    root.style.setProperty('--gp-kanban-panel-right', `${panelRight}px`);
+    root.style.setProperty('--gp-kanban-panel-rail-inset', `${railInset}px`);
+    root.style.setProperty('--gp-kanban-panel-rail-gap', `${PANEL_RAIL_GAP_PX}px`);
+    root.style.setProperty('--gp-kanban-panel-calendar-gap', `${PANEL_CALENDAR_GAP_PX}px`);
   }
 
   function setCalendarPushed(open) {
@@ -1119,17 +1119,17 @@
 
   function applyGpSidebarTaskSurfaceInsets() {
     const layoutInsetRight = `${PANEL_WIDTH_PX + PANEL_CALENDAR_GAP_PX}px`;
-    const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px - ${PANEL_CALENDAR_GAP_PX}px - var(--gp-tasks-panel-rail-gap, 4px) - var(--gp-tasks-panel-rail-inset, 56px)))`;
+    const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px - ${PANEL_CALENDAR_GAP_PX}px - var(--gp-kanban-panel-rail-gap, 4px) - var(--gp-kanban-panel-rail-inset, 56px)))`;
 
     document.querySelectorAll('.mytasks-native-tasks-layout').forEach((el) => {
-      if (el.closest('#gp-tasks-panel')) return;
+      if (el.closest('#gp-kanban-panel')) return;
       el.setAttribute(GP_SIDEBAR_INSET_ATTR, 'layout');
       el.style.setProperty('padding-right', layoutInsetRight, 'important');
       el.style.setProperty('box-sizing', 'border-box', 'important');
     });
 
     document.querySelectorAll('.mytasks-kanban').forEach((kanban) => {
-      if (kanban.closest('#gp-tasks-panel')) return;
+      if (kanban.closest('#gp-kanban-panel')) return;
       const board = kanban.querySelector(':scope > .mytasks-kanban__board');
       if (!board) return;
       kanban.setAttribute(GP_SIDEBAR_INSET_ATTR, 'kanban');
@@ -1148,7 +1148,7 @@
     if (gpSidebarInsetReflowTimer) clearTimeout(gpSidebarInsetReflowTimer);
     gpSidebarInsetReflowTimer = setTimeout(() => {
       gpSidebarInsetReflowTimer = null;
-      const panel = document.getElementById('gp-tasks-panel');
+      const panel = document.getElementById('gp-kanban-panel');
       if (!panel?.classList.contains('open')) return;
       clearGpSidebarInset();
       applyGpSidebarTaskSurfaceInsets();
@@ -1160,7 +1160,7 @@
   }
 
   function syncGpSidebarLayout() {
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     const isOpen = Boolean(panel?.classList.contains('open'));
 
     updateGpPanelChromeMetrics();
@@ -1171,7 +1171,7 @@
     }
 
     clearGpSidebarInset();
-    document.body.classList.toggle('gp-tasks-sidebar-open', isOpen);
+    document.body.classList.toggle('gp-sidebar-open', isOpen);
 
     if (isOpen) {
       applyGpSidebarTaskSurfaceInsets();
@@ -1188,7 +1188,7 @@
 
   function setupCalendarPushObserver() {
     const reapply = () => {
-      const panel = document.getElementById('gp-tasks-panel');
+      const panel = document.getElementById('gp-kanban-panel');
       if (panel?.classList.contains('open')) {
         setCalendarPushed(true);
       } else {
@@ -1341,7 +1341,7 @@
     const row = chip?.closest('.gp-task-row');
     const taskId = row?.dataset.taskId;
     const statusKey = chip?.dataset.status || 'planned';
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
 
     if (!taskId || !panel || !row) {
       void syncSidebarTaskStatus(chip, statusKey);
@@ -1661,7 +1661,7 @@
     const accordion = row?.closest('#gp-tasks-accordion');
     const completedFolder = accordion?.querySelector('[data-folder="completed"]');
     const completedInner = completedFolder?.querySelector('.gp-task-folder-panel-inner');
-    const panel = row?.closest('#gp-tasks-panel');
+    const panel = row?.closest('#gp-kanban-panel');
 
     if (!row || !sourceFolder || !completedFolder || !completedInner || !panel || sourceFolder === completedFolder) {
       return;
@@ -2350,11 +2350,11 @@
   }
 
   function isMkDueEditorInSidebar() {
-    return Boolean(gpMkDueEditorTarget?.host?.closest('#gp-tasks-panel'));
+    return Boolean(gpMkDueEditorTarget?.host?.closest('#gp-kanban-panel'));
   }
 
   function getSidebarDueScrollContainer() {
-    return document.querySelector('#gp-tasks-panel .gp-card');
+    return document.querySelector('#gp-kanban-panel .gp-card');
   }
 
   function getMkDueDropdownScrollContainer() {
@@ -3155,7 +3155,7 @@
     if (!gpMkDueEditorTarget || !gpMkDueEditorDraft) return;
     const { taskId, host } = gpMkDueEditorTarget;
     const draft = gpMkDueEditorDraft;
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     clearGpFolderMoveAnimTimers();
     let pending = null;
     if (panel && draft.dueDate) {
@@ -3445,8 +3445,8 @@
 
   function isSidebarTitleEditActive() {
     return Boolean(
-      document.querySelector('#gp-tasks-panel .gp-task-row.is-editing-title')
-      || document.querySelector('#gp-tasks-panel .gp-task-title:focus'),
+      document.querySelector('#gp-kanban-panel .gp-task-row.is-editing-title')
+      || document.querySelector('#gp-kanban-panel .gp-task-title:focus'),
     );
   }
 
@@ -3457,7 +3457,7 @@
   function takeMkDueSidebarEditorResume() {
     const target = gpMkDueEditorTarget;
     if (!target?.taskId) return null;
-    if (!target.host?.closest('#gp-tasks-panel')) return null;
+    if (!target.host?.closest('#gp-kanban-panel')) return null;
     if (!target.host.classList.contains('is-schedule-open')) return null;
     return {
       taskId: target.taskId,
@@ -4638,7 +4638,7 @@
     if (!options.sidebarOnly) {
       scheduleCalendarWeekTaskOverlayRefresh(normalized);
     }
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     if (panel && !isSidebarTitleEditActive() && !options.skipSidebarRender) {
       renderSidebarTasks(panel, normalized);
     }
@@ -8238,7 +8238,7 @@
 
   function isExtensionTasksControl(el) {
     return Boolean(
-      el?.closest('#gp-panel, .mytasks-sidebar, #gp-sidebar-btn, .gp-sidebar-btn-shell, #gp-sidebar-rail')
+      el?.closest('#gp-kanban-panel, .mytasks-sidebar, #gp-kanban-sidebar-btn, .gp-kanban-sidebar-btn-shell, #gp-sidebar-rail')
       || /\bmy tasks\b/i.test(getElementLabel(el)),
     );
   }
@@ -8308,7 +8308,7 @@
 
   function isTasksSurfaceVisible(el) {
     if (!el || !isVisibleElement(el)) return false;
-    if (el.closest('#gp-tasks-panel, #gp-panel, .mytasks-sidebar')) return false;
+    if (el.closest('#gp-kanban-panel, .mytasks-sidebar')) return false;
 
     const calendarMain = getCalendarMainEl();
     if (calendarMain && (el === calendarMain || el.contains(calendarMain))) return false;
@@ -8421,7 +8421,7 @@
   function isNativeTasksManagedElement(el) {
     if (!(el instanceof Element)) return false;
     return Boolean(
-      el.closest('.mytasks-kanban, .mytasks-native-tasks-nav, .mytasks-native-tasks-layout, #gp-tasks-panel, #gp-panel, .mytasks-sidebar'),
+      el.closest('.mytasks-kanban, .mytasks-native-tasks-nav, .mytasks-native-tasks-layout, #gp-kanban-panel, .mytasks-sidebar'),
     );
   }
 
@@ -9023,7 +9023,7 @@
   }
 
   async function injectKanbanIntoNativeTasksPanel(host) {
-    if (!host || host.closest('#gp-tasks-panel, #gp-panel, .mytasks-sidebar')) return;
+    if (!host || host.closest('#gp-kanban-panel, .mytasks-sidebar')) return;
 
     ensureNativeTasksLayout(host);
     ensureNativeTasksNavShell(host);
@@ -9397,7 +9397,7 @@
 
   function mountSidebar() {
     ensureGlobalTaskModals();
-    let existing = document.getElementById('gp-tasks-panel');
+    let existing = document.getElementById('gp-kanban-panel');
     if (existing && existing.querySelector('#gp-view-kanban-btn, #gp-screen-kanban')) {
       existing.remove();
       existing = null;
@@ -9444,7 +9444,7 @@
   }
 
   function closePanel() {
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     if (!panel) return false;
 
     panel.classList.remove('open');
@@ -9456,7 +9456,7 @@
   }
 
   function togglePanel() {
-    const panel = document.getElementById('gp-tasks-panel');
+    const panel = document.getElementById('gp-kanban-panel');
     if (!panel) {
       return openPanel();
     }
@@ -10077,7 +10077,12 @@
     mountSidebar();
     setupCalendarDueFolderRefreshListeners();
     await ensurePaletteCaches();
-    setupRailObserver();
+    // setupRailObserver intentionally disabled in the integrated build:
+    // the kanban sidebar is opened via the extension's toolbar icon
+    // (chrome.action.onClicked -> TOGGLE_SIDEBAR), so we no longer need
+    // a rail button. Leaving it on competes with the Goal Planner rail
+    // button — both observers re-mount on every body mutation, causing
+    // the buttons to flicker/fly across the rail.
     setupNativeTasksKanbanObserver();
     setupCalendarWeekTaskOverlay();
     void syncTaskViewsFromStorage();
@@ -10086,7 +10091,7 @@
   let gpDueFolderRefreshWired = false;
 
   function refreshTaskViewsIfQuiet() {
-    if (!document.getElementById('gp-tasks-panel')) return;
+    if (!document.getElementById('gp-kanban-panel')) return;
     if (isSidebarTitleEditActive() || isMkDueEditorActive()) return;
     if (kanbanStateCache) {
       refreshLinkedTaskViews(kanbanStateCache);

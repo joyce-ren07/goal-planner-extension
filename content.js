@@ -1108,15 +1108,20 @@
       shell.id = 'gp-rail-slot';
       shell.dataset.gpRailSlot = '1';
     }
-    if (referenceSlot instanceof HTMLElement && referenceSlot.className) {
-      shell.className = referenceSlot.className;
-    } else {
-      shell.className = '';
-    }
-    shell.style.cssText =
+    const desiredClassName = (referenceSlot instanceof HTMLElement && referenceSlot.className)
+      ? referenceSlot.className
+      : '';
+    if (shell.className !== desiredClassName) shell.className = desiredClassName;
+    const desiredCss =
       'display:flex;align-items:center;justify-content:center;flex:0 0 auto;width:100%;' +
       'min-height:48px;box-sizing:border-box;pointer-events:none;';
-    shell.replaceChildren(btn);
+    if (shell.style.cssText !== desiredCss) shell.style.cssText = desiredCss;
+    // Skip replaceChildren if the button is already the only child — replaceChildren
+    // is a childList mutation that fires our own MutationObserver, which would
+    // re-enter this code in a loop once shannon's script wakes up other observers.
+    if (shell.firstElementChild !== btn || shell.childElementCount !== 1) {
+      shell.replaceChildren(btn);
+    }
     return shell;
   }
 
@@ -1133,6 +1138,25 @@
   function tryMountRailButtonInStack(btn) {
     const rail = findRailByStructure();
     if (!(rail instanceof HTMLElement) || !(btn instanceof HTMLElement)) return false;
+
+    // Fast path: if the shell already exists in the rail at the correct position
+    // with the button as its only child, there is nothing to do. Without this
+    // guard the function unconditionally mutates the DOM on every call, which
+    // re-triggers our own MutationObserver and causes the button to visibly
+    // blink/move whenever another script (e.g. shannon's kanban) makes
+    // unrelated DOM changes.
+    const existingShell = document.getElementById('gp-rail-slot');
+    if (
+      existingShell instanceof HTMLElement &&
+      existingShell.parentElement === rail &&
+      existingShell.firstElementChild === btn &&
+      existingShell.childElementCount === 1 &&
+      gpRailStackOrderOk(existingShell, rail)
+    ) {
+      const wrap = document.getElementById('gp-rail-fallback');
+      if (wrap && wrap.style.display !== 'none') wrap.style.display = 'none';
+      return true;
+    }
 
     const tips = findRailIconControl(rail, /^Tips$/i);
     const insertBeforeSlot = tips
@@ -1175,7 +1199,7 @@
       wrap.id = 'gp-rail-fallback';
       document.body.appendChild(wrap);
     }
-    wrap.style.display = 'flex';
+    if (wrap.style.display !== 'flex') wrap.style.display = 'flex';
     if (btn.parentElement !== wrap) wrap.replaceChildren(btn);
     positionRailFallback();
   }
@@ -1188,6 +1212,17 @@
 
   function setupRailMountWatcher() {
     if (_gpRailStackMo) return;
+    // Watch for GCal route changes via the URL bar instead of by listening to
+    // every body mutation. The body-subtree observer was the original way to
+    // know when GCal rebuilt its rail (e.g. SPA navigation between views), but
+    // it also fires on every DOM change anyone else makes — when shannon's
+    // kanban is also injected, that's a constant stream of mutations and the
+    // button visibly thrashes as we re-evaluate mount state for each one.
+    //
+    // GCal is an SPA — view switches change the URL via history.pushState
+    // without triggering navigation events. So we override the history API
+    // and dispatch a custom event we can listen to.
+    let lastHref = location.href;
     const run = () => {
       const btn = document.getElementById('gp-sidebar-btn');
       if (btn) ensureGoalPlannerRailButtonMounted(btn);
@@ -1195,11 +1230,43 @@
     run();
     const schedule = () => {
       clearTimeout(_railStackMountTimer);
-      _railStackMountTimer = setTimeout(run, 180);
+      _railStackMountTimer = setTimeout(() => {
+        if (location.href === lastHref) {
+          // Same view — only re-run if the rail mount state changed (rare;
+          // can happen if GCal lazy-loads the rail after initial load).
+          const shell = document.getElementById('gp-rail-slot');
+          const rail = findRailByStructure();
+          if (shell?.isConnected && rail?.contains(shell)) return;
+        }
+        lastHref = location.href;
+        run();
+      }, 180);
     };
-    _gpRailStackMo = new MutationObserver(schedule);
-    _gpRailStackMo.observe(document.body, { childList: true, subtree: true });
+    // Hook pushState / replaceState so GCal's SPA navigation triggers a remount.
+    const wrap = (orig) => function (...args) {
+      const ret = orig.apply(this, args);
+      schedule();
+      return ret;
+    };
+    history.pushState = wrap(history.pushState);
+    history.replaceState = wrap(history.replaceState);
+    window.addEventListener('popstate', schedule);
+    window.addEventListener('hashchange', schedule);
     window.addEventListener('resize', run);
+    // Light, throttled fallback: poll every 2s for the case where GCal mounts
+    // the rail well after initial document_idle. Stop polling once mounted.
+    const pollHandle = setInterval(() => {
+      const shell = document.getElementById('gp-rail-slot');
+      const rail = findRailByStructure();
+      if (shell?.isConnected && rail?.contains(shell)) {
+        clearInterval(pollHandle);
+        return;
+      }
+      run();
+    }, 2000);
+    // Sentinel so we can detect old wiring in dev tools. We deliberately do
+    // not assign a body-subtree MutationObserver here.
+    _gpRailStackMo = { disconnect() {} };
     setupRailFallbackPositioner();
   }
 
@@ -1207,16 +1274,16 @@
     const shell = document.getElementById('gp-rail-slot');
     const wrap = document.getElementById('gp-rail-fallback');
     if (shell?.isConnected && findRailByStructure()?.contains(shell)) {
-      if (wrap) wrap.style.display = 'none';
+      if (wrap && wrap.style.display !== 'none') wrap.style.display = 'none';
       return;
     }
     if (!wrap) return;
-    wrap.style.display = 'flex';
 
     const btn = document.getElementById('gp-sidebar-btn');
     const btnH = btn?.offsetHeight || 40;
     const gap = 6;
     const rail = findRailByStructure();
+    let desiredCss;
     if (rail) {
       const r = rail.getBoundingClientRect();
       const rightPx = window.innerWidth - r.right;
@@ -1226,27 +1293,32 @@
         const tr = tips.getBoundingClientRect();
         topPx = Math.max(r.top + 4, tr.top - btnH - gap);
       }
-      wrap.style.cssText =
+      desiredCss =
         `position:fixed;right:${rightPx}px;top:${topPx}px;width:${r.width}px;z-index:10000;` +
         'display:flex;flex-direction:column;align-items:center;padding:0;pointer-events:none;';
-      return;
+    } else {
+      // No rail in the current view (e.g. GCal Tasks view). Use viewport-
+      // anchored constants so the button has a stable, predictable home
+      // instead of chasing a moving header. The values are deliberately not
+      // read from the live DOM so other scripts' reflows can't move us.
+      desiredCss =
+        'position:fixed;right:8px;top:80px;width:48px;z-index:10000;' +
+        'display:flex;flex-direction:column;align-items:center;padding:0;pointer-events:none;';
     }
-    const hdrH = getGCalHeaderBottom();
-    wrap.style.cssText =
-      `position:fixed;right:0;top:${hdrH}px;z-index:10000;display:flex;flex-direction:column;` +
-      'align-items:center;padding:0;pointer-events:none;';
+    // Idempotency: skip the style write if the cssText is already correct.
+    // Setting style.cssText is an attribute change, but the broader concern
+    // is downstream layout work — when nothing changed, we want a true no-op.
+    if (wrap.style.cssText !== desiredCss) wrap.style.cssText = desiredCss;
   }
 
   function setupRailFallbackPositioner() {
-    const schedule = () => {
-      clearTimeout(_railPositionTimer);
-      _railPositionTimer = setTimeout(() => {
-        const shell = document.getElementById('gp-rail-slot');
-        if (shell?.isConnected && findRailByStructure()?.contains(shell)) return;
-        positionRailFallback();
-      }, 200);
-    };
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    // Originally this watched document.body subtree mutations to reposition
+    // the fallback wrap as GCal's layout shifted. With shannon's kanban also
+    // mutating the body, that observer fires constantly, and the button
+    // visibly chases the layout. Switch to resize-only triggering — the
+    // fallback uses constants for top/right, so we don't need to reposition
+    // on every layout shift anyway. We still position once on initial mount.
+    positionRailFallback();
     window.addEventListener('resize', positionRailFallback);
   }
 

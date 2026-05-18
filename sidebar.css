@@ -2,14 +2,14 @@
 
 :root {
   --color-text-tertiary: #9aa0a6;
-  --gp-tasks-panel-width: 341px;
-  --gp-tasks-panel-calendar-gap: 8px;
-  --gp-tasks-panel-top: 64px;
-  --gp-tasks-panel-right: 56px;
-  --gp-tasks-panel-rail-inset: 56px;
-  --gp-tasks-panel-rail-gap: 4px;
-  --gp-tasks-panel-height: calc(100vh - var(--gp-tasks-panel-top) - 8px);
-  /* M3 shape scale + surfaces (Material 3); #gp-panel overrides where needed */
+  --gp-kanban-panel-width: 341px;
+  --gp-kanban-panel-calendar-gap: 8px;
+  --gp-kanban-panel-top: 64px;
+  --gp-kanban-panel-right: 56px;
+  --gp-kanban-panel-rail-inset: 56px;
+  --gp-kanban-panel-rail-gap: 4px;
+  --gp-kanban-panel-height: calc(100vh - var(--gp-kanban-panel-top) - 8px);
+  /* M3 shape scale + surfaces (Material 3); #gp-kanban-panel overrides where needed */
   --m3-radius-xs: 4px;
   --m3-radius-sm: 8px;
   --m3-radius-md: 12px;
@@ -28,11 +28,11 @@
   --gp-sidebar-due-text-inset-x: 8px;
 }
 
-#gp-tasks-panel.mytasks-sidebar .gp-card {
+#gp-kanban-panel.mytasks-sidebar .gp-card {
   contain: layout style paint;
 }
 
-#gp-tasks-panel.mytasks-sidebar {
+#gp-kanban-panel.mytasks-sidebar {
   --m3-surface: #ffffff;
   --m3-on-surface: #1d1b20;
   --m3-on-surface-variant: #49454f;
@@ -84,15 +84,15 @@
   --m3-state-pressed: 0.12;
   --m3-state-focused: 0.12;
   position: fixed;
-  top: var(--gp-tasks-panel-top, 64px);
-  right: var(--gp-tasks-panel-right, 56px);
-  width: var(--gp-tasks-panel-width);
-  height: var(--gp-tasks-panel-height, calc(100vh - var(--gp-tasks-panel-top, 64px) - 8px));
+  top: var(--gp-kanban-panel-top, 64px);
+  right: var(--gp-kanban-panel-right, 56px);
+  width: var(--gp-kanban-panel-width);
+  height: var(--gp-kanban-panel-height, calc(100vh - var(--gp-kanban-panel-top, 64px) - 8px));
   z-index: 2147483646;
   display: flex;
   flex-direction: column;
   pointer-events: none;
-  transform: translate3d(calc(100% + var(--gp-tasks-panel-right, 56px)), 0, 0);
+  transform: translate3d(calc(100% + var(--gp-kanban-panel-right, 56px)), 0, 0);
   transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
   border-radius: var(--m3-radius-xl);
   border: 1px solid var(--m3-outline-variant);
@@ -103,7 +103,7 @@
   box-sizing: border-box;
 }
 
-#gp-tasks-panel.mytasks-sidebar.open {
+#gp-kanban-panel.mytasks-sidebar.open {
   pointer-events: auto;
   transform: translate3d(0, 0, 0);
   box-shadow: var(--m3-elevation-1);
@@ -121,7 +121,7 @@
   overflow: visible;
 }
 
-.gp-sidebar-btn-shell {
+.gp-kanban-sidebar-btn-shell {
   position: relative;
   display: flex;
   align-items: center;
@@ -132,7 +132,7 @@
   overflow: visible;
 }
 
-.gp-sidebar-btn__indicator {
+.gp-kanban-sidebar-btn__indicator {
   position: absolute;
   left: 0;
   top: 50%;
@@ -147,12 +147,12 @@
   pointer-events: none;
 }
 
-.gp-sidebar-btn-shell.is-active .gp-sidebar-btn__indicator {
+.gp-kanban-sidebar-btn-shell.is-active .gp-kanban-sidebar-btn__indicator {
   opacity: 1;
   transform: scaleY(1);
 }
 
-#gp-sidebar-btn {
+#gp-kanban-sidebar-btn {
   width: 40px;
   height: 40px;
   border-radius: 9999px;
@@ -168,17 +168,17 @@
   color: #444746;
 }
 
-#gp-sidebar-btn:hover {
+#gp-kanban-sidebar-btn:hover {
   background: #e8edf6;
 }
 
-#gp-sidebar-btn.active,
-.gp-sidebar-btn-shell.is-active #gp-sidebar-btn {
+#gp-kanban-sidebar-btn.active,
+.gp-kanban-sidebar-btn-shell.is-active #gp-kanban-sidebar-btn {
   background: #c2e7ff;
   color: #0b57d0;
 }
 
-#gp-sidebar-btn svg {
+#gp-kanban-sidebar-btn svg {
   width: 20px;
   height: 20px;
 }
@@ -803,20 +803,20 @@
 }
 
 /* When sidebar is open: allow the flex row to shrink (room comes from Calendar main padding). */
-body.gp-tasks-sidebar-open .mytasks-native-tasks-layout {
+body.gp-sidebar-open .mytasks-native-tasks-layout {
   min-width: 0;
 }
 
 /* When sidebar is open: Kanban max-width uses viewport minus panel so the board
    clears the fixed sidebar even if Calendar main (add-ons) is moved separately. */
-body.gp-tasks-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban {
+body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban {
   flex: 1 1 auto;
   min-width: 0 !important;
-  max-width: min(100%, calc(100vw - var(--gp-tasks-panel-width) - var(--gp-tasks-panel-calendar-gap, 8px) - var(--gp-tasks-panel-rail-gap, 4px) - var(--gp-tasks-panel-rail-inset, 56px))) !important;
+  max-width: min(100%, calc(100vw - var(--gp-kanban-panel-width) - var(--gp-kanban-panel-calendar-gap, 8px) - var(--gp-kanban-panel-rail-gap, 4px) - var(--gp-kanban-panel-rail-inset, 56px))) !important;
   overflow: hidden !important;
 }
 
-body.gp-tasks-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
+body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   width: 100%;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -942,8 +942,9 @@ body.gp-tasks-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 .mytasks-kanban .mk-column {
   display: flex;
   flex-direction: column;
-  flex: 0 0 260px;
-  width: 260px;
+  flex: 1 1 280px;
+  min-width: 280px;
+  max-width: 480px;
   height: 100%;
   min-height: 100%;
   align-self: stretch;
@@ -2674,8 +2675,8 @@ body.gp-task-modals-open {
   padding-top: max(20px, 5vh);
 }
 
-body.gp-tasks-sidebar-open .gp-mt-layer {
-  padding-right: calc(var(--gp-tasks-panel-width, 341px) + var(--gp-tasks-panel-calendar-gap, 8px) + var(--gp-tasks-panel-rail-inset, 56px) + 12px);
+body.gp-sidebar-open .gp-mt-layer {
+  padding-right: calc(var(--gp-kanban-panel-width, 341px) + var(--gp-kanban-panel-calendar-gap, 8px) + var(--gp-kanban-panel-rail-inset, 56px) + 12px);
 }
 
 .gp-ct-scrim {
