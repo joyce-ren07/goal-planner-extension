@@ -9285,13 +9285,16 @@
 
     chip.addEventListener('click', e => {
       e.stopPropagation();
+      if (!popover) return;
       if (popover.style.display === 'block') { closeDropdowns(); return; }
       const val = document.getElementById('gp-end-date').value || defaultEndDate();
       const d = new Date(val + 'T00:00:00');
       calY = d.getFullYear(); calM = d.getMonth();
       renderCal();
-      positionFloating(popover, chip);
       popover.style.display = 'block';
+      popover.style.visibility = 'hidden';
+      positionGpDatePopover(popover, chip);
+      popover.style.visibility = 'visible';
       chip.classList.add('active');
     });
 
