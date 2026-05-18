@@ -1,9 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Goal Planner for Google Calendar",
-  "version": "1.0",
-  "description": "Plan long-term goals and block focused work sessions directly in Google Calendar.",
-  "permissions": ["identity", "storage"],
+  "name": "Goal Planner + My Tasks for Google Calendar",
+  "version": "1.1.0",
+  "description": "Plan goals and manage tasks inside Google Calendar — goals on the right rail, tasks via the extension icon.",
+  "host_permissions": [
+    "https://calendar.google.com/*",
+    "https://tasks.google.com/*"
+  ],
+  "permissions": ["identity", "scripting", "storage"],
   "background": {
     "service_worker": "background.js"
   },
@@ -13,12 +17,34 @@
       "https://www.googleapis.com/auth/calendar.events"
     ]
   },
+  "action": {
+    "default_title": "Toggle My Tasks sidebar"
+  },
   "content_scripts": [
     {
       "matches": ["https://calendar.google.com/*"],
-      "js": ["goalModel.js", "goalCalendarSync.js", "content.js"],
-      "css": ["content.css"],
+      "js": [
+        "goalModel.js",
+        "goalCalendarSync.js",
+        "TaskDeleteConfirm.js",
+        "TaskDetailPopup.js",
+        "content.js",
+        "taskSidebar.js"
+      ],
+      "css": ["content.css", "sidebar.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://tasks.google.com/*"],
+      "js": ["TaskDeleteConfirm.js", "TaskDetailPopup.js", "taskSidebar.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar.html"],
+      "matches": ["https://calendar.google.com/*"]
     }
   ],
   "icons": {
