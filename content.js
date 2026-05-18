@@ -5101,14 +5101,6 @@
       item.appendChild(dismiss);
       pillsHost.appendChild(item);
     });
-
-    const layoutHost = root.closest('.mytasks-native-tasks-layout');
-    if (layoutHost) {
-      requestAnimationFrame(() => {
-        syncKanbanColumnAlignment(layoutHost);
-        syncKanbanHostSize(layoutHost);
-      });
-    }
   }
 
   function buildKanbanColumnHeader(label, filtered) {
@@ -5170,6 +5162,11 @@
   function syncKanbanColumnEmptyState(column, visibleCount, filtered) {
     const cardsContainer = column?.querySelector('.mk-column-cards');
     if (!cardsContainer) return;
+
+    if (cardsContainer.querySelector(':scope > .mk-ghost[data-empty-adopted="true"]')) {
+      cardsContainer.querySelector(':scope > .mk-column-empty')?.remove();
+      return;
+    }
 
     let empty = cardsContainer.querySelector('.mk-column-empty');
     if (!filtered || visibleCount > 0) {
@@ -5295,11 +5292,6 @@
 
     updateKanbanFilterBar(root, state);
     applyKanbanBoardFilters(root, state, { animate: false });
-
-    const layoutHost = root.closest('.mytasks-native-tasks-layout');
-    if (layoutHost) {
-      requestAnimationFrame(() => syncKanbanColumnAlignment(layoutHost));
-    }
   }
 
   function createKanbanShell() {
@@ -7784,16 +7776,50 @@
     let activeDropColumn = null;
     let originContainer = null;
     let originNextSibling = null;
+    let dragGhostBaseHeight = 0;
+
+    function isKanbanCardVisibleInColumn(card) {
+      if (!card?.classList.contains('mk-card')) return false;
+      if (card.classList.contains('is-dragging')) return false;
+      if (card.classList.contains('mk-card--filter-collapsed')) return false;
+      if (card.classList.contains('mk-card--filter-hidden')) return false;
+      return window.getComputedStyle(card).display !== 'none';
+    }
 
     function getColumnCards(container) {
-      return [...container.querySelectorAll('.mk-card:not(.is-dragging)')];
+      return [...container.querySelectorAll('.mk-card')].filter(isKanbanCardVisibleInColumn);
+    }
+
+    function getColumnEmptyState(container) {
+      const empty = container?.querySelector(':scope > .mk-column-empty');
+      if (!empty || empty.hidden) return null;
+      return empty;
+    }
+
+    function isFilteredEmptyColumn(container) {
+      if (getColumnCards(container).length > 0) return false;
+      if (getColumnEmptyState(container)) return true;
+      return Boolean(
+        dragGhost?.parentElement === container
+        && dragGhost.dataset.emptyAdopted === 'true',
+      );
     }
 
     function getGhostInsertBefore(container, clientY) {
       const cards = getColumnCards(container);
+      if (isFilteredEmptyColumn(container)) {
+        const empty = getColumnEmptyState(container);
+        if (empty) return empty;
+        if (dragGhost?.parentElement === container) {
+          return dragGhost.nextElementSibling;
+        }
+        return container.firstElementChild;
+      }
+
       for (let index = 0; index < cards.length; index += 1) {
         const card = cards[index];
         const rect = card.getBoundingClientRect();
+        if (!rect.height) continue;
         const midpoint = rect.top + rect.height / 2;
         if (midpoint > clientY) {
           return card;
@@ -7804,8 +7830,15 @@
 
     function isGhostInPosition(container, insertBefore) {
       if (!dragGhost || dragGhost.parentElement !== container) return false;
-      if (!insertBefore) return dragGhost === container.lastElementChild;
-      return dragGhost.nextElementSibling === insertBefore;
+      if (insertBefore) return dragGhost.nextElementSibling === insertBefore;
+      if (isFilteredEmptyColumn(container)) {
+        for (let node = container.firstElementChild; node; node = node.nextElementSibling) {
+          if (node === dragGhost) return true;
+          if (isKanbanCardVisibleInColumn(node)) return false;
+        }
+        return false;
+      }
+      return dragGhost === container.lastElementChild;
     }
 
     function recordCardTops(scope) {
@@ -7848,6 +7881,71 @@
       ghost.setAttribute('aria-hidden', 'true');
       ghost.style.height = `${height}px`;
       return ghost;
+    }
+
+    function adoptEmptyIntoGhost(ghost, empty) {
+      if (!ghost || !empty || ghost.dataset.emptyAdopted === 'true') return;
+
+      ghost.classList.add('mk-ghost--empty-column');
+      ghost.dataset.emptyAdopted = 'true';
+      ghost.style.height = '';
+      ghost.style.minHeight = `${Math.max(dragGhostBaseHeight, 120)}px`;
+
+      const content = document.createElement('div');
+      content.className = 'mk-ghost-empty-content';
+      content.innerHTML = empty.innerHTML;
+      ghost.appendChild(content);
+
+      ghost._detachedColumnEmpty = empty;
+      empty.remove();
+    }
+
+    function releaseGhostEmptyPresentation(ghost, container, options = {}) {
+      const { restoreEmpty = true } = options;
+      if (!ghost || ghost.dataset.emptyAdopted !== 'true') return;
+
+      const detached = ghost._detachedColumnEmpty;
+      delete ghost._detachedColumnEmpty;
+
+      ghost.classList.remove('mk-ghost--empty-column');
+      ghost.querySelector('.mk-ghost-empty-content')?.remove();
+      delete ghost.dataset.emptyAdopted;
+      ghost.style.minHeight = '';
+      ghost.style.height = `${dragGhostBaseHeight}px`;
+
+      if (!restoreEmpty) {
+        detached?.remove();
+        return;
+      }
+
+      if (!detached || !container || container.contains(detached)) return;
+
+      const anchor = ghost?.parentElement === container ? ghost.nextElementSibling : null;
+      if (anchor && anchor.parentElement === container) {
+        container.insertBefore(detached, anchor);
+      } else {
+        container.appendChild(detached);
+      }
+      detached.hidden = false;
+    }
+
+    function syncGhostEmptyPresentation(container) {
+      if (!dragGhost || !container) return;
+
+      const visibleCards = getColumnCards(container);
+      const empty = container.querySelector(':scope > .mk-column-empty');
+      const isEmptyDropColumn = !visibleCards.length
+        && (empty || dragGhost.dataset.emptyAdopted === 'true');
+
+      if (isEmptyDropColumn) {
+        if (empty) {
+          adoptEmptyIntoGhost(dragGhost, empty);
+        }
+        container.querySelector(':scope > .mk-column-empty')?.remove();
+        return;
+      }
+
+      releaseGhostEmptyPresentation(dragGhost, container);
     }
 
     function createDragClone(card, rect) {
@@ -7893,10 +7991,15 @@
       if (!dragGhost || !container) return;
 
       const insertBefore = getGhostInsertBefore(container, clientY);
-      if (isGhostInPosition(container, insertBefore)) return;
+      if (isGhostInPosition(container, insertBefore)) {
+        syncGhostEmptyPresentation(container);
+        return;
+      }
 
       const beforeTops = recordCardTops(board);
-      if (dragGhost.parentElement && dragGhost.parentElement !== container) {
+      const previousContainer = dragGhost.parentElement;
+      if (previousContainer && previousContainer !== container) {
+        releaseGhostEmptyPresentation(dragGhost, previousContainer);
         dragGhost.remove();
       }
 
@@ -7906,6 +8009,7 @@
         container.appendChild(dragGhost);
       }
 
+      syncGhostEmptyPresentation(container);
       playFlip(board, beforeTops);
     }
 
@@ -7974,6 +8078,7 @@
       activeDropColumn = null;
       originContainer = null;
       originNextSibling = null;
+      dragGhostBaseHeight = 0;
       document.body.classList.remove('mytasks-kanban-dragging');
     }
 
@@ -7996,6 +8101,7 @@
       originContainer = card.parentElement;
       originNextSibling = card.nextSibling;
 
+      dragGhostBaseHeight = rect.height;
       dragGhost = createDragGhost(rect.height);
       dragClone = createDragClone(card, rect);
       updateDragClonePosition();
@@ -8019,8 +8125,11 @@
         return;
       }
 
+      const container = dragGhost.parentElement;
       const beforeTops = recordCardTops(board);
+      releaseGhostEmptyPresentation(dragGhost, container, { restoreEmpty: false });
       dragGhost.replaceWith(draggedCard);
+      container?.querySelector(':scope > .mk-column-empty')?.remove();
       playFlip(board, beforeTops);
 
       if (dragClone) {
@@ -8037,8 +8146,10 @@
 
     function cancelDrag() {
       const beforeTops = recordCardTops(board);
+      const ghostContainer = dragGhost?.parentElement;
 
       if (dragGhost?.parentElement && draggedCard) {
+        releaseGhostEmptyPresentation(dragGhost, ghostContainer);
         dragGhost.replaceWith(draggedCard);
       } else if (originContainer && draggedCard) {
         if (originNextSibling && originNextSibling.parentElement === originContainer) {
@@ -8875,41 +8986,24 @@
     });
   }
 
-  function syncKanbanColumnAlignment(host) {
-    const createBtn = host?.querySelector('.mytasks-create-btn');
-    const board = host?.querySelector(':scope > .mytasks-kanban .mytasks-kanban__board');
-    if (!createBtn || !board) {
-      if (board) board.style.marginTop = '';
-      return;
-    }
-
-    const header = board.querySelector('.mk-column-header');
-    if (!header) {
-      board.style.marginTop = '';
-      return;
-    }
-
-    const targetTop = createBtn.getBoundingClientRect().top;
-    const headerTop = header.getBoundingClientRect().top;
-    const delta = Math.round((headerTop - targetTop) * 10) / 10;
-    board.style.marginTop = delta ? `${-delta}px` : '';
-  }
-
   function syncKanbanHostSize(host) {
     const kanban = host?.querySelector(':scope > .mytasks-kanban');
+    const nav = host?.querySelector(':scope > .mytasks-native-tasks-nav');
     if (!host || !kanban) return;
 
-    const rect = host.getBoundingClientRect();
-    if (!rect.height) return;
+    const navHeight = nav?.getBoundingClientRect().height || 0;
+    const hostStyle = window.getComputedStyle(host);
+    const paddingTop = Number.parseFloat(hostStyle.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(hostStyle.paddingBottom) || 0;
+    const hostInnerHeight = Math.max(0, host.getBoundingClientRect().height - paddingTop - paddingBottom);
+    const targetHeight = Math.max(navHeight, hostInnerHeight);
+    if (!targetHeight) return;
 
-    const style = window.getComputedStyle(host);
-    const paddingTop = Number.parseFloat(style.paddingTop) || 0;
-    const paddingBottom = Number.parseFloat(style.paddingBottom) || 0;
-    const innerHeight = Math.max(0, rect.height - paddingTop - paddingBottom);
+    kanban.style.height = `${targetHeight}px`;
+    kanban.style.minHeight = `${targetHeight}px`;
 
-    kanban.style.height = `${innerHeight}px`;
-    kanban.style.minHeight = `${innerHeight}px`;
-    syncKanbanColumnAlignment(host);
+    const board = kanban.querySelector(':scope > .mytasks-kanban__board');
+    if (board) board.style.marginTop = '';
   }
 
   function observeNativeTasksHost(host) {

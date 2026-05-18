@@ -248,7 +248,7 @@
 .mytasks-native-tasks-layout {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 12px;
   padding: 12px;
   width: 100%;
@@ -810,12 +810,15 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   max-width: 100% !important;
   box-sizing: border-box !important;
   overflow-x: auto !important;
-  overflow-y: auto !important;
+  overflow-y: hidden !important;
 }
 
 .mytasks-kanban {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   margin: 0;
-  padding: 0 12px 12px 0;
+  padding: 0 12px 0 0;
   --m3-surface: #ffffff;
   --m3-on-surface: #1d1b20;
   --m3-on-surface-variant: #49454f;
@@ -837,7 +840,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   box-sizing: border-box;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 320px;
+  min-height: 0;
   height: 100%;
   align-self: stretch;
   font-family: 'Google Sans', Roboto, sans-serif;
@@ -845,16 +848,18 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 
 .mytasks-kanban__board {
   display: flex;
+  flex: 1 1 auto;
   gap: 8px;
   padding: 0;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  min-height: 280px;
-  width: 100%;
+  min-height: 0;
   height: 100%;
+  width: 100%;
   align-items: stretch;
+  align-self: stretch;
   box-sizing: border-box;
 }
 
@@ -928,7 +933,9 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   flex-direction: column;
   flex: 0 0 260px;
   width: 260px;
-  min-height: 0;
+  height: 100%;
+  min-height: 100%;
+  align-self: stretch;
   padding: 12px 16px 16px;
   border-radius: 16px;
   background: #eef2fb;
@@ -938,12 +945,15 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 .mytasks-kanban .mk-column-header {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
+  min-height: 32px;
   margin: 0 0 8px;
+  box-sizing: border-box;
   font-family: 'Google Sans', Roboto, sans-serif;
   font-size: 11px;
   font-weight: 600;
-  line-height: normal;
+  line-height: 16px;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   color: #5f6368;
@@ -974,6 +984,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   gap: 6px;
   min-height: 48px;
   flex: 1 1 auto;
+  align-content: flex-start;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -1047,6 +1058,39 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   opacity: 1;
   transition: none;
   flex-shrink: 0;
+}
+
+.mytasks-kanban .mk-ghost--empty-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 12px 20px;
+}
+
+.mytasks-kanban .mk-ghost-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  pointer-events: none;
+  text-align: center;
+}
+
+.mytasks-kanban .mk-ghost-empty-content .mk-column-empty__icon {
+  display: flex;
+  color: #7aa9f6;
+}
+
+.mytasks-kanban .mk-ghost-empty-content .mk-column-empty__text {
+  margin: 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  color: #5f6368;
 }
 
 .mk-drag-clone-host {
@@ -1204,6 +1248,10 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   border-width: 0;
 }
 
+.mytasks-kanban .mk-card.mk-card--filter-collapsed:not(.mk-card--filter-enter):not(.mk-card--filter-leave) {
+  display: none !important;
+}
+
 .mytasks-kanban .mk-card.mk-card--filter-hidden {
   visibility: hidden;
 }
@@ -1238,6 +1286,14 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   padding: 28px 12px 20px;
   text-align: center;
   pointer-events: none;
+}
+
+.mytasks-kanban .mk-column-cards > .mk-column-empty[hidden] {
+  display: none !important;
+}
+
+body.mytasks-kanban-dragging .mk-column-cards:has(> .mk-ghost[data-empty-adopted='true']) > .mk-column-empty {
+  display: none !important;
 }
 
 .mytasks-kanban .mk-column-empty__icon {
