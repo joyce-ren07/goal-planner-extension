@@ -4892,16 +4892,17 @@
       }
       if (saved) hidden.value = saved;
     }
-    if (!hidden || hidden.type === 'time') {
-      if (hidden?.type === 'time') {
-        const saved = hidden.value || '';
-        hidden.remove();
-        hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.id = 'gp-pref-time-input';
-        hidden.value = saved;
-        section.appendChild(hidden);
-      }
+    if (hidden?.type === 'time') {
+      const saved = hidden.value || '';
+      hidden.remove();
+      hidden = null;
+    }
+    if (!hidden && trigger) {
+      hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.id = 'gp-pref-time-input';
+      hidden.value = '';
+      section.appendChild(hidden);
     }
     syncPrefTimeTriggerLabel();
   }
