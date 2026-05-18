@@ -5408,6 +5408,7 @@
     sel.colorId = colorId;
     await saveColorLabels(state.colorLabels);
     renderColorLabelsSection();
+    refreshGoalSessionBlocksForPickerColor();
     scheduleGhostPreviewRefreshDebounced();
   }
 
