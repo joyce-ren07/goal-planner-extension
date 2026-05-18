@@ -10480,7 +10480,7 @@
       const titleEl = existingRoot.querySelector('.ext-goal-title');
       if (titleEl && goalData.title) titleEl.textContent = goalData.title;
       const checkEl = existingRoot.querySelector('.goal-checkbox, .ext-check-circle');
-      if (checkEl) checkEl.innerHTML = isDone ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
+      if (checkEl) checkEl.innerHTML = checkboxSvg;
       boundChipHeight(chip);
       requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
       return;
