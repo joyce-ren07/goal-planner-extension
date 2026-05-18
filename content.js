@@ -668,7 +668,7 @@
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
       </span>
-      <span class="gp-create-task-label">Create task</span>
+      <span class="gp-create-task-label">Add tasks</span>
       </button>
     </div>
 
@@ -6856,21 +6856,24 @@
     return null;
   }
 
-  function formatTaskDetailDateLine(task) {
+  function formatTaskDetailDateOnly(task) {
     const d = parseDueDateIsoLocal(task?.dueDate);
     if (!d) return 'No due date';
-    const dateStr = d.toLocaleDateString('en-US', {
+    return d.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
       year: 'numeric',
     });
-    if (task?.allDay) return dateStr;
+  }
+
+  function formatTaskDetailTimeLine(task) {
+    if (task?.allDay) return '';
     const start = formatTimeCompact12(normalizeDueHm(task?.dueTimeStart));
     const end = formatTimeCompact12(normalizeDueHm(task?.dueTimeEnd));
-    if (start && end) return `${dateStr} · ${start}–${end}`;
-    if (start) return `${dateStr} · ${start}`;
-    return dateStr;
+    if (start && end) return `${start}–${end}`;
+    if (start) return start;
+    return '';
   }
 
   function formatReminderLabel(minutes) {
@@ -6990,13 +6993,50 @@
       if (closeBtn) {
         event.preventDefault();
         closeTaskDetailPopup();
+        return;
+      }
+
+      const addSubtaskBtn = event.target.closest('[data-gp-task-detail-add-subtask]');
+      if (addSubtaskBtn && gpTaskDetailOpenCtx) {
+        event.preventDefault();
+        addTaskDetailSubtaskRow();
+        return;
+      }
+
+      const removeSubtaskBtn = event.target.closest('[data-gp-task-detail-remove-subtask]');
+      if (removeSubtaskBtn && gpTaskDetailOpenCtx) {
+        event.preventDefault();
+        removeTaskDetailSubtaskRow(removeSubtaskBtn.dataset.subtaskId);
+        return;
+      }
+
+      const saveBtn = event.target.closest('[data-gp-task-detail-save]');
+      if (saveBtn && gpTaskDetailOpenCtx) {
+        event.preventDefault();
+        void saveTaskDetailPopup();
       }
     });
 
     gpTaskDetailRoot.addEventListener('change', (event) => {
       const subtaskCheck = event.target.closest('.gp-task-detail-subtask-check');
       if (!subtaskCheck || !gpTaskDetailOpenCtx) return;
-      void toggleTaskDetailSubtask(gpTaskDetailOpenCtx.taskId, subtaskCheck.dataset.subtaskId, subtaskCheck.checked);
+      const row = subtaskCheck.closest('.gp-task-detail-subtask');
+      if (row) row.classList.toggle('is-done', subtaskCheck.checked);
+      const detailCard = gpTaskDetailRoot.querySelector('.gp-task-detail-card');
+      if (detailCard) refreshTaskDetailSubtaskUiFromDom(detailCard);
+    });
+
+    gpTaskDetailRoot.addEventListener('input', (event) => {
+      if (!event.target.closest('.gp-task-detail-subtask-input') || !gpTaskDetailOpenCtx) return;
+      const detailCard = gpTaskDetailRoot.querySelector('.gp-task-detail-card');
+      if (detailCard) refreshTaskDetailSubtaskUiFromDom(detailCard);
+    });
+
+    gpTaskDetailRoot.addEventListener('keydown', (event) => {
+      const input = event.target.closest('.gp-task-detail-subtask-input');
+      if (!input || !gpTaskDetailOpenCtx || event.key !== 'Enter') return;
+      event.preventDefault();
+      void saveTaskDetailPopup();
     });
   }
 
@@ -7064,29 +7104,38 @@
     cardEl.style.top = `${top}px`;
   }
 
+  function renderTaskDetailSubtaskRow(subtask) {
+    const id = escapeHtmlAttr(subtask.id || '');
+    const title = escapeHtmlAttr(subtask.title || '');
+    const checked = subtask.done ? 'checked' : '';
+    const doneClass = subtask.done ? ' is-done' : '';
+    const ariaLabel = title || 'Subtask';
+    return `
+      <div class="gp-task-detail-subtask${doneClass}" data-subtask-id="${id}">
+        <label class="gp-task-detail-subtask-check-wrap">
+          <input type="checkbox" class="gp-task-detail-subtask-check" data-subtask-id="${id}" ${checked} aria-label="Mark ${ariaLabel} done">
+          <span class="gp-task-detail-subtask-box" aria-hidden="true">${GP_TASK_DETAIL_SUBTASK_CHECK_SVG}</span>
+        </label>
+        <input type="text" class="gp-task-detail-subtask-input" data-subtask-id="${id}" value="${title}" placeholder="Subtask" autocomplete="off" aria-label="${ariaLabel}">
+        <button type="button" class="gp-m3-icon-btn gp-task-detail-subtask-del" data-gp-task-detail-remove-subtask data-subtask-id="${id}" aria-label="Remove subtask">${GP_CT_ICON_CLOSE}</button>
+      </div>
+    `;
+  }
+
   function renderTaskDetailSubtasksSection(task, categoryColor) {
     const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
     const stats = getSubtaskStats(subtasks);
     const progressPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
-
-    const rows = subtasks.map((subtask) => {
-      const id = escapeHtmlAttr(subtask.id || '');
-      const title = escapeHtmlAttr(subtask.title || 'Subtask');
-      const checked = subtask.done ? 'checked' : '';
-      const doneClass = subtask.done ? ' is-done' : '';
-      return `
-        <label class="gp-task-detail-subtask${doneClass}">
-          <input type="checkbox" class="gp-task-detail-subtask-check" data-subtask-id="${id}" ${checked} aria-label="${title}">
-          <span class="gp-task-detail-subtask-box" aria-hidden="true">${GP_TASK_DETAIL_SUBTASK_CHECK_SVG}</span>
-          <span class="gp-task-detail-subtask-label">${title}</span>
-        </label>
-      `;
-    }).join('');
+    const rows = subtasks.map((subtask) => renderTaskDetailSubtaskRow(subtask)).join('');
 
     return `
       <div class="gp-task-detail-subtasks">
         <p class="gp-task-detail-subtasks-heading">Subtasks</p>
         <div class="gp-task-detail-subtasks-list">${rows}</div>
+        <button type="button" class="gp-task-detail-add-subtask-btn" data-gp-task-detail-add-subtask>
+          <span class="gp-task-detail-add-subtask-btn__icon" aria-hidden="true">${GP_CT_ICON_ADD}</span>
+          <span>Add subtask</span>
+        </button>
         <div class="gp-task-detail-subtasks-progress" aria-hidden="true">
           <div class="gp-task-detail-subtasks-progress-fill" style="width:${progressPct}%; background:${categoryColor};"></div>
         </div>
@@ -7094,10 +7143,135 @@
     `;
   }
 
+  function syncTaskDetailSubtaskChrome(taskId, task) {
+    const subtasks = Array.isArray(task?.subtasks) ? task.subtasks : [];
+    const cardEl = document.querySelector(`.mk-card[data-card-id="${taskId}"]`);
+    if (cardEl) {
+      if (subtasks.length) {
+        syncMkCardSubtaskDataset(cardEl, subtasks);
+        attachMkCardSubtaskIndicator(cardEl, subtasks);
+      } else {
+        cardEl.querySelector('.mk-subtask-indicator')?.remove();
+        delete cardEl.dataset.subtasks;
+      }
+    }
+
+    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
+    if (detailCard && gpTaskDetailOpenCtx?.taskId === taskId) {
+      refreshTaskDetailSubtaskUi(detailCard, task);
+    }
+  }
+
+  function readTaskDetailSubtasksPreviewFromDom(detailCard) {
+    const host = detailCard?.querySelector('.gp-task-detail-subtasks');
+    if (!host) return [];
+    return [...host.querySelectorAll('.gp-task-detail-subtask')].map((row, index) => {
+      const id = row.dataset.subtaskId || `st-${index}-${Date.now()}`;
+      const title = row.querySelector('.gp-task-detail-subtask-input')?.value.trim() || '';
+      const done = Boolean(row.querySelector('.gp-task-detail-subtask-check')?.checked);
+      return { id, title, done };
+    });
+  }
+
+  function readTaskDetailSubtasksFromDom(detailCard) {
+    return readTaskDetailSubtasksPreviewFromDom(detailCard).filter((subtask) => subtask.title);
+  }
+
+  function syncMkCardSubtaskIndicatorFromDetailDom(detailCard) {
+    const taskId = gpTaskDetailOpenCtx?.taskId;
+    if (!taskId || !detailCard) return;
+
+    const cardEl = document.querySelector(`.mk-card[data-card-id="${taskId}"]`);
+    if (!cardEl) return;
+
+    const subtasks = readTaskDetailSubtasksPreviewFromDom(detailCard);
+    if (!subtasks.length) {
+      cardEl.querySelector('.mk-subtask-indicator')?.remove();
+      delete cardEl.dataset.subtasks;
+      return;
+    }
+
+    syncMkCardSubtaskDataset(cardEl, subtasks);
+    attachMkCardSubtaskIndicator(cardEl, subtasks);
+  }
+
+  function refreshTaskDetailSubtaskUiFromDom(detailCard) {
+    const subtasksHost = detailCard?.querySelector('.gp-task-detail-subtasks');
+    if (!subtasksHost) return;
+
+    const subtasks = readTaskDetailSubtasksPreviewFromDom(detailCard);
+    const categoryColor = getTaskCategoryColorHex(
+      findTaskInState(kanbanStateCache || getDefaultKanbanState(), gpTaskDetailOpenCtx?.taskId)?.task || {},
+    );
+    const stats = getSubtaskStats(subtasks);
+    const progressPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
+    const fill = subtasksHost.querySelector('.gp-task-detail-subtasks-progress-fill');
+    if (fill) {
+      fill.style.width = `${progressPct}%`;
+      fill.style.background = categoryColor;
+    }
+
+    subtasksHost.querySelectorAll('.gp-task-detail-subtask').forEach((row) => {
+      const check = row.querySelector('.gp-task-detail-subtask-check');
+      row.classList.toggle('is-done', Boolean(check?.checked));
+    });
+
+    syncMkCardSubtaskIndicatorFromDetailDom(detailCard);
+  }
+
+  function repositionOpenTaskDetailPopup() {
+    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
+    if (detailCard && gpTaskDetailOpenCtx?.anchor) {
+      requestAnimationFrame(() => {
+        positionTaskDetailCard(detailCard, gpTaskDetailOpenCtx.anchor);
+      });
+    }
+  }
+
+  function addTaskDetailSubtaskRow() {
+    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
+    const list = detailCard?.querySelector('.gp-task-detail-subtasks-list');
+    if (!detailCard || !list) return;
+
+    const id = `st-temp-${Date.now()}`;
+    list.insertAdjacentHTML('beforeend', renderTaskDetailSubtaskRow({ id, title: '', done: false }));
+    const input = list.querySelector(`.gp-task-detail-subtask-input[data-subtask-id="${id}"]`);
+    input?.focus({ preventScroll: true });
+    refreshTaskDetailSubtaskUiFromDom(detailCard);
+    repositionOpenTaskDetailPopup();
+  }
+
+  function removeTaskDetailSubtaskRow(subtaskId) {
+    if (!subtaskId) return;
+    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
+    if (!detailCard) return;
+
+    detailCard.querySelector(`.gp-task-detail-subtask[data-subtask-id="${subtaskId}"]`)?.remove();
+    refreshTaskDetailSubtaskUiFromDom(detailCard);
+    repositionOpenTaskDetailPopup();
+  }
+
+  async function saveTaskDetailPopup() {
+    const taskId = gpTaskDetailOpenCtx?.taskId;
+    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
+    if (!taskId || !detailCard) return;
+
+    const subtasks = readTaskDetailSubtasksFromDom(detailCard);
+    const updated = await persistTaskPatch(taskId, { subtasks });
+    if (!updated) return;
+
+    syncTaskDetailSubtaskChrome(taskId, updated);
+    closeTaskDetailPopup();
+  }
+
   function renderTaskDetailCardContent(task) {
     const categoryColor = getTaskCategoryColorHex(task);
     const title = escapeHtmlAttr(task.title || 'Untitled task');
-    const dateLine = escapeHtmlAttr(formatTaskDetailDateLine(task));
+    const dateOnly = escapeHtmlAttr(formatTaskDetailDateOnly(task));
+    const timeLine = formatTaskDetailTimeLine(task);
+    const timeHtml = timeLine
+      ? `<p class="gp-task-detail-time">${escapeHtmlAttr(timeLine)}</p>`
+      : '';
     const recurrenceLine = task.recurrence
       ? `<p class="gp-task-detail-recurrence">${escapeHtmlAttr(task.recurrence)}</p>`
       : '';
@@ -7110,7 +7284,6 @@
           <span>${escapeHtmlAttr(reminderLabel)}</span>
         </div>`
       : '';
-    const calendarName = task.calendarName || 'My Tasks';
     const subtasksSection = task.subtasks?.length
       ? `<div class="gp-task-detail-divider"></div>${renderTaskDetailSubtasksSection(task, categoryColor)}`
       : '';
@@ -7126,17 +7299,15 @@
           <span class="gp-task-detail-category-dot" style="background:${categoryColor};"></span>
           <h2 id="gp-task-detail-title" class="gp-task-detail-title">${title}</h2>
         </div>
-        <p class="gp-task-detail-date">${dateLine}</p>
+        <p class="gp-task-detail-date">${dateOnly}</p>
+        ${timeHtml}
         ${recurrenceLine}
         ${subtasksSection}
       </div>
       <footer class="gp-task-detail-footer">
         ${reminderLine}
-        <div class="gp-task-detail-footer-row">
-          <span class="gp-task-detail-footer-icon" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          </span>
-          <span>${escapeHtmlAttr(calendarName)}</span>
+        <div class="gp-task-detail-footer-actions">
+          <button type="button" class="gp-m3-btn gp-m3-btn--filled gp-task-detail-save-btn" data-gp-task-detail-save>Save</button>
         </div>
       </footer>
     `;
@@ -7144,10 +7315,11 @@
 
   function refreshTaskDetailSubtaskUi(cardShell, task) {
     const subtasksHost = cardShell.querySelector('.gp-task-detail-subtasks');
-    if (!subtasksHost || !task.subtasks?.length) return;
+    if (!subtasksHost) return;
 
+    const subtasks = Array.isArray(task?.subtasks) ? task.subtasks : [];
     const categoryColor = getTaskCategoryColorHex(task);
-    const stats = getSubtaskStats(task.subtasks);
+    const stats = getSubtaskStats(subtasks);
     const progressPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
     const fill = subtasksHost.querySelector('.gp-task-detail-subtasks-progress-fill');
     if (fill) {
@@ -7155,39 +7327,17 @@
       fill.style.background = categoryColor;
     }
 
-    task.subtasks.forEach((subtask) => {
-      const check = subtasksHost.querySelector(`.gp-task-detail-subtask-check[data-subtask-id="${subtask.id}"]`);
-      const row = check?.closest('.gp-task-detail-subtask');
+    subtasks.forEach((subtask) => {
+      const row = subtasksHost.querySelector(`.gp-task-detail-subtask[data-subtask-id="${subtask.id}"]`);
+      const check = row?.querySelector('.gp-task-detail-subtask-check');
+      const input = row?.querySelector('.gp-task-detail-subtask-input');
       if (!row) return;
       row.classList.toggle('is-done', Boolean(subtask.done));
       if (check) check.checked = Boolean(subtask.done);
+      if (input && document.activeElement !== input) {
+        input.value = subtask.title || '';
+      }
     });
-  }
-
-  async function toggleTaskDetailSubtask(taskId, subtaskId, done) {
-    if (!taskId || !subtaskId) return;
-
-    const state = kanbanStateCache || await loadKanbanState();
-    const found = findTaskInState(state, taskId);
-    if (!found) return;
-
-    const nextSubtasks = (found.task.subtasks || []).map((subtask) => (
-      subtask.id === subtaskId ? { ...subtask, done: Boolean(done) } : subtask
-    ));
-
-    const updated = await persistTaskPatch(taskId, { subtasks: nextSubtasks });
-    if (!updated) return;
-
-    const cardEl = document.querySelector(`.mk-card[data-card-id="${taskId}"]`);
-    if (cardEl) {
-      syncMkCardSubtaskDataset(cardEl, nextSubtasks);
-      attachMkCardSubtaskIndicator(cardEl, nextSubtasks);
-    }
-
-    const detailCard = gpTaskDetailRoot?.querySelector('.gp-task-detail-card');
-    if (detailCard && gpTaskDetailOpenCtx?.taskId === taskId) {
-      refreshTaskDetailSubtaskUi(detailCard, updated);
-    }
   }
 
   function openTaskDetailPopup(anchorEl, taskId) {
@@ -7205,6 +7355,7 @@
     if (!cardShell) return;
 
     cardShell.innerHTML = renderTaskDetailCardContent(found.task);
+    cardShell.style.setProperty('--gp-task-detail-category', getTaskCategoryColorHex(found.task));
     root.hidden = false;
     gpTaskDetailOpenCtx = { taskId, anchor: anchorEl };
 
