@@ -918,14 +918,14 @@
 
   function createRailButton() {
     const shell = document.createElement('div');
-    shell.className = 'gp-sidebar-btn-shell';
+    shell.className = 'gp-kanban-sidebar-btn-shell';
 
     const indicator = document.createElement('span');
-    indicator.className = 'gp-sidebar-btn__indicator';
+    indicator.className = 'gp-kanban-sidebar-btn__indicator';
     indicator.setAttribute('aria-hidden', 'true');
 
     const btn = document.createElement('button');
-    btn.id = 'gp-sidebar-btn';
+    btn.id = 'gp-kanban-sidebar-btn';
     btn.type = 'button';
     btn.title = 'My Tasks';
     btn.setAttribute('aria-label', 'Open My Tasks');
@@ -947,21 +947,21 @@
   }
 
   function getRailButtonShell() {
-    const btn = document.getElementById('gp-sidebar-btn');
-    return btn?.closest('.gp-sidebar-btn-shell') || null;
+    const btn = document.getElementById('gp-kanban-sidebar-btn');
+    return btn?.closest('.gp-kanban-sidebar-btn-shell') || null;
   }
 
   function ensureRailButtonShell(btn) {
     if (!btn) return null;
 
-    const existingShell = btn.closest('.gp-sidebar-btn-shell');
+    const existingShell = btn.closest('.gp-kanban-sidebar-btn-shell');
     if (existingShell) return existingShell;
 
     const shell = document.createElement('div');
-    shell.className = 'gp-sidebar-btn-shell';
+    shell.className = 'gp-kanban-sidebar-btn-shell';
 
     const indicator = document.createElement('span');
-    indicator.className = 'gp-sidebar-btn__indicator';
+    indicator.className = 'gp-kanban-sidebar-btn__indicator';
     indicator.setAttribute('aria-hidden', 'true');
 
     const parent = btn.parentElement;
@@ -973,7 +973,7 @@
   }
 
   function syncRailButtonState() {
-    const btn = document.getElementById('gp-sidebar-btn');
+    const btn = document.getElementById('gp-kanban-sidebar-btn');
     const shell = getRailButtonShell();
     const panel = document.getElementById('gp-kanban-panel');
     if (!btn || !panel) return;
@@ -985,9 +985,9 @@
   }
 
   function placeRailButton(rail, buttonNode) {
-    const shell = buttonNode.classList?.contains('gp-sidebar-btn-shell')
+    const shell = buttonNode.classList?.contains('gp-kanban-sidebar-btn-shell')
       ? buttonNode
-      : buttonNode.closest('.gp-sidebar-btn-shell') || buttonNode;
+      : buttonNode.closest('.gp-kanban-sidebar-btn-shell') || buttonNode;
 
     if (shell.parentElement !== rail || rail.firstElementChild !== shell) {
       rail.prepend(shell);
@@ -995,7 +995,7 @@
   }
 
   function mountRailButton() {
-    const existing = document.getElementById('gp-sidebar-btn');
+    const existing = document.getElementById('gp-kanban-sidebar-btn');
     const existingShell = getRailButtonShell();
     const rail = getRailMountTarget();
 
@@ -8238,7 +8238,7 @@
 
   function isExtensionTasksControl(el) {
     return Boolean(
-      el?.closest('#gp-kanban-panel, .mytasks-sidebar, #gp-sidebar-btn, .gp-sidebar-btn-shell, #gp-sidebar-rail')
+      el?.closest('#gp-kanban-panel, .mytasks-sidebar, #gp-kanban-sidebar-btn, .gp-kanban-sidebar-btn-shell, #gp-sidebar-rail')
       || /\bmy tasks\b/i.test(getElementLabel(el)),
     );
   }

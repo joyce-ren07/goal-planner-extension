@@ -43,6 +43,12 @@
     queueMicrotask(() => { suppressingMutations = false; });
   }
 
+  // Hard ceiling on how long we'll keep watching for a panel to mount.
+  // After this, give up so we don't keep a global subtree observer alive
+  // forever — the kanban panel is lazy-loaded, so it may legitimately
+  // never appear in a session.
+  const PANEL_WAIT_MS = 60_000;
+
   function watch(panelId, closeOther) {
     const observer = new MutationObserver(() => {
       if (suppressingMutations) return;
@@ -59,14 +65,25 @@
       return false;
     }
 
-    if (!tryAttach()) {
-      // Either module may mount its panel after our content script runs.
-      // Watch the body for child additions until the panel appears.
-      const bodyObs = new MutationObserver(() => {
-        if (tryAttach()) bodyObs.disconnect();
-      });
-      bodyObs.observe(document.documentElement, { childList: true, subtree: true });
-    }
+    if (tryAttach()) return;
+
+    // Either module may mount its panel after our content script runs.
+    // Watch the body for child additions until the panel appears, but
+    // give up after PANEL_WAIT_MS to avoid a perpetual global observer
+    // when the panel is never created.
+    const bodyObs = new MutationObserver(() => {
+      if (tryAttach()) {
+        bodyObs.disconnect();
+        clearTimeout(timeoutId);
+      }
+    });
+    bodyObs.observe(document.documentElement, { childList: true, subtree: true });
+
+    const timeoutId = setTimeout(() => {
+      // Re-arm once via direct lookup, then drop the body subtree observer.
+      tryAttach();
+      bodyObs.disconnect();
+    }, PANEL_WAIT_MS);
   }
 
   watch(GOAL_PANEL_ID, closeKanbanPanel);

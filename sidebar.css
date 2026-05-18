@@ -121,7 +121,7 @@
   overflow: visible;
 }
 
-.gp-sidebar-btn-shell {
+.gp-kanban-sidebar-btn-shell {
   position: relative;
   display: flex;
   align-items: center;
@@ -132,7 +132,7 @@
   overflow: visible;
 }
 
-.gp-sidebar-btn__indicator {
+.gp-kanban-sidebar-btn__indicator {
   position: absolute;
   left: 0;
   top: 50%;
@@ -147,12 +147,12 @@
   pointer-events: none;
 }
 
-.gp-sidebar-btn-shell.is-active .gp-sidebar-btn__indicator {
+.gp-kanban-sidebar-btn-shell.is-active .gp-kanban-sidebar-btn__indicator {
   opacity: 1;
   transform: scaleY(1);
 }
 
-#gp-sidebar-btn {
+#gp-kanban-sidebar-btn {
   width: 40px;
   height: 40px;
   border-radius: 9999px;
@@ -168,17 +168,17 @@
   color: #444746;
 }
 
-#gp-sidebar-btn:hover {
+#gp-kanban-sidebar-btn:hover {
   background: #e8edf6;
 }
 
-#gp-sidebar-btn.active,
-.gp-sidebar-btn-shell.is-active #gp-sidebar-btn {
+#gp-kanban-sidebar-btn.active,
+.gp-kanban-sidebar-btn-shell.is-active #gp-kanban-sidebar-btn {
   background: #c2e7ff;
   color: #0b57d0;
 }
 
-#gp-sidebar-btn svg {
+#gp-kanban-sidebar-btn svg {
   width: 20px;
   height: 20px;
 }
