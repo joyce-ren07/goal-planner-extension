@@ -5083,6 +5083,26 @@
     input?.addEventListener('blur', () => { commit(); });
   }
 
+  function pickUnusedPaletteEntry() {
+    const used = new Set(state.colorLabels.map((l) => l.colorId));
+    for (const c of GP_COLOR_LABEL_PALETTE) {
+      if (!used.has(c.colorId)) return c;
+    }
+    return GP_COLOR_LABEL_PALETTE[0];
+  }
+
+  async function deleteColorLabel(id) {
+    if (state.colorLabels.length <= 1) return;
+    const idx = state.colorLabels.findIndex((l) => l.id === id);
+    if (idx === -1) return;
+    state.colorLabels.splice(idx, 1);
+    if (state.selectedColorLabelId === id) {
+      state.selectedColorLabelId = state.colorLabels[0]?.id || null;
+    }
+    await saveColorLabels(state.colorLabels);
+    renderColorLabelsSection();
+  }
+
   async function handleColorSwatchClick(colorId, hex) {
     const sel = findColorLabelById(state.selectedColorLabelId);
     if (!sel) return;
