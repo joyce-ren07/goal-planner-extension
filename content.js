@@ -5459,9 +5459,15 @@
       inspectorShell instanceof HTMLElement
         ? gpCollectEventIdHintsFromRoot(inspectorShell)
         : [];
-    const mergedHints = [...hintList, ...hostHints];
+    const mergedHints = [
+      ...hintList,
+      ...hostHints,
+      ...ids.map((id) => String(id)).filter(Boolean),
+    ];
 
-    if (!gpGdHintsBelongToPlannerGoal(legacyGoals, gid, mergedHints)) return false;
+    if (!gpGdHintsBelongToPlannerGoal(legacyGoals, gid, mergedHints)) {
+      if (!gpGdHintsBelongToPlannerGoal(legacyGoals, gid, hintList)) return false;
+    }
 
     if (!(inspectorShell instanceof HTMLElement)) return true;
 
