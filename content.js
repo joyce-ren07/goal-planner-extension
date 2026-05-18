@@ -5406,10 +5406,10 @@
     if (!sel) return;
     sel.color = hex;
     sel.colorId = colorId;
-    await saveColorLabels(state.colorLabels);
     renderColorLabelsSection();
     refreshGoalSessionBlocksForPickerColor();
     scheduleGhostPreviewRefreshDebounced();
+    await saveColorLabels(state.colorLabels);
   }
 
   /** Persist gp_goals and mirror into goalPlannerUnifiedState so sidebar/calendar chips share one goal list. */
