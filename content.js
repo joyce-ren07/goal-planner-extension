@@ -1333,18 +1333,34 @@
   }
 
   function restoreTaskFromCompleted(chip) {
-    void syncSidebarTaskStatus(chip, chip?.dataset.status || 'planned');
+    const row = chip?.closest('.gp-task-row');
+    const taskId = row?.dataset.taskId;
+    const statusKey = chip?.dataset.status || 'planned';
+    const panel = document.getElementById('gp-panel');
+
+    if (!taskId || !panel || !row) {
+      void syncSidebarTaskStatus(chip, statusKey);
+      return;
+    }
+
+    clearGpFolderMoveAnimTimers();
+    gpFolderMoveAnimPending = captureSidebarStatusRestoreAnimContext(panel, taskId);
+
+    void syncSidebarTaskStatus(chip, statusKey).then((ok) => {
+      if (!ok) gpFolderMoveAnimPending = null;
+    });
   }
 
   async function syncSidebarTaskStatus(chip, statusKey) {
     const row = chip?.closest('.gp-task-row');
     const taskId = row?.dataset.taskId;
     const columnId = STATUS_COLUMN_MAP[statusKey];
-    if (!taskId || !columnId) return;
+    if (!taskId || !columnId) return false;
 
     const state = await loadKanbanState();
-    if (!moveTaskInState(state, taskId, columnId)) return;
+    if (!moveTaskInState(state, taskId, columnId)) return false;
     await saveKanbanState(state);
+    return true;
   }
 
   function applyTaskStatus(chip, statusKey, options = {}) {
@@ -1667,7 +1683,7 @@
     });
 
     row.classList.add('gp-task-row--completed');
-    completedInner.prepend(row);
+    insertSidebarRowInSortedFolder(completedInner, row);
     syncFolderCounts(accordion);
 
     spawnConfetti(
@@ -1690,9 +1706,15 @@
         row.dataset.completing = 'false';
         checkbox.disabled = false;
         if (taskId) {
+          gpSidebarScrollToTaskIdPending = taskId;
           void loadKanbanState().then((state) => {
-            if (!moveTaskInState(state, taskId, 'done')) return state;
-            return saveKanbanState(state);
+            if (!moveTaskInState(state, taskId, 'done')) {
+              gpSidebarScrollToTaskIdPending = null;
+              return state;
+            }
+            return saveKanbanState(state, { skipSidebarRender: true });
+          }).then(() => {
+            gpSidebarScrollToTaskIdPending = null;
           });
         }
       },
@@ -1969,6 +1991,8 @@
   let gpFolderMoveAnimClearTimers = null;
   /** @type {null | number} */
   let gpFolderMoveAnimRaf = null;
+  /** @type {null | string} */
+  let gpSidebarScrollToTaskIdPending = null;
 
   function getCreateTaskDueIso() {
     return document.getElementById('gp-ct-due-date')?.value || '';
@@ -3676,6 +3700,34 @@
     return getTaskSidebarFolderKey(task);
   }
 
+  function captureSidebarStatusRestoreAnimContext(panel, taskId) {
+    const accordion = panel?.querySelector('#gp-tasks-accordion');
+    const row = panel?.querySelector(`.gp-task-row[data-task-id="${taskId}"]`);
+    const state = kanbanStateCache;
+    if (!accordion || !row || !state) return null;
+    const loc = findTaskWithColumn(state, taskId);
+    if (!loc || loc.columnId !== 'done') return null;
+
+    const oldFolder = 'completed';
+    const newFolder = getTaskSidebarFolderKey(loc.task);
+    if (oldFolder === newFolder) return null;
+
+    const folderCountsBefore = {};
+    SIDEBAR_FOLDER_ORDER.forEach((k) => {
+      const f = accordion.querySelector(`[data-folder="${k}"]`);
+      folderCountsBefore[k] = getFolderTaskCount(f);
+    });
+    const { ghost, fromRect } = createSidebarTaskFlyGhost(row);
+    return {
+      taskId,
+      oldFolder,
+      newFolder,
+      fromRect,
+      ghost,
+      folderCountsBefore,
+    };
+  }
+
   function captureSidebarFolderMoveAnimContext(panel, taskId, draft) {
     const accordion = panel?.querySelector('#gp-tasks-accordion');
     const row = panel?.querySelector(`.gp-task-row[data-task-id="${taskId}"]`);
@@ -3893,6 +3945,36 @@
       if (da !== db) return da - db;
       return String(a.task.id).localeCompare(String(b.task.id));
     });
+  }
+
+  function sidebarRowDueSortMs(row) {
+    if (!row) return Number.POSITIVE_INFINITY;
+    const taskId = row.dataset.taskId;
+    if (taskId && kanbanStateCache) {
+      const loc = findTaskWithColumn(kanbanStateCache, taskId);
+      if (loc?.task) return sidebarTaskDueSortMs(loc.task);
+    }
+    return sidebarTaskDueSortMs({
+      dueDate: row.dataset.dueDate,
+      dueTimeStart: row.dataset.dueTimeStart,
+      allDay: row.dataset.allDay === 'true',
+    });
+  }
+
+  function insertSidebarRowInSortedFolder(inner, row) {
+    if (!inner || !row) return;
+    const taskId = row.dataset.taskId || '';
+    const sortMs = sidebarRowDueSortMs(row);
+    const existingRows = [...inner.querySelectorAll('.gp-task-row')];
+    for (const existing of existingRows) {
+      const existingMs = sidebarRowDueSortMs(existing);
+      const existingId = existing.dataset.taskId || '';
+      if (sortMs < existingMs || (sortMs === existingMs && taskId.localeCompare(existingId) < 0)) {
+        inner.insertBefore(row, existing);
+        return;
+      }
+    }
+    inner.appendChild(row);
   }
 
   function normalizeKanbanCard(card, fallbackId, tags) {
@@ -4497,6 +4579,17 @@
     if (animCtx && panel) {
       requestAnimationFrame(() => runSidebarFolderMoveAnimAfterRender(panel, accordion, animCtx));
     }
+    const scrollTaskId = gpSidebarScrollToTaskIdPending;
+    if (scrollTaskId) {
+      gpSidebarScrollToTaskIdPending = null;
+      requestAnimationFrame(() => {
+        const scrollRow = panel.querySelector(`.gp-task-row[data-task-id="${scrollTaskId}"]`);
+        const scrollEl = panel.querySelector('.gp-card');
+        if (scrollRow && scrollEl) {
+          scrollSidebarToCenterTask(scrollEl, scrollRow, panel, 'auto');
+        }
+      });
+    }
   }
 
   function isKanbanDragActive() {
@@ -4507,7 +4600,7 @@
   function refreshLinkedTaskViews(state, options = {}) {
     const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
     const panel = document.getElementById('gp-panel');
-    if (panel && !isSidebarTitleEditActive()) {
+    if (panel && !isSidebarTitleEditActive() && !options.skipSidebarRender) {
       renderSidebarTasks(panel, normalized);
     }
 
@@ -5331,15 +5424,11 @@
         <div class="gp-ct-section">
           <div class="gp-ct-section-label">Subtasks</div>
           <div class="gp-ct-subtasks-wrap">
-            <div id="gp-ct-subtasks-first" class="gp-ct-subtasks gp-ct-subtasks--first"></div>
-            <div class="gp-ct-subtask gp-ct-subtask-add">
-              <span class="gp-ct-subtask-check-spacer" aria-hidden="true"></span>
-              <div class="gp-ct-subtask-add-stack">
-                <button type="button" class="gp-ct-text-btn gp-ct-add-subtask-btn" id="gp-ct-add-subtask">Add subtask</button>
-                <p class="gp-ct-hint">Subtasks are saved with the task</p>
-              </div>
+            <div id="gp-ct-subtasks-list" class="gp-ct-subtasks-list"></div>
+            <div class="gp-ct-subtasks-footer">
+              <button type="button" class="gp-ct-text-btn gp-ct-add-subtask-btn" id="gp-ct-add-subtask">+ Add subtask</button>
+              <p class="gp-ct-hint">Subtasks are saved with the task</p>
             </div>
-            <div id="gp-ct-subtasks-more" class="gp-ct-subtasks gp-ct-subtasks--more"></div>
           </div>
         </div>
         <footer class="gp-ct-footer">
@@ -6059,17 +6148,14 @@
   }
 
   function resetCreateTaskSubtasks() {
-    const first = document.getElementById('gp-ct-subtasks-first');
-    const more = document.getElementById('gp-ct-subtasks-more');
-    if (first) {
-      first.innerHTML = '';
-      appendSubtaskRow('', false, { host: first, removable: false });
-    }
-    if (more) more.innerHTML = '';
+    const list = document.getElementById('gp-ct-subtasks-list');
+    if (!list) return;
+    list.innerHTML = '';
+    appendSubtaskRow('', false, { removable: false });
   }
 
   function appendSubtaskRow(title = '', done = false, options = {}) {
-    const host = options.host || document.getElementById('gp-ct-subtasks-more');
+    const host = document.getElementById('gp-ct-subtasks-list');
     if (!host) return;
     const removable = options.removable !== false;
     const row = document.createElement('div');
@@ -6085,9 +6171,9 @@
   }
 
   function readSubtasksFromForm() {
-    const wrap = document.querySelector('.gp-ct-subtasks-wrap');
-    if (!wrap) return [];
-    return [...wrap.querySelectorAll('.gp-ct-subtask')].map((row, i) => {
+    const list = document.getElementById('gp-ct-subtasks-list');
+    if (!list) return [];
+    return [...list.querySelectorAll('.gp-ct-subtask')].map((row, i) => {
       const input = row.querySelector('.gp-ct-subtask-input');
       const check = row.querySelector('.gp-ct-subtask-check');
       const title = input?.value.trim() || '';
@@ -6473,8 +6559,9 @@
 
     document.getElementById('gp-ct-add-subtask')?.addEventListener('click', () => {
       appendSubtaskRow();
-      const host = document.getElementById('gp-ct-subtasks-more');
-      host?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')?.focus();
+      document.getElementById('gp-ct-subtasks-list')
+        ?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')
+        ?.focus();
     });
 
     document.querySelector('.gp-ct-subtasks-wrap')?.addEventListener('click', (e) => {
@@ -6489,8 +6576,9 @@
       if (!input) return;
       e.preventDefault();
       appendSubtaskRow();
-      const host = document.getElementById('gp-ct-subtasks-more');
-      host?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')?.focus();
+      document.getElementById('gp-ct-subtasks-list')
+        ?.querySelector('.gp-ct-subtask:last-of-type .gp-ct-subtask-input')
+        ?.focus();
     });
 
     document.getElementById('gp-ct-new-tag-add')?.addEventListener('click', () => {

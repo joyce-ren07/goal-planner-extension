@@ -4538,89 +4538,61 @@ body.gp-sidebar-open .gp-mt-layer {
   width: 100%;
 }
 
-.gp-ct-subtasks {
+.gp-ct-subtasks-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   width: 100%;
 }
 
-.gp-ct-subtasks--first {
-  margin-bottom: 0;
-}
-
-.gp-ct-subtask-check-spacer {
-  grid-column: 1;
-  width: 18px;
-  justify-self: start;
-}
-
-.gp-ct-subtask-add {
-  margin-top: 6px;
-  display: grid;
-  grid-template-columns: var(--gp-ct-row-icon-width) minmax(0, 1fr);
-  column-gap: var(--gp-ct-row-gap);
-  align-items: start;
-}
-
-.gp-ct-subtask-add-stack {
-  grid-column: 2;
-  min-width: 0;
+.gp-ct-subtasks-footer {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  padding-left: 26px;
+  margin: 0;
 }
 
-.gp-ct-subtask-add-stack .gp-ct-add-subtask-btn {
-  width: 100%;
+.gp-ct-subtasks-footer .gp-ct-add-subtask-btn {
   margin: 0;
-  padding: 10px 0 0;
+  padding: 4px 0 0;
   min-height: 0;
-  display: block;
-  text-align: left;
-  box-sizing: border-box;
 }
 
-.gp-ct-subtask-add-stack .gp-ct-hint {
-  width: 100%;
+.gp-ct-subtasks-footer .gp-ct-hint {
   margin: 0;
-  padding: 0 0 4px;
-  text-align: left;
-  box-sizing: border-box;
-}
-
-.gp-ct-subtasks--more {
-  margin-top: 6px;
+  padding: 0;
 }
 
 .gp-ct-subtask {
-  display: grid;
-  grid-template-columns: var(--gp-ct-row-icon-width) minmax(0, 1fr);
-  column-gap: var(--gp-ct-row-gap);
+  display: flex;
   align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.gp-ct-subtask:last-child {
+  margin-bottom: 0;
 }
 
 .gp-ct-subtask-check {
-  grid-column: 1;
+  flex: 0 0 18px;
   width: 18px;
   height: 18px;
-  justify-self: center;
-  align-self: center;
   margin: 0;
 }
 
 .gp-ct-subtask-input {
-  grid-column: 2;
-  width: 100%;
+  flex: 1 1 auto;
   min-width: 0;
-  min-height: 40px;
   border: none;
   border-radius: 4px;
   border-bottom: 2px solid transparent;
-  padding: 10px 12px;
+  padding: 8px 12px;
   font: inherit;
   font-size: 14px;
+  line-height: 20px;
   color: #3c4043;
   background: #e8eaed;
   outline: none;
@@ -4633,10 +4605,7 @@ body.gp-sidebar-open .gp-mt-layer {
 }
 
 .gp-ct-subtask-del {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  align-self: center;
+  flex: 0 0 auto;
   border: none;
   background: transparent;
   color: #5f6368;
@@ -4648,7 +4617,8 @@ body.gp-sidebar-open .gp-mt-layer {
   transition: opacity 0.15s ease;
 }
 
-.gp-ct-subtask:hover .gp-ct-subtask-del {
+.gp-ct-subtask:hover .gp-ct-subtask-del,
+.gp-ct-subtask:focus-within .gp-ct-subtask-del {
   opacity: 1;
 }
 
