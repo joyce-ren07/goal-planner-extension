@@ -1405,18 +1405,26 @@
   }
 
   function positionStatusMenu(trigger, menu, panel) {
-    const triggerRect = trigger.getBoundingClientRect();
+    const chip = trigger?.closest('.gp-filter-chip');
+    const anchorRect = chip?.getBoundingClientRect() || trigger.getBoundingClientRect();
     const panelRect = panel.getBoundingClientRect();
     const menuWidth = menu.offsetWidth || 208;
     const menuHeight = menu.offsetHeight || 156;
     const edgePadding = 8;
 
-    let left = triggerRect.right - panelRect.left - menuWidth;
-    left = Math.max(edgePadding, Math.min(left, panelRect.width - menuWidth - edgePadding));
+    const chipLeftInPanel = anchorRect.left - panelRect.left;
+    const maxLeft = panelRect.width - menuWidth - edgePadding;
+    const minLeft = edgePadding;
 
-    let top = triggerRect.bottom - panelRect.top + 4;
+    let left = chipLeftInPanel;
+    if (left + menuWidth > panelRect.width - edgePadding) {
+      left = anchorRect.right - panelRect.left - menuWidth;
+    }
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+
+    let top = anchorRect.bottom - panelRect.top + 4;
     if (top + menuHeight > panelRect.height - edgePadding) {
-      top = triggerRect.top - panelRect.top - menuHeight - 4;
+      top = anchorRect.top - panelRect.top - menuHeight - 4;
     }
     top = Math.max(edgePadding, Math.min(top, panelRect.height - menuHeight - edgePadding));
 
