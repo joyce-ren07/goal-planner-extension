@@ -1257,7 +1257,7 @@
     toast.setAttribute('role', 'status');
     toast.setAttribute('aria-live', 'polite');
     toast.innerHTML =
-      '<span class="gp-toast-message">Sessions added to your calendar!</span>' +
+      '<span class="gp-toast-message">Goal session added</span>' +
       '<button type="button" class="gp-toast-close" id="gp-toast-close" aria-label="Dismiss">' +
       '<span class="material-symbols-outlined gp-ms-icon">close</span></button>';
     return toast;
