@@ -4143,6 +4143,8 @@
     // Set confirm button label for edit mode
     document.getElementById('gp-confirm-add').textContent = 'Save changes';
 
+    state.selectedColorLabelId = goal.colorLabelId || null;
+
     // Skip form screen — jump straight to review/suggestions screen
     await goToSuggestions();
   }
