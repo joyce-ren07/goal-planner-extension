@@ -1525,6 +1525,29 @@
         document.getElementById('gp-toast')?.classList.remove('visible');
       }
     });
+
+    const chipsRoot = document.getElementById('gp-color-chips');
+    if (chipsRoot) {
+      chipsRoot.addEventListener('click', (e) => {
+        const addBtn = e.target.closest('#gp-color-chip-add-btn');
+        if (addBtn) { beginAddColorLabel(); return; }
+        const chip = e.target.closest('.gp-color-chip');
+        if (!chip) return;
+        const id = chip.dataset.labelId;
+        if (!id) return;
+        state.selectedColorLabelId = id;
+        renderColorLabelsSection();
+      });
+    }
+    const swRoot = document.getElementById('gp-color-swatches');
+    if (swRoot) {
+      swRoot.addEventListener('click', (e) => {
+        const sw = e.target.closest('.gp-color-swatch');
+        if (!sw) return;
+        handleColorSwatchClick(sw.dataset.colorId, sw.dataset.hex);
+      });
+    }
+
     document.getElementById('gp-close-btn').addEventListener('click', closePanel);
     document.getElementById('gp-set-goal-btn').addEventListener('click', () => { resetEditMode(); showScreen('form'); });
 
