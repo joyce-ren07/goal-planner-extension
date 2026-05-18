@@ -6316,10 +6316,16 @@
   function gpGdAlignInjectedBlockToCard(wrap, dialogShell) {
     if (!(wrap instanceof HTMLElement) || !(dialogShell instanceof HTMLElement)) return false;
     const now = Date.now();
+    const card = gpGdResolveInspectorCardRoot(dialogShell, wrap.dataset.gpGoalId || '');
+    if (
+      gpGdIsGoalBlockWellPlaced(wrap, dialogShell, false) &&
+      (now - _gpGdLastAlignAt < 1200 || gpGdLayoutLocked())
+    ) {
+      return true;
+    }
     if (now - _gpGdLastAlignAt < 450 && gpGdComposedSubtreeContains(dialogShell, wrap)) {
       return true;
     }
-    const card = gpGdResolveInspectorCardRoot(dialogShell, wrap.dataset.gpGoalId || '');
     if (!(card instanceof HTMLElement) || gpGdIsWeekGridMountSurface(card)) return false;
     const ok = gpGdForceMountIntoCard(wrap, card, null);
     if (ok) _gpGdLastAlignAt = now;
