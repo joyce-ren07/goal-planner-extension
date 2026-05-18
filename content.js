@@ -10483,6 +10483,7 @@
       const checkEl = existingRoot.querySelector('.goal-checkbox, .ext-check-circle');
       if (checkEl) checkEl.innerHTML = checkboxSvg;
       boundChipHeight(chip);
+      applyGoalChipTheme(chip, accent, isDone);
       requestAnimationFrame(() => syncExtGoalTimeFromContainer(chip));
       return;
     }
