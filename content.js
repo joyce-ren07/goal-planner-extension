@@ -992,10 +992,10 @@
       }
       root.style.transition = trans;
       root.style.boxSizing = root.style.boxSizing || 'border-box';
-      // GCal-style: shrink the main column from the right so the grid stays in the visible lane.
+      // GCal-style: reserve space for panel + right rail so the week grid is not clipped.
       root.style.marginRight = `${amount}px`;
-      root.style.maxWidth = `calc(100% - ${amount}px)`;
-      root.style.width = 'auto';
+      root.style.maxWidth = '';
+      root.style.width = '';
       return;
     }
 
