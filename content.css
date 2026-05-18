@@ -1509,8 +1509,8 @@
   display: block;
   width: 100%;
   box-sizing: border-box;
-  background: #d3564b;
-  color: #fff;
+  background: var(--gp-chip-badge-bg, #d3564b);
+  color: var(--gp-chip-badge-fg, #fff);
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
