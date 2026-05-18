@@ -5894,6 +5894,11 @@
         __gpGdMarkFooterEl.parentElement;
       if (!(shell instanceof HTMLElement) || !gpGdIsValidEventDetailInspectorShell(shell)) {
         teardownGpGdMarkFooter();
+        return;
+      }
+      const card = gpGdResolveInspectorCardRoot(shell, __gpGdBlockEl?.dataset.gpGoalId || '');
+      if (card instanceof HTMLElement && !gpGdIsMarkFooterWellPlaced(__gpGdMarkFooterEl, card)) {
+        teardownGpGdMarkFooter();
       }
     }
   }
