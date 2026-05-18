@@ -858,13 +858,8 @@
     // lives OUTSIDE GCal's stacking context. This guarantees pointer-events are never
     // intercepted by GCal's own overlays/backdrops. positionRailFallback() then
     // aligns it visually with the native icon rail.
-    const wrap = document.createElement('div');
-    wrap.id = 'gp-rail-fallback';
-    wrap.style.cssText = 'position:fixed;right:0;top:65px;z-index:10000;display:flex;flex-direction:column;align-items:center;padding:4px 0;pointer-events:none;';
-    wrap.appendChild(btn);
-    document.body.appendChild(wrap);
-    positionRailFallback();
-    setupRailFallbackPositioner();
+    ensureGoalPlannerRailButtonMounted(btn);
+    setupRailMountWatcher();
 
     wireEvents();
     setupCalendarCreateMenuGoalItem();
