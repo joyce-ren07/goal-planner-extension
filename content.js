@@ -6834,15 +6834,16 @@
       'clear:both !important;left:0 !important;right:auto !important;transform:none !important;';
     footer.appendChild(markBtn);
 
-    const nativeFooter = gpGdFindNativeMarkCompletedFooterRow(cardRoot);
-    if (nativeFooter?.parentElement instanceof HTMLElement) {
-      nativeFooter.parentElement.insertBefore(footer, nativeFooter);
-    } else {
-      cardRoot.appendChild(footer);
-    }
     gpGdHideNativeMarkCompletedAffordances(cardRoot);
-    gpGdForceMountIntoCard(footer, cardRoot, null);
+    if (!gpGdMountFooterAtCardBottom(footer, cardRoot)) {
+      teardownGpGdMarkFooter();
+      return null;
+    }
     gpGdApplyCardContainmentStyles(footer, cardRoot);
+    if (!gpGdIsMarkFooterWellPlaced(footer, cardRoot)) {
+      teardownGpGdMarkFooter();
+      return null;
+    }
     __gpGdMarkFooterEl = footer;
     if (__gpGdBlockEl instanceof HTMLElement) {
       gpGdWireMarkCompleteButton(__gpGdBlockEl, null);
