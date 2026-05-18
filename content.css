@@ -1189,6 +1189,13 @@
   transition: transform 0.12s;
 }
 .gp-color-swatch:hover { transform: scale(1.08); }
+.gp-color-swatch:disabled,
+.gp-color-swatch.used {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+.gp-color-swatch:disabled:hover,
+.gp-color-swatch.used:hover { transform: none; }
 .gp-color-swatch .gp-color-swatch-check {
   display: none;
   color: #fff;
