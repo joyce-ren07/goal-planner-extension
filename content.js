@@ -4820,8 +4820,9 @@
             totalSessions,
             calEventIds: eventIds,
             sessionAnchors,
-            colorId: goals[idx].colorId || '9',
-            color: goals[idx].color || GP_GOAL_DEFAULT_UI_COLOR,
+            colorId: goalColorId,
+            color: goalColor,
+            colorLabelId: selectedLabel?.id || goals[idx].colorLabelId || null,
           };
         }
       } else {
