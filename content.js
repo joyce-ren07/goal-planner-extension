@@ -10393,6 +10393,16 @@
     shell.className = 'ext-goal-root ext-goal-root--prime';
     shell.setAttribute('aria-hidden', 'true');
     chip.appendChild(shell);
+    const goals = _gpGoalsCache || [];
+    const gid = chip.dataset.gpGoalId;
+    const goal = gid
+      ? goals.find((g) => String(g.id) === String(gid))
+      : findLegacyGoalForGoalChip(chip, goals);
+    applyGoalChipTheme(
+      chip,
+      goal ? getGoalChipAccentColor(goal) : GP_GOAL_DEFAULT_UI_COLOR,
+      chip.classList.contains('ext-goal-completed')
+    );
     boundChipHeight(chip);
     requestAnimationFrame(() => {
       boundChipHeight(chip);
