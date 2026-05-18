@@ -1174,12 +1174,17 @@
   font-size: 11px; font-weight: 400; color: #9aa0a6; letter-spacing: 0.3px;
 }
 .gp-pref-time-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   background: none; border: none; outline: none;
   font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 13px; font-weight: 400; color: #3c4043;
-  cursor: pointer; color-scheme: light;
+  font-size: 13px; font-weight: 400; color: #9aa0a6;
+  cursor: pointer;
   padding: 0;
+  text-align: left;
 }
+.gp-pref-time-input.has-value { color: #3c4043; }
 
 /* ── Per-card remove button ── */
 .gp-session-remove {
