@@ -10660,7 +10660,7 @@
     const doneMap = _gpChipDoneCache || {};
     const apply = (map) => {
       if (!chip.isConnected || chip.querySelector('.ext-goal-root:not(.ext-goal-root--prime)')) return;
-      injectGoalChipContent(chip, goalData, !!map[goalData.chipKey]);
+      injectGoalChipContent(chip, goalData, !!map[goalData.chipKey], _gpGoalsCache || []);
     };
     if (_gpChipDoneCache) {
       apply(doneMap);
