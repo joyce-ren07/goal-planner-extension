@@ -2,6 +2,8 @@
   'use strict';
 
   const PANEL_WIDTH_PX = 341;
+  const PANEL_CALENDAR_GAP_PX = 8;
+  const PANEL_RAIL_GAP_PX = 4;
   const GP_SIDEBAR_INSET_ATTR = 'data-gp-sidebar-inset';
   const GP_SIDEBAR_INSET_STYLE_KEYS = {
     layout: ['padding-right', 'margin-right', 'max-width', 'min-width', 'box-sizing'],
@@ -908,6 +910,13 @@
   }
 
   function createRailButton() {
+    const shell = document.createElement('div');
+    shell.className = 'gp-sidebar-btn-shell';
+
+    const indicator = document.createElement('span');
+    indicator.className = 'gp-sidebar-btn__indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+
     const btn = document.createElement('button');
     btn.id = 'gp-sidebar-btn';
     btn.type = 'button';
@@ -925,31 +934,67 @@
     btn.addEventListener('click', () => {
       handleToggleRequest();
     });
-    return btn;
+
+    shell.append(indicator, btn);
+    return shell;
+  }
+
+  function getRailButtonShell() {
+    const btn = document.getElementById('gp-sidebar-btn');
+    return btn?.closest('.gp-sidebar-btn-shell') || null;
+  }
+
+  function ensureRailButtonShell(btn) {
+    if (!btn) return null;
+
+    const existingShell = btn.closest('.gp-sidebar-btn-shell');
+    if (existingShell) return existingShell;
+
+    const shell = document.createElement('div');
+    shell.className = 'gp-sidebar-btn-shell';
+
+    const indicator = document.createElement('span');
+    indicator.className = 'gp-sidebar-btn__indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+
+    const parent = btn.parentElement;
+    if (!parent) return null;
+
+    parent.insertBefore(shell, btn);
+    shell.append(indicator, btn);
+    return shell;
   }
 
   function syncRailButtonState() {
     const btn = document.getElementById('gp-sidebar-btn');
+    const shell = getRailButtonShell();
     const panel = document.getElementById('gp-panel');
     if (!btn || !panel) return;
 
     const isOpen = panel.classList.contains('open');
     btn.classList.toggle('active', isOpen);
     btn.setAttribute('aria-pressed', isOpen ? 'true' : 'false');
+    shell?.classList.toggle('is-active', isOpen);
   }
 
-  function placeRailButton(rail, button) {
-    if (button.parentElement !== rail || rail.firstElementChild !== button) {
-      rail.prepend(button);
+  function placeRailButton(rail, buttonNode) {
+    const shell = buttonNode.classList?.contains('gp-sidebar-btn-shell')
+      ? buttonNode
+      : buttonNode.closest('.gp-sidebar-btn-shell') || buttonNode;
+
+    if (shell.parentElement !== rail || rail.firstElementChild !== shell) {
+      rail.prepend(shell);
     }
   }
 
   function mountRailButton() {
     const existing = document.getElementById('gp-sidebar-btn');
+    const existingShell = getRailButtonShell();
     const rail = getRailMountTarget();
 
     if (existing) {
-      placeRailButton(rail, existing);
+      const shell = ensureRailButtonShell(existing) || existingShell || existing;
+      placeRailButton(rail, shell);
 
       if (rail.id === 'gp-sidebar-rail') {
         positionFallbackRail();
@@ -1004,12 +1049,54 @@
     return cachedCalendarMainEl;
   }
 
+  function getGoogleAppRailInset() {
+    const rail = findRailByStructure();
+    if (!rail || rail.id === 'gp-sidebar-rail') return 56;
+
+    const rect = rail.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 40) return 56;
+
+    return Math.max(0, Math.round(window.innerWidth - rect.left));
+  }
+
+  function updateGpPanelChromeMetrics() {
+    const panel = document.getElementById('gp-panel');
+    const mainEl = getCalendarMainEl();
+    const railInset = getGoogleAppRailInset();
+    let top = 64;
+    let height = Math.max(240, window.innerHeight - top - 8);
+    let panelRight = railInset;
+
+    if (mainEl) {
+      const mainRect = mainEl.getBoundingClientRect();
+      top = Math.max(0, Math.round(mainRect.top));
+      height = Math.max(240, Math.round(mainRect.height));
+
+      if (panel?.classList.contains('open')) {
+        const flushRight = Math.round(
+          window.innerWidth - mainRect.right - PANEL_WIDTH_PX - PANEL_CALENDAR_GAP_PX,
+        );
+        const anchoredNearRail = railInset + PANEL_RAIL_GAP_PX;
+        panelRight = Math.min(flushRight, anchoredNearRail);
+      }
+    }
+
+    const root = document.documentElement;
+    root.style.setProperty('--gp-panel-top', `${top}px`);
+    root.style.setProperty('--gp-panel-height', `${height}px`);
+    root.style.setProperty('--gp-panel-right', `${panelRight}px`);
+    root.style.setProperty('--gp-panel-rail-inset', `${railInset}px`);
+    root.style.setProperty('--gp-panel-rail-gap', `${PANEL_RAIL_GAP_PX}px`);
+    root.style.setProperty('--gp-panel-calendar-gap', `${PANEL_CALENDAR_GAP_PX}px`);
+  }
+
   function setCalendarPushed(open) {
     const mainEl = getCalendarMainEl();
     if (!mainEl) return;
 
     mainEl.style.transition = MAIN_MARGIN_TRANSITION;
-    mainEl.style.marginRight = open ? `${PANEL_WIDTH_PX}px` : '';
+    const push = PANEL_WIDTH_PX + PANEL_CALENDAR_GAP_PX;
+    mainEl.style.marginRight = open ? `${push}px` : '';
   }
 
   function clearGpSidebarInset() {
@@ -1022,18 +1109,8 @@
   }
 
   function applyGpSidebarTaskSurfaceInsets() {
-    const inset = `${PANEL_WIDTH_PX}px`;
-    /* Cap Kanban width to viewport minus fixed sidebar so the board moves even when
-       padding on an ancestor (or the Tasks "rail" root from findVisibleGoogleTasksPanel)
-       does not shrink the flex row that holds our layout. */
-    const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px))`;
-
-    document.querySelectorAll('.mytasks-native-tasks-layout').forEach((el) => {
-      if (el.closest('#gp-panel')) return;
-      el.setAttribute(GP_SIDEBAR_INSET_ATTR, 'layout');
-      el.style.setProperty('padding-right', inset, 'important');
-      el.style.setProperty('box-sizing', 'border-box', 'important');
-    });
+    /* Cap Kanban width when Calendar main margin does not shrink the flex row (Tasks rail). */
+    const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px - ${PANEL_CALENDAR_GAP_PX}px - var(--gp-panel-rail-gap, 4px) - var(--gp-panel-rail-inset, 56px)))`;
 
     document.querySelectorAll('.mytasks-kanban').forEach((kanban) => {
       if (kanban.closest('#gp-panel')) return;
@@ -1059,6 +1136,7 @@
       if (!panel?.classList.contains('open')) return;
       clearGpSidebarInset();
       applyGpSidebarTaskSurfaceInsets();
+      updateGpPanelChromeMetrics();
       if (activeNativeTasksHost?.isConnected) {
         syncKanbanHostSize(activeNativeTasksHost);
       }
@@ -1068,6 +1146,8 @@
   function syncGpSidebarLayout() {
     const panel = document.getElementById('gp-panel');
     const isOpen = Boolean(panel?.classList.contains('open'));
+
+    updateGpPanelChromeMetrics();
 
     if (!isOpen && gpSidebarInsetReflowTimer) {
       clearTimeout(gpSidebarInsetReflowTimer);
@@ -1083,6 +1163,7 @@
     }
 
     requestAnimationFrame(() => {
+      updateGpPanelChromeMetrics();
       if (activeNativeTasksHost?.isConnected) {
         syncKanbanHostSize(activeNativeTasksHost);
       }
@@ -1868,6 +1949,7 @@
 
   let gpCtCalViewMonth = null;
   let gpMkDueCalViewMonth = null;
+  let gpMkDueSidebarScrollRaf = null;
   /** @type {{ anchor: HTMLElement, taskId: string } | null} */
   let gpMkDueEditorTarget = null;
   /** @type {{ dueDate: string, dueTimeStart: string, dueTimeEnd: string, allDay: boolean } | null} */
@@ -2046,33 +2128,119 @@
     el.style.zIndex = '';
   }
 
+  function positionMkDueFixedDropdown(el, anchorRect, preferredWidth) {
+    if (!el || !anchorRect) return;
+    const w = Math.min(preferredWidth, window.innerWidth - 16);
+    let left = anchorRect.left;
+    if (preferredWidth > 288) {
+      left = anchorRect.right - w;
+    }
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+
+    const gap = 4;
+    const margin = 8;
+    el.style.position = 'fixed';
+    el.style.left = `${left}px`;
+    el.style.right = 'auto';
+    el.style.width = `${w}px`;
+    el.style.zIndex = '2147483647';
+
+    const measuredHeight = el.getBoundingClientRect().height || el.offsetHeight || 0;
+    const dropdownHeight = Math.max(measuredHeight, 300);
+    let top = anchorRect.bottom + gap;
+    if (top + dropdownHeight > window.innerHeight - margin) {
+      const aboveTop = anchorRect.top - gap - dropdownHeight;
+      if (aboveTop >= margin) {
+        top = aboveTop;
+      } else {
+        top = Math.max(margin, window.innerHeight - dropdownHeight - margin);
+      }
+    }
+    el.style.top = `${top}px`;
+  }
+
   function positionMkDueDateDropdown(cal, dateLink) {
     if (!cal || !dateLink) return;
-    const r = dateLink.getBoundingClientRect();
-    const w = Math.min(288, window.innerWidth - 16);
-    let left = r.left;
-    left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
-    cal.style.position = 'fixed';
-    cal.style.left = `${left}px`;
-    cal.style.top = `${r.bottom + 4}px`;
-    cal.style.right = 'auto';
-    cal.style.width = `${w}px`;
-    cal.style.zIndex = '2147483647';
+    positionMkDueFixedDropdown(cal, dateLink.getBoundingClientRect(), 288);
   }
 
   function positionMkDueTimeDropdown(timeDropdown, timeLink) {
     if (!timeDropdown || !timeLink) return;
-    const r = timeLink.getBoundingClientRect();
-    const w = Math.min(320, window.innerWidth - 16);
-    let left = r.right - w;
-    if (left < 8) left = Math.max(8, r.left);
-    if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
-    timeDropdown.style.position = 'fixed';
-    timeDropdown.style.left = `${left}px`;
-    timeDropdown.style.top = `${r.bottom + 4}px`;
-    timeDropdown.style.right = 'auto';
-    timeDropdown.style.width = `${w}px`;
-    timeDropdown.style.zIndex = '2147483647';
+    positionMkDueFixedDropdown(timeDropdown, timeLink.getBoundingClientRect(), 320);
+  }
+
+  function isMkDueEditorInSidebar() {
+    return Boolean(gpMkDueEditorTarget?.host?.closest('#gp-panel'));
+  }
+
+  function getSidebarDueScrollContainer() {
+    return document.querySelector('#gp-panel .gp-card');
+  }
+
+  function ensureMkDueDropdownVisibleInSidebar() {
+    if (!isMkDueEditorInSidebar()) return;
+
+    const target = gpMkDueEditorTarget;
+    const scrollEl = getSidebarDueScrollContainer();
+    if (!target?.scheduleEl || !scrollEl) return;
+
+    const scheduleEl = target.scheduleEl;
+    const dateOpen = Boolean(target.dateDropdownOpen);
+    const timeOpen = Boolean(target.timeDropdownOpen);
+    const anchorLink = dateOpen
+      ? scheduleEl.querySelector('.gp-inline-schedule-date-link')
+      : timeOpen
+        ? scheduleEl.querySelector('.gp-inline-schedule-time-link')
+        : null;
+    if (!anchorLink) return;
+
+    const dropdown = dateOpen
+      ? queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal')
+      : queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
+    if (!dropdown || dropdown.hidden) return;
+
+    const padding = 12;
+    const gap = 8;
+    const anchorRect = anchorLink.getBoundingClientRect();
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const measuredHeight = dropdown.getBoundingClientRect().height || dropdown.offsetHeight || 0;
+    const dropdownHeight = Math.max(measuredHeight, dateOpen ? 300 : 220);
+    const neededBottom = anchorRect.bottom + gap + dropdownHeight + padding;
+
+    if (neededBottom > scrollRect.bottom) {
+      scrollEl.scrollTop += neededBottom - scrollRect.bottom;
+    }
+
+    const host = target.host;
+    if (host) {
+      const hostRect = host.getBoundingClientRect();
+      if (hostRect.top < scrollRect.top + padding) {
+        scrollEl.scrollTop -= (scrollRect.top + padding) - hostRect.top;
+      }
+    }
+  }
+
+  function queueMkDueSidebarScrollAdjust() {
+    if (!isMkDueEditorInSidebar()) return;
+    if (gpMkDueSidebarScrollRaf) cancelAnimationFrame(gpMkDueSidebarScrollRaf);
+    gpMkDueSidebarScrollRaf = requestAnimationFrame(() => {
+      gpMkDueSidebarScrollRaf = requestAnimationFrame(() => {
+        gpMkDueSidebarScrollRaf = null;
+        ensureMkDueDropdownVisibleInSidebar();
+        if (!gpMkDueEditorTarget) return;
+        const scheduleEl = gpMkDueEditorTarget.scheduleEl;
+        if (!scheduleEl) return;
+        if (gpMkDueEditorTarget.dateDropdownOpen) {
+          const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
+          const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
+          if (cal && dateLink) positionMkDueDateDropdown(cal, dateLink);
+        } else if (gpMkDueEditorTarget.timeDropdownOpen) {
+          const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
+          const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
+          if (timeDropdown && timeLink) positionMkDueTimeDropdown(timeDropdown, timeLink);
+        }
+      });
+    });
   }
 
   function syncMkDueDropdownPortal() {
@@ -2098,6 +2266,10 @@
       scrollMkDueTimeListsToDraft();
     } else if (timeDropdown) {
       restoreMkDueDropdownFromPortal(timeDropdown, 'timeMount');
+    }
+
+    if (target.dateDropdownOpen || target.timeDropdownOpen) {
+      queueMkDueSidebarScrollAdjust();
     }
   }
 
@@ -2454,6 +2626,7 @@
     const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
     if (target?.dateDropdownOpen && cal && dateLink) {
       positionMkDueDateDropdown(cal, dateLink);
+      queueMkDueSidebarScrollAdjust();
     }
   }
 
@@ -3400,7 +3573,7 @@
     statusMenuBtn.setAttribute('aria-expanded', 'false');
     statusMenuBtn.setAttribute('aria-label', `Change task status: ${status.label}`);
     statusMenuBtn.innerHTML = `<span class="gp-filter-chip-trailing" aria-hidden="true">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 12 15 18 9"></polyline>
       </svg>
     </span>`;
@@ -6395,7 +6568,7 @@
 
   function isExtensionTasksControl(el) {
     return Boolean(
-      el?.closest('#gp-panel, .mytasks-sidebar, #gp-sidebar-btn, #gp-sidebar-rail')
+      el?.closest('#gp-panel, .mytasks-sidebar, #gp-sidebar-btn, .gp-sidebar-btn-shell, #gp-sidebar-rail')
       || /\bmy tasks\b/i.test(getElementLabel(el)),
     );
   }
@@ -6698,7 +6871,7 @@
     const colors = tagColorStyles(category);
     const swatch = document.createElement('span');
     swatch.className = 'mytasks-filter-nav__swatch';
-    swatch.style.background = colors.swatch;
+    swatch.style.backgroundColor = colors.swatch;
     swatch.setAttribute('aria-hidden', 'true');
 
     const text = document.createElement('span');
@@ -6818,6 +6991,7 @@
 
     if (categoriesList) {
       categoriesList.innerHTML = '';
+      categoriesList.classList.remove('mytasks-filter-nav__list--category-pills');
       const categories = getBoardCategoryRows(state);
 
       if (!categories.length) {
@@ -7578,7 +7752,11 @@
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     setCalendarPushed(true);
-    requestAnimationFrame(() => setCalendarPushed(true));
+    requestAnimationFrame(() => {
+      setCalendarPushed(true);
+      updateGpPanelChromeMetrics();
+      syncGpSidebarLayout();
+    });
     syncGpSidebarLayout();
     syncRailButtonState();
     return true;

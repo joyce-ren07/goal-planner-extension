@@ -2,6 +2,12 @@
 
 :root {
   --gp-panel-width: 341px;
+  --gp-panel-calendar-gap: 8px;
+  --gp-panel-top: 64px;
+  --gp-panel-right: 56px;
+  --gp-panel-rail-inset: 56px;
+  --gp-panel-rail-gap: 4px;
+  --gp-panel-height: calc(100vh - var(--gp-panel-top) - 8px);
 }
 
 #gp-panel.mytasks-sidebar {
@@ -53,26 +59,29 @@
   --m3-radius-xl: 28px;
   --m3-radius-full: 9999px;
   position: fixed;
-  top: 0;
-  right: 0;
+  top: var(--gp-panel-top, 64px);
+  right: var(--gp-panel-right, 56px);
   width: var(--gp-panel-width);
-  height: 100vh;
+  height: var(--gp-panel-height, calc(100vh - var(--gp-panel-top, 64px) - 8px));
   z-index: 2147483646;
   display: flex;
   flex-direction: column;
   pointer-events: none;
-  transform: translate3d(100%, 0, 0);
-  transition: transform 0.2s ease;
-  border-radius: 0;
+  transform: translate3d(calc(100% + var(--gp-panel-right, 56px)), 0, 0);
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
+  border-radius: var(--m3-radius-xl);
+  border: 1px solid var(--m3-outline-variant);
   box-shadow: none;
   background: var(--m3-surface-container-lowest);
   font-family: 'Google Sans', Roboto, sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 #gp-panel.mytasks-sidebar.open {
   pointer-events: auto;
   transform: translate3d(0, 0, 0);
-  overflow: hidden;
+  box-shadow: var(--m3-elevation-1);
   min-height: 0;
 }
 
@@ -84,6 +93,38 @@
   align-items: center;
   gap: 8px;
   pointer-events: auto;
+  overflow: visible;
+}
+
+.gp-sidebar-btn-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.gp-sidebar-btn__indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 20px;
+  margin-top: -10px;
+  border-radius: 0 3px 3px 0;
+  background: #0b57d0;
+  opacity: 0;
+  transform: scaleY(0.6);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none;
+}
+
+.gp-sidebar-btn-shell.is-active .gp-sidebar-btn__indicator {
+  opacity: 1;
+  transform: scaleY(1);
 }
 
 #gp-sidebar-btn {
@@ -96,7 +137,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
   padding: 0;
   flex-shrink: 0;
   color: #444746;
@@ -106,8 +147,10 @@
   background: #e8edf6;
 }
 
-#gp-sidebar-btn.active {
-  background: #d3e3fd;
+#gp-sidebar-btn.active,
+.gp-sidebar-btn-shell.is-active #gp-sidebar-btn {
+  background: #c2e7ff;
+  color: #0b57d0;
 }
 
 #gp-sidebar-btn svg {
@@ -192,6 +235,7 @@
   display: flex;
   flex-direction: row;
   align-items: stretch;
+  gap: 0;
   width: 100%;
   min-height: 320px;
   height: 100%;
@@ -417,6 +461,15 @@
 
 .mytasks-filter-nav__option--checkbox .mytasks-filter-nav__count {
   margin-left: auto;
+}
+
+.mytasks-filter-nav__option--checkbox .mytasks-filter-nav__swatch {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .mytasks-filter-nav__scroll {
@@ -723,7 +776,7 @@
 body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban {
   flex: 1 1 auto;
   min-width: 0 !important;
-  max-width: min(100%, calc(100vw - var(--gp-panel-width))) !important;
+  max-width: min(100%, calc(100vw - var(--gp-panel-width) - var(--gp-panel-calendar-gap, 8px) - var(--gp-panel-rail-gap, 4px) - var(--gp-panel-rail-inset, 56px))) !important;
   overflow: hidden !important;
 }
 
@@ -736,6 +789,8 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 }
 
 .mytasks-kanban {
+  margin: 0;
+  padding: 0;
   --m3-surface: #ffffff;
   --m3-on-surface: #1d1b20;
   --m3-on-surface-variant: #49454f;
@@ -768,7 +823,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 .mytasks-kanban__board {
   display: flex;
   gap: 8px;
-  padding: 8px 16px 16px;
+  padding: 8px 16px 16px 0;
   overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -788,7 +843,7 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 
 .mytasks-kanban__filter-bar {
   display: none;
-  padding: 8px 16px 0;
+  padding: 6px 16px 0 0;
   box-sizing: border-box;
 }
 
@@ -1857,19 +1912,31 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   pointer-events: auto;
 }
 
+.mytasks-sidebar .gp-course-chip,
+.mytasks-sidebar .gp-filter-chip {
+  --gp-sidebar-chip-height: 22px;
+  --gp-sidebar-chip-pad-block: 2px;
+  --gp-sidebar-chip-pad-inline: 6px;
+  --gp-sidebar-chip-font-size: 11px;
+  --gp-sidebar-chip-line-height: 14px;
+  --gp-sidebar-chip-radius: var(--m3-radius-sm);
+  box-sizing: border-box;
+  font-family: Roboto, 'Google Sans', sans-serif;
+  font-size: var(--gp-sidebar-chip-font-size);
+  font-weight: 500;
+  line-height: var(--gp-sidebar-chip-line-height);
+  letter-spacing: 0.05px;
+  white-space: nowrap;
+}
+
 .mytasks-sidebar .gp-course-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 22px;
-  padding: 2px 6px;
-  border-radius: var(--m3-radius-sm);
-  font-family: Roboto, 'Google Sans', sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 14px;
-  letter-spacing: 0.05px;
-  white-space: nowrap;
+  min-height: var(--gp-sidebar-chip-height);
+  height: var(--gp-sidebar-chip-height);
+  padding: var(--gp-sidebar-chip-pad-block) var(--gp-sidebar-chip-pad-inline);
+  border-radius: var(--gp-sidebar-chip-radius);
 }
 
 .mytasks-sidebar .gp-course-chip--psych {
@@ -1897,22 +1964,22 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
-  padding: 2px 2px 2px 8px;
-  border-radius: var(--m3-radius-lg);
+  gap: 4px;
+  min-height: var(--gp-sidebar-chip-height);
+  height: var(--gp-sidebar-chip-height);
+  max-height: var(--gp-sidebar-chip-height);
+  padding: 0 calc(var(--gp-sidebar-chip-pad-inline) - 2px) 0 var(--gp-sidebar-chip-pad-inline);
+  border-radius: var(--gp-sidebar-chip-radius);
   border: 1px solid transparent;
   background: transparent;
-  font-family: 'Google Sans', Roboto, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 14px;
-  letter-spacing: 0.05px;
 }
 
 .mytasks-sidebar .gp-filter-chip-menu-btn {
   position: relative;
-  min-width: 24px;
-  min-height: 24px;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
   margin: 0;
   padding: 0;
   border: none;
@@ -1921,6 +1988,7 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   border-radius: var(--m3-radius-full);
   cursor: pointer;
 }
@@ -1966,7 +2034,7 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   z-index: 1;
   width: 6px;
   height: 6px;
-  margin-right: 3px;
+  margin: 0 0 0 2px;
   border-radius: var(--m3-radius-full);
   flex-shrink: 0;
 }
@@ -1989,18 +2057,23 @@ body.mytasks-kanban-dragging .mytasks-kanban .mk-card {
   z-index: 1;
 }
 
+.mytasks-sidebar .gp-filter-chip-label {
+  padding: 0;
+}
+
 .mytasks-sidebar .gp-filter-chip-trailing {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
-  margin-left: 2px;
+  width: 12px;
+  height: 12px;
+  margin: 0;
 }
 
 .mytasks-sidebar .gp-filter-chip-trailing svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
+  display: block;
 }
 
 .mytasks-sidebar .gp-task-checkbox--checked {
@@ -2252,7 +2325,7 @@ body.gp-task-modals-open {
 }
 
 body.gp-sidebar-open .gp-mt-layer {
-  padding-right: calc(var(--gp-panel-width, 341px) + 12px);
+  padding-right: calc(var(--gp-panel-width, 341px) + var(--gp-panel-calendar-gap, 8px) + var(--gp-panel-rail-inset, 56px) + 12px);
 }
 
 .gp-ct-scrim {
@@ -3977,7 +4050,7 @@ body.gp-sidebar-open .gp-mt-layer {
 .gp-ct-seg {
   flex: 0 1 auto;
   min-width: 0;
-  padding: 6px 16px;
+  padding: 4px 6px;
   border-radius: 8px;
   border: 1px solid #dadce0;
   background: #fff;
