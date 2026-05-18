@@ -1507,6 +1507,11 @@
   // ── Wire all events ──
   function wireEvents() {
     // Rail btn click is wired in createRailBtn() to survive DOM moves.
+    document.addEventListener('click', e => {
+      if (e.target.closest('#gp-toast-close')) {
+        document.getElementById('gp-toast')?.classList.remove('visible');
+      }
+    });
     document.getElementById('gp-close-btn').addEventListener('click', closePanel);
     document.getElementById('gp-set-goal-btn').addEventListener('click', () => { resetEditMode(); showScreen('form'); });
 
