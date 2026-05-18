@@ -5356,10 +5356,12 @@
     if (!(chip instanceof HTMLElement)) return false;
     if (!chip.matches('[data-eventchip]')) return false;
     if (chip.dataset.gpGoalId) return true;
+    if (chip.classList.contains('ext-goal-chip') && chip.querySelector('.ext-goal-root')) return true;
     if (chip.querySelector('.ext-goal-root .ext-goal-badge')) return true;
     if (chip.querySelector('.ext-goal-root:not(.ext-goal-root--prime)')) return true;
     const ec = chip.closest('[data-eventid]');
-    return !!(ec instanceof HTMLElement && ec.classList.contains('gp-goal-event'));
+    if (ec instanceof HTMLElement && ec.classList.contains('gp-goal-event')) return true;
+    return eventContainerLooksLikeGoal(ec);
   }
 
   function gpGdChipLooksLikeGoalSession(chip) {
