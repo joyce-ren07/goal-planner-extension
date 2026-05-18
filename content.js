@@ -1248,11 +1248,8 @@
     return btn;
   }
 
-  // ── Panel HTML ──
   function createGpToastElement() {
     const toast = document.createElement('motion-replacement');
-    const panel = document.createElement('div');
-    panel.id = 'gp-panel';
     panel.innerHTML = `
       <div class="gp-card" id="gp-card">
 
