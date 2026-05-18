@@ -10077,7 +10077,12 @@
     mountSidebar();
     setupCalendarDueFolderRefreshListeners();
     await ensurePaletteCaches();
-    setupRailObserver();
+    // setupRailObserver intentionally disabled in the integrated build:
+    // the kanban sidebar is opened via the extension's toolbar icon
+    // (chrome.action.onClicked -> TOGGLE_SIDEBAR), so we no longer need
+    // a rail button. Leaving it on competes with the Goal Planner rail
+    // button — both observers re-mount on every body mutation, causing
+    // the buttons to flicker/fly across the rail.
     setupNativeTasksKanbanObserver();
     setupCalendarWeekTaskOverlay();
     void syncTaskViewsFromStorage();
