@@ -803,20 +803,20 @@
 }
 
 /* When sidebar is open: allow the flex row to shrink (room comes from Calendar main padding). */
-body.gp-sidebar-open .mytasks-native-tasks-layout {
+body.gp-tasks-sidebar-open .mytasks-native-tasks-layout {
   min-width: 0;
 }
 
 /* When sidebar is open: Kanban max-width uses viewport minus panel so the board
    clears the fixed sidebar even if Calendar main (add-ons) is moved separately. */
-body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban {
+body.gp-tasks-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban {
   flex: 1 1 auto;
   min-width: 0 !important;
   max-width: min(100%, calc(100vw - var(--gp-tasks-panel-width) - var(--gp-tasks-panel-calendar-gap, 8px) - var(--gp-tasks-panel-rail-gap, 4px) - var(--gp-tasks-panel-rail-inset, 56px))) !important;
   overflow: hidden !important;
 }
 
-body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
+body.gp-tasks-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
   width: 100%;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -2674,7 +2674,7 @@ body.gp-task-modals-open {
   padding-top: max(20px, 5vh);
 }
 
-body.gp-sidebar-open .gp-mt-layer {
+body.gp-tasks-sidebar-open .gp-mt-layer {
   padding-right: calc(var(--gp-tasks-panel-width, 341px) + var(--gp-tasks-panel-calendar-gap, 8px) + var(--gp-tasks-panel-rail-inset, 56px) + 12px);
 }
 

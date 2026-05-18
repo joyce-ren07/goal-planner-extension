@@ -7,10 +7,6 @@ const css = execSync('git show origin/shannon:sidebar.css', { cwd: root, encodin
 
 let out = js;
 out = out.replace(
-  '<motion id="gp-panel" class="mytasks-sidebar"',
-  '<motion id="gp-tasks-panel" class="mytasks-sidebar"',
-);
-out = out.replace(
   '<div id="gp-panel" class="mytasks-sidebar"',
   '<div id="gp-tasks-panel" class="mytasks-sidebar"',
 );
@@ -52,6 +48,7 @@ cssOut = cssOut.split('--gp-panel-right').join('--gp-tasks-panel-right');
 cssOut = cssOut.split('--gp-panel-rail-inset').join('--gp-tasks-panel-rail-inset');
 cssOut = cssOut.split('--gp-panel-rail-gap').join('--gp-tasks-panel-rail-gap');
 cssOut = cssOut.split('--gp-panel-height').join('--gp-tasks-panel-height');
+cssOut = cssOut.split('body.gp-sidebar-open').join('body.gp-tasks-sidebar-open');
 
 fs.writeFileSync(require('path').join(root, 'taskSidebar.js'), out);
 fs.writeFileSync(require('path').join(root, 'sidebar.css'), cssOut);
