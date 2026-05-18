@@ -1660,6 +1660,8 @@
       clearGoalCreationPreview();
       scheduleGhostPreviewRefreshDebounced();
     } else if (name === 'suggestions') {
+      ensurePrefTimeControl();
+      syncPrefTimeTriggerLabel();
       scheduleGhostPreviewRefreshDebounced();
     }
   }
