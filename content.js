@@ -3448,6 +3448,39 @@
     return parseTaskDueDate(card?.due);
   }
 
+  /** Milliseconds from local midnight for a normalized HH:mm, or 0 if missing. */
+  function dueHmToDayOffsetMs(hm) {
+    const n = normalizeDueHm(hm || '');
+    if (!n) return 0;
+    const [h, m] = n.split(':').map(Number);
+    return ((h * 60) + m) * 60 * 1000;
+  }
+
+  /**
+   * Sort key for sidebar folder ordering: earliest due first; tasks with no due
+   * date sort last (Infinity). Same calendar day breaks ties by start time when set.
+   */
+  function sidebarTaskDueSortMs(task) {
+    const dayDate = getTaskDueDateFromCard(task);
+    if (!dayDate || Number.isNaN(dayDate.getTime())) {
+      return Number.POSITIVE_INFINITY;
+    }
+    const dayStart = normalizeDateOnly(dayDate).getTime();
+    if (task?.allDay === true) {
+      return dayStart;
+    }
+    return dayStart + dueHmToDayOffsetMs(task?.dueTimeStart);
+  }
+
+  function sortSidebarFolderEntries(entries) {
+    entries.sort((a, b) => {
+      const da = sidebarTaskDueSortMs(a.task);
+      const db = sidebarTaskDueSortMs(b.task);
+      if (da !== db) return da - db;
+      return String(a.task.id).localeCompare(String(b.task.id));
+    });
+  }
+
   function normalizeKanbanCard(card, fallbackId, tags) {
     const chip = card?.chip || card?.course || 'PSYC101';
     const dueDate = card?.dueDate
@@ -4017,10 +4050,8 @@
       });
     });
 
-    buckets.overdue.sort((a, b) => {
-      const aDate = getTaskDueDateFromCard(a.task)?.getTime() || 0;
-      const bDate = getTaskDueDateFromCard(b.task)?.getTime() || 0;
-      return aDate - bDate;
+    SIDEBAR_FOLDER_ORDER.forEach((folderKey) => {
+      sortSidebarFolderEntries(buckets[folderKey] || []);
     });
 
     SIDEBAR_FOLDER_ORDER.forEach((folderKey) => {
