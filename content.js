@@ -1361,8 +1361,7 @@
           </div>
           <div class="gp-action-group" style="margin-top:12px;">
             <button class="gp-btn-primary gp-btn-full gp-btn-calendar" id="gp-confirm-add">Create goal</button>
-            <div class="gp-toast" id="gp-toast"><span class="material-symbols-outlined gp-ms-icon" style="font-size:15px;color:#137333;vertical-align:text-bottom;font-variation-settings:'opsz' 20,'wght' 400,'FILL' 1,'GRAD' 0">check_circle</span> Sessions added to your calendar!</div>
-          </div>
+          </motion-replacement>
         </div>
 
       </div>`;
