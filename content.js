@@ -1373,6 +1373,13 @@
               <span class="gp-confirm-chip-label"></span>
             </button>
           </div>
+          <div class="gp-field" id="gp-color-labels-field" style="margin-top:20px;">
+            <span class="gp-field-label">Label</span>
+            <div class="gp-color-labels" id="gp-color-labels">
+              <div class="gp-color-chips" id="gp-color-chips"></div>
+              <div class="gp-color-swatches" id="gp-color-swatches"></div>
+            </div>
+          </div>
           <div class="gp-field" style="margin-top:20px;">
             <div class="gp-section-header">
               <span class="gp-section-label">Suggested Sessions</span>
