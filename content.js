@@ -4189,6 +4189,7 @@
     state.editingGoalId = null;
     state.recurrence = null;
     state.goalTitle = '';
+    state.selectedColorLabelId = null;
 
     const toSuggBtn = document.getElementById('gp-to-suggestions');
     if (toSuggBtn) toSuggBtn.textContent = 'Create goal';
