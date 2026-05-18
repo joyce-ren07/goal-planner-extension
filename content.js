@@ -10880,12 +10880,13 @@
           chipKey,
           id: goal ? goal.id : null,
           slotIdx: slotIdx >= 0 ? slotIdx : undefined,
+          accentColor: goal ? getGoalChipAccentColor(goal) : GP_GOAL_DEFAULT_UI_COLOR,
         };
         const isDone = !!doneMap[chipKey];
 
         debugChipStructure(chip, 'BEFORE injection');
         setupDebugMousedownLogger();
-        injectGoalChipContent(chip, goalData, isDone);
+        injectGoalChipContent(chip, goalData, isDone, goals);
         // rAF ensures layout is settled before the post-injection probe runs
         requestAnimationFrame(() => debugChipStructure(chip, 'AFTER injection'));
         attachChipResizeObserver(chip, goalData);
