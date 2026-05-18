@@ -1543,26 +1543,26 @@
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
-  color: #d3564b;
+  color: var(--gp-chip-text, #d3564b);
 }
 
-/* Secondary line — regular (400); goal brand coral. */
+/* Secondary line — regular (400); themed accent. */
 [data-eventchip].ext-goal-chip .ext-goal-root .ext-goal-time {
   font-size: 11px;
   line-height: 14px;
   font-weight: 400;
-  color: #d3564b;
+  color: var(--gp-chip-text, #d3564b);
   opacity: 1;
 }
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-title {
-  color: #e79992;
+  color: var(--gp-chip-text-done, #e79992);
   text-decoration: line-through;
-  text-decoration-color: #e79992;
+  text-decoration-color: var(--gp-chip-text-done, #e79992);
 }
 
 [data-eventchip].ext-goal-chip.ext-goal-completed .ext-goal-root .ext-goal-time {
-  color: #e79992;
+  color: var(--gp-chip-text-done, #e79992);
 }
 
 /* ── Goal Planner: Google Calendar-style rows in event-detail (data from unified Goal only) ── */
