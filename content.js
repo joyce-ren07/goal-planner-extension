@@ -5314,6 +5314,24 @@
     return document.getElementById('gp-task-modals-root');
   }
 
+  const GP_CT_ICON_ADD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
+  const GP_CT_ICON_CLOSE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+
+  function syncGpCtSubtaskAccent(state) {
+    const wrap = document.querySelector('.gp-ct-subtasks-wrap');
+    if (!wrap) return;
+    const chipLabel = document.getElementById('gp-ct-chip')?.value?.trim();
+    const tags = state?.tags || kanbanStateCache?.tags || getDefaultTags();
+    let hex = TAG_HEX_BY_KEY.blue;
+    const tag = chipLabel ? findTagByLabel(tags, chipLabel) : null;
+    if (tag) {
+      hex = tagResolvedHex(tag) || hex;
+    } else if (chipLabel && KANBAN_CHIP_COLORS[chipLabel]) {
+      hex = TAG_HEX_BY_KEY[KANBAN_CHIP_COLORS[chipLabel]] || hex;
+    }
+    wrap.style.setProperty('--gp-ct-accent', hex);
+  }
+
   function buildGlobalTaskModalsMarkup() {
     return `
 <div id="gp-task-modals-root" class="gp-task-modals-root" hidden>
@@ -5437,12 +5455,15 @@
           </span>
           <textarea class="gp-ct-notes" name="notes" rows="2" placeholder="Add description" aria-label="Description"></textarea>
         </div>
-        <div class="gp-ct-section">
+        <div class="gp-ct-section gp-ct-section--subtasks">
           <div class="gp-ct-section-label">Subtasks</div>
           <div class="gp-ct-subtasks-wrap">
             <div id="gp-ct-subtasks-list" class="gp-ct-subtasks-list"></div>
             <div class="gp-ct-subtasks-footer">
-              <button type="button" class="gp-ct-text-btn gp-ct-add-subtask-btn" id="gp-ct-add-subtask">+ Add subtask</button>
+              <button type="button" class="gp-ct-add-subtask-btn" id="gp-ct-add-subtask">
+                <span class="gp-ct-add-subtask-btn__icon" aria-hidden="true">${GP_CT_ICON_ADD}</span>
+                <span>Add subtask</span>
+              </button>
               <p class="gp-ct-hint">Subtasks are saved with the task</p>
             </div>
           </div>
@@ -5529,6 +5550,7 @@
 
       renderCreateTaskTagChips(state);
       syncCreateTaskStatusSegments(col);
+      syncGpCtSubtaskAccent(state);
 
       resetCreateTaskTagSectionEngagement();
 
@@ -5624,6 +5646,7 @@
     if (chipInput && !chipInput.value && tags[0]) {
       chipInput.value = tags[0].label;
     }
+    syncGpCtSubtaskAccent(state);
   }
 
   function applyInlineNewTagCustomColorFromPicker(rawHex) {
@@ -6177,9 +6200,14 @@
     const row = document.createElement('div');
     row.className = 'gp-ct-subtask';
     row.innerHTML = `
-      <input type="checkbox" class="gp-ct-subtask-check" ${done ? 'checked' : ''} aria-label="Done">
-      <input type="text" class="gp-ct-subtask-input" placeholder="Subtask">
-      ${removable ? '<button type="button" class="gp-ct-subtask-del" aria-label="Remove subtask">×</button>' : ''}
+      <label class="gp-ct-subtask-check-wrap">
+        <input type="checkbox" class="gp-ct-subtask-check" ${done ? 'checked' : ''} aria-label="Mark subtask done">
+        <span class="gp-ct-subtask-check-box" aria-hidden="true"></span>
+      </label>
+      <div class="gp-ct-subtask-field">
+        <input type="text" class="gp-ct-subtask-input" placeholder="Subtask" autocomplete="off">
+      </div>
+      ${removable ? '<button type="button" class="gp-ct-subtask-del" aria-label="Remove subtask">' + GP_CT_ICON_CLOSE + '</button>' : ''}
     `;
     const textInput = row.querySelector('.gp-ct-subtask-input');
     if (textInput) textInput.value = title;
@@ -6395,6 +6423,7 @@
         const tag = state.tags.find((t) => t.id === id);
         const input = document.getElementById('gp-ct-chip');
         if (input && tag) input.value = tag.label;
+        syncGpCtSubtaskAccent(state);
       });
     });
 
@@ -6961,29 +6990,6 @@
       if (closeBtn) {
         event.preventDefault();
         closeTaskDetailPopup();
-        return;
-      }
-
-      const editBtn = event.target.closest('[data-gp-task-detail-edit]');
-      if (editBtn && gpTaskDetailOpenCtx) {
-        event.preventDefault();
-        const card = document.querySelector(`.mk-card[data-card-id="${gpTaskDetailOpenCtx.taskId}"]`);
-        closeTaskDetailPopup();
-        const titleInput = card?.querySelector('.mk-card-title');
-        if (titleInput) {
-          titleInput.focus({ preventScroll: true });
-          titleInput.select();
-        }
-        return;
-      }
-
-      const deleteBtn = event.target.closest('[data-gp-task-detail-delete]');
-      if (deleteBtn && gpTaskDetailOpenCtx) {
-        event.preventDefault();
-        const card = document.querySelector(`.mk-card[data-card-id="${gpTaskDetailOpenCtx.taskId}"]`);
-        closeTaskDetailPopup();
-        if (card) openMkDeleteConfirm(card);
-        return;
       }
     });
 
@@ -7079,6 +7085,7 @@
 
     return `
       <div class="gp-task-detail-subtasks">
+        <p class="gp-task-detail-subtasks-heading">Subtasks</p>
         <div class="gp-task-detail-subtasks-list">${rows}</div>
         <div class="gp-task-detail-subtasks-progress" aria-hidden="true">
           <div class="gp-task-detail-subtasks-progress-fill" style="width:${progressPct}%; background:${categoryColor};"></div>
@@ -7110,23 +7117,9 @@
 
     return `
       <header class="gp-task-detail-header">
-        <div class="gp-task-detail-header-actions">
-          <button type="button" class="gp-task-detail-icon-btn" data-gp-task-detail-edit aria-label="Edit">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-          </button>
-          <button type="button" class="gp-task-detail-icon-btn" data-gp-task-detail-delete aria-label="Delete">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          </button>
-          <button type="button" class="gp-task-detail-icon-btn" aria-label="Email">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
-          </button>
-          <button type="button" class="gp-task-detail-icon-btn" aria-label="More options">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
-          </button>
-          <button type="button" class="gp-task-detail-icon-btn" data-gp-task-detail-close aria-label="Close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-        </div>
+        <button type="button" class="gp-m3-icon-btn gp-task-detail-close-btn" data-gp-task-detail-close aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </header>
       <div class="gp-task-detail-body" style="--gp-task-detail-category:${categoryColor};">
         <div class="gp-task-detail-title-row">
