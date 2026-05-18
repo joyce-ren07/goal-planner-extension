@@ -5376,11 +5376,7 @@
   }
 
   function gpGdHasRecentGoalChipOpenIntent() {
-    return !!(
-      _gpGdPinnedGoalId &&
-      _gpGdPinnedHints.length &&
-      Date.now() - _gpGdPinnedAt < 90000
-    );
+    return _gpGdPinnedHints.length > 0 && Date.now() - _gpGdPinnedAt < 90000;
   }
 
   function gpGdEventHintsOverlap(a, b) {
