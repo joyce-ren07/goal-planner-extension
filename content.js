@@ -4867,12 +4867,54 @@
     syncPrefTimeTriggerLabel();
   }
 
-  function initPrefTimePicker() {
-    const trigger = document.getElementById('gp-pref-time-trigger');
-    const hidden = document.getElementById('gp-pref-time-input');
-    if (!trigger || !hidden) return;
+  /** Upgrade legacy `<input type="time">` and ensure trigger + hidden value exist. */
+  function ensurePrefTimeControl() {
+    const section = document.getElementById('gp-pref-time-section');
+    if (!section) return;
+    let trigger = document.getElementById('gp-pref-time-trigger');
+    let hidden = document.getElementById('gp-pref-time-input');
+    const legacy = section.querySelector('input[type="time"]');
+    if (!trigger && legacy instanceof HTMLInputElement) {
+      const saved = legacy.value || '';
+      trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.id = 'gp-pref-time-trigger';
+      trigger.textContent = 'Select time';
+      legacy.replaceWith(trigger);
+      if (!(hidden instanceof HTMLInputElement) || hidden.type === 'time') {
+        if (hidden) hidden.remove();
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = 'gp-pref-time-input';
+        hidden.value = '';
+        section.appendChild(hidden);
+      }
+      if (saved) hidden.value = saved;
+    }
+    if (!hidden || hidden.type === 'time') {
+      if (hidden?.type === 'time') {
+        const saved = hidden.value || '';
+        hidden.remove();
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = 'gp-pref-time-input';
+        hidden.value = saved;
+        section.appendChild(hidden);
+      }
+    }
     syncPrefTimeTriggerLabel();
-    trigger.addEventListener('click', (e) => {
+  }
+
+  function initPrefTimePicker() {
+    if (initPrefTimePicker._wired) return;
+    initPrefTimePicker._wired = true;
+    ensurePrefTimeControl();
+    const card = document.getElementById('gp-card');
+    if (!card) return;
+    card.addEventListener('click', (e) => {
+      const trigger = e.target.closest('#gp-pref-time-trigger');
+      if (!trigger) return;
+      e.preventDefault();
       e.stopPropagation();
       void openGCalNativePrefTimePicker(trigger);
     });
