@@ -1285,6 +1285,43 @@
     return 'later';
   }
 
+  /**
+   * Sidebar / filter bucket for a task using the current clock: calendar days
+   * first; for "today" with a specific time (not all-day), past end of that
+   * moment counts as overdue.
+   */
+  function getTaskSidebarFolderKey(task, now = new Date()) {
+    const dayDate = getTaskDueDateFromCard(task);
+    if (!dayDate || Number.isNaN(dayDate.getTime())) return 'later';
+
+    const today = normalizeDateOnly(now);
+    const dueDay = normalizeDateOnly(dayDate);
+
+    if (dueDay < today) return 'overdue';
+    if (dueDay > today) return 'later';
+
+    const allDay = task?.allDay === true;
+    const startHm = normalizeDueHm(task?.dueTimeStart || '');
+    const endHm = normalizeDueHm(task?.dueTimeEnd || '');
+
+    if (allDay || (!startHm && !endHm)) {
+      return 'today';
+    }
+
+    const y = dueDay.getFullYear();
+    const mo = dueDay.getMonth();
+    const d = dueDay.getDate();
+    const hmParts = (hm) => {
+      const [h, m] = hm.split(':').map(Number);
+      return new Date(y, mo, d, h, m, 0, 0);
+    };
+
+    const deadline = startHm ? hmParts(startHm) : hmParts(endHm);
+    if (Number.isNaN(deadline.getTime())) return 'today';
+
+    return deadline.getTime() < now.getTime() ? 'overdue' : 'today';
+  }
+
   function setCheckboxUncheckedVisual(checkbox) {
     const icon = checkbox.querySelector('.gp-task-checkbox-icon');
     if (!icon) return;
@@ -1574,20 +1611,17 @@
     }, TASK_COMPLETE_ANIM_MS + 500);
   }
 
-  function ensureFlyLayer(panel) {
-    let layer = panel.querySelector('.gp-fly-layer');
+  function ensureFolderMoveLayer(panel) {
+    const card = panel?.querySelector('.gp-card');
+    if (!card) return null;
+    let layer = card.querySelector('.gp-folder-move-layer');
     if (layer) return layer;
 
     layer = document.createElement('div');
-    layer.className = 'gp-fly-layer';
+    layer.className = 'gp-folder-move-layer';
     layer.setAttribute('aria-hidden', 'true');
-    panel.appendChild(layer);
+    card.appendChild(layer);
     return layer;
-  }
-
-  function setFlyingRowPosition(row, x, y, scale, opacity) {
-    row.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-    row.style.opacity = String(opacity);
   }
 
   function completeTask(checkbox) {
@@ -1595,15 +1629,18 @@
     const sourceFolder = row?.closest('.gp-task-folder');
     const accordion = row?.closest('#gp-tasks-accordion');
     const completedFolder = accordion?.querySelector('[data-folder="completed"]');
+    const completedInner = completedFolder?.querySelector('.gp-task-folder-panel-inner');
     const panel = row?.closest('#gp-panel');
 
-    if (!row || !sourceFolder || !completedFolder || !panel || sourceFolder === completedFolder) {
+    if (!row || !sourceFolder || !completedFolder || !completedInner || !panel || sourceFolder === completedFolder) {
       return;
     }
 
     if (row.dataset.completing === 'true' || checkbox.disabled) {
       return;
     }
+
+    clearGpFolderMoveAnimTimers();
 
     row.dataset.completing = 'true';
     checkbox.disabled = true;
@@ -1618,87 +1655,48 @@
       closeTaskStatusMenu();
     }
 
-    const rowRect = row.getBoundingClientRect();
-    const targetRect = completedFolder.querySelector('.gp-task-folder-header')?.getBoundingClientRect();
-    if (!targetRect) {
-      row.dataset.completing = 'false';
-      checkbox.disabled = false;
-      return;
-    }
-
-    const flyLayer = ensureFlyLayer(panel);
-    const flyingRow = row.cloneNode(true);
-    flyingRow.classList.add('gp-task-row--flying');
-    flyingRow.classList.remove('gp-task-row--departing', 'gp-task-row--completed');
-    flyingRow.style.width = `${rowRect.width}px`;
-    flyingRow.querySelectorAll('button').forEach((button) => {
-      button.disabled = true;
-    });
-    flyLayer.appendChild(flyingRow);
-
-    const startX = rowRect.left;
-    const startY = rowRect.top;
-    const endX = targetRect.left + targetRect.width / 2 - rowRect.width / 2;
-    const endY = targetRect.top + targetRect.height / 2 - rowRect.height / 2;
-
-    setFlyingRowPosition(flyingRow, startX, startY, 1, 1);
-    row.classList.add('gp-task-row--departing');
-    syncFolderCounts(accordion);
-    completedFolder.classList.add('gp-task-folder--receiving');
-
     const checkboxRect = checkbox.getBoundingClientRect();
+    const { ghost, fromRect } = createSidebarTaskFlyGhost(row);
+    const sourceFolderKey = sourceFolder.dataset.folder;
+    const oldIdx = SIDEBAR_FOLDER_ORDER.indexOf(sourceFolderKey);
+    const newIdx = SIDEBAR_FOLDER_ORDER.indexOf('completed');
+    const folderCountsBefore = {};
+    SIDEBAR_FOLDER_ORDER.forEach((k) => {
+      const f = accordion.querySelector(`[data-folder="${k}"]`);
+      folderCountsBefore[k] = getFolderTaskCount(f);
+    });
+
+    row.classList.add('gp-task-row--completed');
+    completedInner.prepend(row);
+    syncFolderCounts(accordion);
+
     spawnConfetti(
       panel,
       checkboxRect.left + checkboxRect.width / 2,
       checkboxRect.top + checkboxRect.height / 2,
     );
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setFlyingRowPosition(flyingRow, endX, endY, 0.55, 0.2);
-      });
+    const taskId = row.dataset.taskId;
+    runSidebarTaskFlyAnim(panel, accordion, {
+      ghost,
+      fromRect,
+      destRow: row,
+      destFolder: completedFolder,
+      destFolderKey: 'completed',
+      oldIdx,
+      newIdx,
+      folderCountsBefore,
+      onComplete: () => {
+        row.dataset.completing = 'false';
+        checkbox.disabled = false;
+        if (taskId) {
+          void loadKanbanState().then((state) => {
+            if (!moveTaskInState(state, taskId, 'done')) return state;
+            return saveKanbanState(state);
+          });
+        }
+      },
     });
-
-    const finishCompletion = () => {
-      flyingRow.remove();
-      row.classList.remove('gp-task-row--departing');
-      row.classList.add('gp-task-row--completed');
-      row.dataset.completing = 'false';
-
-      const completedInner = completedFolder.querySelector('.gp-task-folder-panel-inner');
-      if (completedInner) {
-        completedInner.prepend(row);
-      }
-
-      syncFolderCounts(accordion);
-
-      completedFolder.classList.add('open');
-      const completedToggle = completedFolder.querySelector('.gp-task-folder-toggle');
-      if (completedToggle) {
-        completedToggle.setAttribute('aria-expanded', 'true');
-      }
-
-      completedFolder.classList.remove('gp-task-folder--receiving');
-      checkbox.disabled = false;
-
-      const taskId = row.dataset.taskId;
-      if (taskId) {
-        void loadKanbanState().then((state) => {
-          if (!moveTaskInState(state, taskId, 'done')) return state;
-          return saveKanbanState(state);
-        });
-      }
-    };
-
-    let finished = false;
-    const onFinish = () => {
-      if (finished) return;
-      finished = true;
-      finishCompletion();
-    };
-
-    flyingRow.addEventListener('transitionend', onFinish, { once: true });
-    window.setTimeout(onFinish, TASK_COMPLETE_ANIM_MS + 120);
   }
 
   function initTaskCompletion(root) {
@@ -1965,6 +1963,13 @@
   let gpMkDueEditorTarget = null;
   /** @type {{ dueDate: string, dueTimeStart: string, dueTimeEnd: string, allDay: boolean } | null} */
   let gpMkDueEditorDraft = null;
+  /** @type {null | { taskId: string, oldFolder: string, newFolder: string, fromRect: DOMRect, ghost: HTMLElement, folderCountsBefore: Record<string, number> }} */
+  let gpFolderMoveAnimPending = null;
+  /** @type {null | (() => void)} */
+  let gpFolderMoveAnimClearTimers = null;
+  /** @type {null | number} */
+  let gpFolderMoveAnimRaf = null;
+
   function getCreateTaskDueIso() {
     return document.getElementById('gp-ct-due-date')?.value || '';
   }
@@ -3111,6 +3116,13 @@
     if (!gpMkDueEditorTarget || !gpMkDueEditorDraft) return;
     const { taskId, host } = gpMkDueEditorTarget;
     const draft = gpMkDueEditorDraft;
+    const panel = document.getElementById('gp-panel');
+    clearGpFolderMoveAnimTimers();
+    let pending = null;
+    if (panel && draft.dueDate) {
+      pending = captureSidebarFolderMoveAnimContext(panel, taskId, draft);
+    }
+    gpFolderMoveAnimPending = pending;
     if (host) {
       if (draft.dueDate) host.dataset.dueDate = draft.dueDate;
       if (draft.allDay) {
@@ -3125,16 +3137,17 @@
         else delete host.dataset.dueTimeEnd;
       }
     }
-    await updateKanbanTaskSchedule(taskId, {
+    const ok = await updateKanbanTaskSchedule(taskId, {
       dueDate: draft.dueDate,
       dueTimeStart: draft.dueTimeStart,
       dueTimeEnd: draft.dueTimeEnd,
       allDay: draft.allDay,
     });
+    if (!ok) gpFolderMoveAnimPending = null;
   }
 
   async function updateKanbanTaskSchedule(taskId, schedule) {
-    if (!taskId || !schedule?.dueDate) return;
+    if (!taskId || !schedule?.dueDate) return false;
     const state = await loadKanbanState();
     const allDay = Boolean(schedule.allDay);
     const dueDate = schedule.dueDate;
@@ -3163,8 +3176,9 @@
         return next;
       });
     });
-    if (!found) return;
+    if (!found) return false;
     await saveKanbanState(state);
+    return true;
   }
 
   function wireMkDueEditorOnce() {
@@ -3401,6 +3415,406 @@
     return Boolean(gpMkDueEditorTarget?.host?.classList.contains('is-schedule-open'));
   }
 
+  function takeMkDueSidebarEditorResume() {
+    const target = gpMkDueEditorTarget;
+    if (!target?.taskId) return null;
+    if (!target.host?.closest('#gp-panel')) return null;
+    if (!target.host.classList.contains('is-schedule-open')) return null;
+    return {
+      taskId: target.taskId,
+      dateDropdownOpen: !!target.dateDropdownOpen,
+      timeDropdownOpen: !!target.timeDropdownOpen,
+      timePopField: target.timePopField || null,
+    };
+  }
+
+  function resumeMkDueSidebarEditor(panel, state, resume) {
+    if (!resume?.taskId || !panel) return;
+    const row = [...panel.querySelectorAll('.gp-task-row')].find((r) => r.dataset.taskId === resume.taskId);
+    if (!row) return;
+    const dueBtn = row.querySelector('.gp-task-due-btn');
+    const scheduleEl = dueBtn?.querySelector('.gp-inline-schedule');
+    if (!dueBtn || !scheduleEl) return;
+    if (!findTaskColumnId(state, resume.taskId)) return;
+    if (!ensureMkDueEditorSync(dueBtn, resume.taskId, scheduleEl)) return;
+    const t = gpMkDueEditorTarget;
+    if (!t) return;
+    t.dateDropdownOpen = !!resume.dateDropdownOpen;
+    t.timeDropdownOpen = !!resume.timeDropdownOpen;
+    t.timePopField = resume.timePopField || null;
+    syncMkDueEditorUi();
+    applyMkDueDropdownUi();
+    if (resume.dateDropdownOpen) {
+      const iso = gpMkDueEditorDraft?.dueDate || '';
+      const base = parseDueDateIsoLocal(iso) || new Date();
+      gpMkDueCalViewMonth = new Date(base.getFullYear(), base.getMonth(), 1);
+      renderMkDueCalendar();
+    }
+    if (resume.timePopField) {
+      const se = t.scheduleEl;
+      if (se?.querySelector('.gp-inline-schedule-time-summary')) {
+        se.classList.add('is-time-edit-open');
+      }
+      requestAnimationFrame(() => scrollMkDueTimeListsToDraft(resume.timePopField));
+      queueMkDueDropdownScrollAdjust();
+    }
+    syncMkDueDropdownPortal();
+  }
+
+  function clearGpFolderMoveAnimTimers() {
+    if (gpFolderMoveAnimRaf) {
+      cancelAnimationFrame(gpFolderMoveAnimRaf);
+      gpFolderMoveAnimRaf = null;
+    }
+    if (typeof gpFolderMoveAnimClearTimers === 'function') {
+      gpFolderMoveAnimClearTimers();
+      gpFolderMoveAnimClearTimers = null;
+    }
+  }
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
+  }
+
+  function getSidebarStickyHeadHeight(panel) {
+    return panel?.querySelector('.gp-sidebar-sticky-head')?.offsetHeight ?? 0;
+  }
+
+  function computeSidebarScrollToCenterElement(scrollEl, targetEl, panel) {
+    if (!scrollEl || !targetEl) return scrollEl?.scrollTop ?? 0;
+    const stickyH = getSidebarStickyHeadHeight(panel);
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    const visibleTop = scrollRect.top + stickyH;
+    const visibleHeight = Math.max(0, scrollRect.height - stickyH);
+    const targetCenterY = targetRect.top + targetRect.height / 2;
+    const desiredCenterY = visibleTop + visibleHeight / 2;
+    const delta = targetCenterY - desiredCenterY;
+    const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+    return Math.max(0, Math.min(maxScroll, scrollEl.scrollTop + delta));
+  }
+
+  function scrollSidebarToCenterTask(scrollEl, targetEl, panel, behavior = 'auto') {
+    if (!scrollEl || !targetEl) return false;
+    const targetScroll = computeSidebarScrollToCenterElement(scrollEl, targetEl, panel);
+    if (Math.abs(targetScroll - scrollEl.scrollTop) <= 2) return false;
+    scrollEl.scrollTo({ top: targetScroll, behavior });
+    return true;
+  }
+
+  function setFolderMoveGhostPosition(ghost, x, y, opacity = 1) {
+    ghost.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    ghost.style.opacity = String(opacity);
+  }
+
+  function createSidebarTaskFlyGhost(row) {
+    const fromRect = row.getBoundingClientRect();
+    const ghost = row.cloneNode(true);
+    ghost.classList.add('gp-task-row--folder-move-ghost');
+    ghost.querySelectorAll('input, textarea, select').forEach((el) => {
+      el.disabled = true;
+      el.readOnly = true;
+    });
+    ghost.querySelectorAll('button').forEach((el) => {
+      el.disabled = true;
+    });
+    return { ghost, fromRect };
+  }
+
+  function runSidebarTaskFlyAnim(panel, accordion, config) {
+    const {
+      ghost,
+      fromRect,
+      destRow,
+      destFolder,
+      destFolderKey,
+      oldIdx,
+      newIdx,
+      folderCountsBefore = {},
+      onComplete,
+    } = config;
+
+    clearGpFolderMoveAnimTimers();
+    const timers = [];
+    const schedule = (fn, ms) => {
+      timers.push(window.setTimeout(fn, ms));
+    };
+    const cancelAll = () => {
+      if (gpFolderMoveAnimRaf) {
+        cancelAnimationFrame(gpFolderMoveAnimRaf);
+        gpFolderMoveAnimRaf = null;
+      }
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+    gpFolderMoveAnimClearTimers = cancelAll;
+
+    const finish = () => {
+      if (typeof onComplete === 'function') onComplete();
+      gpFolderMoveAnimClearTimers = null;
+    };
+
+    if (!ghost || !fromRect || !destRow || !destFolder || oldIdx < 0 || newIdx < 0) {
+      ghost?.remove();
+      finish();
+      return;
+    }
+
+    ensureSidebarFolderOpenForAnim(destFolder);
+
+    const pulseMs = 90;
+    const landMs = 920;
+    const scrollEl = panel.querySelector('.gp-card');
+    destRow.classList.add('gp-task-row--folder-move-pending');
+    destFolder.classList.add('gp-task-folder--receiving');
+
+    const startScroll = scrollEl?.scrollTop ?? 0;
+    const endScroll = scrollEl
+      ? computeSidebarScrollToCenterElement(scrollEl, destRow, panel)
+      : startScroll;
+    const needsScroll = scrollEl && Math.abs(endScroll - startScroll) > 2;
+    const flightMs = needsScroll ? 520 : 360;
+
+    const moveLayer = ensureFolderMoveLayer(panel);
+    if (!moveLayer) {
+      ghost.remove();
+      destRow.classList.remove('gp-task-row--folder-move-pending');
+      destFolder.classList.remove('gp-task-folder--receiving');
+      finish();
+      return;
+    }
+
+    const g = ghost;
+    g.style.width = `${fromRect.width}px`;
+    g.style.pointerEvents = 'none';
+    g.style.transition = 'none';
+    moveLayer.appendChild(g);
+    setFolderMoveGhostPosition(g, fromRect.left, fromRect.top, 1);
+
+    schedule(() => {
+      g.classList.add('gp-task-row--folder-move-ghost-pulse');
+    }, 0);
+
+    schedule(() => {
+      g.classList.remove('gp-task-row--folder-move-ghost-pulse');
+      flashIntermediateFolderLabels(accordion, oldIdx, newIdx, 0);
+
+      const sx = fromRect.left;
+      const sy = fromRect.top;
+      const flightStart = performance.now();
+
+      const flightTick = (now) => {
+        const rawT = Math.min(1, (now - flightStart) / flightMs);
+        const t = easeInOutCubic(rawT);
+
+        if (scrollEl && needsScroll) {
+          scrollEl.scrollTop = startScroll + (endScroll - startScroll) * t;
+        }
+
+        const targetRect = destRow.getBoundingClientRect();
+        const x = sx + (targetRect.left - sx) * t;
+        const y = sy + (targetRect.top - sy) * t;
+        const fadeStart = 0.82;
+        const opacity = rawT > fadeStart ? 1 - ((rawT - fadeStart) / (1 - fadeStart)) : 1;
+        setFolderMoveGhostPosition(g, x, y, opacity);
+
+        if (rawT < 1) {
+          gpFolderMoveAnimRaf = requestAnimationFrame(flightTick);
+        } else {
+          gpFolderMoveAnimRaf = null;
+        }
+      };
+      gpFolderMoveAnimRaf = requestAnimationFrame(flightTick);
+    }, pulseMs);
+
+    schedule(() => {
+      const destLabel = destFolder.querySelector('.gp-task-folder-label');
+      const fromCount = folderCountsBefore[destFolderKey] ?? 0;
+      const toCount = getFolderTaskCount(destFolder);
+      if (destLabel) {
+        destLabel.classList.add('gp-task-folder-label--flash');
+        if (fromCount !== toCount) {
+          animateFolderLabelCountTick(destLabel, destFolderKey, fromCount, toCount);
+        }
+      }
+      g.remove();
+      destRow.classList.remove('gp-task-row--folder-move-pending');
+      destRow.classList.add('gp-task-row--folder-move-land');
+    }, pulseMs + flightMs);
+
+    schedule(() => {
+      destRow.classList.remove('gp-task-row--folder-move-land');
+      destFolder.classList.remove('gp-task-folder--receiving');
+      const destLabel = destFolder.querySelector('.gp-task-folder-label');
+      destLabel?.classList.remove('gp-task-folder-label--flash');
+      syncFolderCount(destFolder);
+      finish();
+    }, pulseMs + flightMs + landMs);
+  }
+
+  function mergeTaskWithDueDraft(task, draft) {
+    if (!task || !draft) return null;
+    const allDay = Boolean(draft.allDay);
+    const out = { ...task, dueDate: draft.dueDate || task.dueDate };
+    if (allDay) {
+      out.allDay = true;
+      delete out.dueTimeStart;
+      delete out.dueTimeEnd;
+    } else {
+      delete out.allDay;
+      const ds = normalizeDueHm(draft.dueTimeStart || '');
+      const de = normalizeDueHm(draft.dueTimeEnd || '');
+      if (ds) out.dueTimeStart = ds;
+      else delete out.dueTimeStart;
+      if (de) out.dueTimeEnd = de;
+      else delete out.dueTimeEnd;
+    }
+    return out;
+  }
+
+  function sidebarTaskToFolderKey(task, columnId) {
+    if (columnId === 'done') return 'completed';
+    return getTaskSidebarFolderKey(task);
+  }
+
+  function captureSidebarFolderMoveAnimContext(panel, taskId, draft) {
+    const accordion = panel?.querySelector('#gp-tasks-accordion');
+    const row = panel?.querySelector(`.gp-task-row[data-task-id="${taskId}"]`);
+    const state = kanbanStateCache;
+    if (!accordion || !row || !state || !draft?.dueDate) return null;
+    const loc = findTaskWithColumn(state, taskId);
+    if (!loc) return null;
+    const oldFolder = sidebarTaskToFolderKey(loc.task, loc.columnId);
+    const merged = mergeTaskWithDueDraft(loc.task, draft);
+    if (!merged) return null;
+    const newFolder = sidebarTaskToFolderKey(merged, loc.columnId);
+    const folderCountsBefore = {};
+    SIDEBAR_FOLDER_ORDER.forEach((k) => {
+      const f = accordion.querySelector(`[data-folder="${k}"]`);
+      folderCountsBefore[k] = getFolderTaskCount(f);
+    });
+    const { ghost, fromRect } = createSidebarTaskFlyGhost(row);
+    return {
+      taskId,
+      oldFolder,
+      newFolder,
+      fromRect,
+      ghost,
+      folderCountsBefore,
+    };
+  }
+
+  function ensureSidebarFolderOpenForAnim(folderEl) {
+    if (!folderEl || folderEl.classList.contains('open')) return;
+    folderEl.classList.add('open');
+    const toggle = folderEl.querySelector('.gp-task-folder-toggle');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    syncFolderEmptyState(folderEl);
+  }
+
+  function flashIntermediateFolderLabels(accordion, oldIdx, newIdx, startMs) {
+    if (oldIdx === newIdx) return;
+    const step = newIdx > oldIdx ? 1 : -1;
+    const labels = [];
+    let i = oldIdx + step;
+    while (i !== newIdx) {
+      const fk = SIDEBAR_FOLDER_ORDER[i];
+      const label = accordion.querySelector(`[data-folder="${fk}"] .gp-task-folder-label`);
+      if (label) labels.push(label);
+      i += step;
+    }
+    if (!labels.length) return;
+    const spread = 220;
+    const each = Math.max(55, Math.floor(spread / labels.length));
+    labels.forEach((label, idx) => {
+      window.setTimeout(() => {
+        label.classList.add('gp-task-folder-label--trail');
+        window.setTimeout(() => label.classList.remove('gp-task-folder-label--trail'), each + 40);
+      }, startMs + idx * each);
+    });
+  }
+
+  function animateFolderLabelCountTick(labelEl, folderKey, fromCount, toCount) {
+    if (!labelEl || fromCount === toCount) return;
+    const title = FOLDER_LABELS[folderKey];
+    if (!title) return;
+    const steps = Math.abs(toCount - fromCount);
+    const dur = 180;
+    const stepMs = Math.max(28, Math.floor(dur / Math.max(steps, 1)));
+    let cur = fromCount;
+    const dir = toCount > fromCount ? 1 : -1;
+    const tick = () => {
+      labelEl.textContent = `${title} (${cur})`;
+      if (cur === toCount) return;
+      cur += dir;
+      window.setTimeout(tick, stepMs);
+    };
+    tick();
+  }
+
+  function runSidebarFolderMoveAnimAfterRender(panel, accordion, ctx) {
+    clearGpFolderMoveAnimTimers();
+    const timers = [];
+    const schedule = (fn, ms) => {
+      timers.push(window.setTimeout(fn, ms));
+    };
+    const cancelAll = () => {
+      if (gpFolderMoveAnimRaf) {
+        cancelAnimationFrame(gpFolderMoveAnimRaf);
+        gpFolderMoveAnimRaf = null;
+      }
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+    gpFolderMoveAnimClearTimers = cancelAll;
+
+    const loc = findTaskWithColumn(kanbanStateCache, ctx.taskId);
+    const destRow = loc
+      ? panel.querySelector(`.gp-task-row[data-task-id="${ctx.taskId}"]`)
+      : null;
+    if (!loc || !destRow || !ctx.ghost) {
+      ctx.ghost?.remove();
+      gpFolderMoveAnimClearTimers = null;
+      return;
+    }
+    if (!cardMatchesBoardFilters(loc.task, loc.columnId, kanbanStateCache.filters)) {
+      ctx.ghost.remove();
+      gpFolderMoveAnimClearTimers = null;
+      return;
+    }
+
+    const newFolder = sidebarTaskToFolderKey(loc.task, loc.columnId);
+    const pulseOnly = ctx.oldFolder === newFolder;
+
+    if (pulseOnly) {
+      ctx.ghost?.remove();
+      const scrollEl = panel.querySelector('.gp-card');
+      scrollSidebarToCenterTask(scrollEl, destRow, panel, 'smooth');
+      destRow.classList.add('gp-task-row--folder-move-highlight');
+      schedule(() => destRow.classList.remove('gp-task-row--folder-move-highlight'), 820);
+      schedule(() => { gpFolderMoveAnimClearTimers = null; }, 830);
+      return;
+    }
+
+    const destFolder = accordion.querySelector(`[data-folder="${newFolder}"]`);
+    const oldIdx = SIDEBAR_FOLDER_ORDER.indexOf(ctx.oldFolder);
+    const newIdx = SIDEBAR_FOLDER_ORDER.indexOf(newFolder);
+    if (oldIdx < 0 || newIdx < 0) {
+      ctx.ghost.remove();
+      gpFolderMoveAnimClearTimers = null;
+      return;
+    }
+
+    runSidebarTaskFlyAnim(panel, accordion, {
+      ghost: ctx.ghost,
+      fromRect: ctx.fromRect,
+      destRow,
+      destFolder,
+      destFolderKey: newFolder,
+      oldIdx,
+      newIdx,
+      folderCountsBefore: ctx.folderCountsBefore,
+    });
+  }
+
   function bindSidebarTaskTitleInput(title, row) {
     if (!title || !row || title.dataset.gpTitleBound === 'true') return;
     title.dataset.gpTitleBound = 'true';
@@ -3523,6 +3937,7 @@
     };
     if (dueTimeStart) out.dueTimeStart = dueTimeStart;
     if (dueTimeEnd) out.dueTimeEnd = dueTimeEnd;
+    if (card?.allDay === true) out.allDay = true;
     if (chipCustomHex) out.chipCustomHex = chipCustomHex;
     return out;
   }
@@ -3693,11 +4108,7 @@
   }
 
   function isCardOverdue(card, now = new Date()) {
-    const due = getTaskDueDateFromCard(card);
-    if (!due) return false;
-    const dueDay = normalizeDateOnly(due);
-    const today = normalizeDateOnly(now);
-    return dueDay < today;
+    return getTaskSidebarFolderKey(card, now) === 'overdue';
   }
 
   function isBoardFilterActive(filters) {
@@ -3866,6 +4277,13 @@
     return null;
   }
 
+  function findTaskWithColumn(state, taskId) {
+    const columnId = findTaskColumnId(state, taskId);
+    if (!columnId) return null;
+    const task = (state.columns[columnId] || []).find((card) => card.id === taskId);
+    return task ? { task, columnId } : null;
+  }
+
   function moveTaskInState(state, taskId, targetColumnId) {
     const sourceColumnId = findTaskColumnId(state, taskId);
     if (!sourceColumnId || sourceColumnId === targetColumnId) return false;
@@ -4023,7 +4441,12 @@
   function renderSidebarTasks(panel, state) {
     const accordion = panel?.querySelector('#gp-tasks-accordion');
     if (!accordion) return;
-    if (isSidebarTitleEditActive() || isMkDueEditorActive()) return;
+    if (isSidebarTitleEditActive()) return;
+
+    const sidebarDueResume = takeMkDueSidebarEditorResume();
+    if (sidebarDueResume) {
+      closeMkDueEditor();
+    }
 
     const buckets = {
       overdue: [],
@@ -4043,7 +4466,7 @@
           return;
         }
 
-        const folderKey = getDeadlineFolderKey(getTaskDueDateFromCard(task));
+        const folderKey = getTaskSidebarFolderKey(task);
         if (buckets[folderKey]) {
           buckets[folderKey].push({ task, columnId: id });
         }
@@ -4066,6 +4489,14 @@
     });
 
     syncFolderCounts(accordion);
+    if (sidebarDueResume) {
+      resumeMkDueSidebarEditor(panel, state, sidebarDueResume);
+    }
+    const animCtx = gpFolderMoveAnimPending;
+    gpFolderMoveAnimPending = null;
+    if (animCtx && panel) {
+      requestAnimationFrame(() => runSidebarFolderMoveAnimAfterRender(panel, accordion, animCtx));
+    }
   }
 
   function isKanbanDragActive() {
@@ -4076,7 +4507,7 @@
   function refreshLinkedTaskViews(state, options = {}) {
     const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
     const panel = document.getElementById('gp-panel');
-    if (panel && !isSidebarTitleEditActive() && !isMkDueEditorActive()) {
+    if (panel && !isSidebarTitleEditActive()) {
       renderSidebarTasks(panel, normalized);
     }
 
@@ -8243,9 +8674,35 @@
     ensureGlobalTaskModals();
     setupNativeTasksFrameBridge();
     mountSidebar();
+    setupCalendarDueFolderRefreshListeners();
     await ensurePaletteCaches();
     setupRailObserver();
     setupNativeTasksKanbanObserver();
+    void syncTaskViewsFromStorage();
+  }
+
+  let gpDueFolderRefreshWired = false;
+
+  function refreshTaskViewsIfQuiet() {
+    if (!document.getElementById('gp-panel')) return;
+    if (isSidebarTitleEditActive() || isMkDueEditorActive()) return;
+    if (kanbanStateCache) {
+      refreshLinkedTaskViews(kanbanStateCache);
+    } else {
+      void syncTaskViewsFromStorage();
+    }
+  }
+
+  function setupCalendarDueFolderRefreshListeners() {
+    if (gpDueFolderRefreshWired) return;
+    gpDueFolderRefreshWired = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refreshTaskViewsIfQuiet();
+    });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) refreshTaskViewsIfQuiet();
+    });
+    window.setInterval(refreshTaskViewsIfQuiet, 60_000);
   }
 
   function handleToggleRequest() {
