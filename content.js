@@ -9865,8 +9865,15 @@
       if (ec instanceof HTMLElement) ec.classList.toggle('gp-goal-event-done', done);
       if (done) chip.dataset.goalCompleted = 'true';
       else delete chip.dataset.goalCompleted;
+      const goals = _gpGoalsCache || [];
+      const goalId = chip.dataset.gpGoalId;
+      const goal = goalId
+        ? goals.find((g) => String(g.id) === String(goalId))
+        : findLegacyGoalForGoalChip(chip, goals);
+      const accent = goal ? getGoalChipAccentColor(goal) : GP_GOAL_DEFAULT_UI_COLOR;
+      applyGoalChipTheme(chip, accent, done);
       const circle = chip.querySelector('.goal-checkbox') || chip.querySelector('.ext-check-circle');
-      if (circle) circle.innerHTML = done ? SVG_CHECK_DONE : SVG_CIRCLE_ACTIVE;
+      if (circle) circle.innerHTML = goalCheckboxSvg(accent, done);
     },
 
     toggleCompletion(canonicalEventKey, chip) {
