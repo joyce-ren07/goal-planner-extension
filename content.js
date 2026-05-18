@@ -1380,7 +1380,8 @@
               <span class="gp-section-label">Set custom time</span>
               <span class="gp-std-time-hint">optional</span>
             </div>
-            <input type="time" id="gp-pref-time-input" class="gp-pref-time-input" />
+            <button type="button" id="gp-pref-time-trigger" class="gp-pref-time-input">Select time</button>
+            <input type="hidden" id="gp-pref-time-input" value="" />
           </div>
           <div class="gp-action-group" style="margin-top:12px;">
             <button class="gp-btn-primary gp-btn-full gp-btn-calendar" id="gp-confirm-add">Create goal</button>
