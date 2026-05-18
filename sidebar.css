@@ -9,7 +9,7 @@
   --gp-kanban-panel-rail-inset: 56px;
   --gp-kanban-panel-rail-gap: 4px;
   --gp-kanban-panel-height: calc(100vh - var(--gp-kanban-panel-top) - 8px);
-  /* M3 shape scale + surfaces (Material 3); #gp-kanban-panel overrides where needed */
+  /* M3 shape scale + surfaces (Material 3); #gp-panel overrides where needed */
   --m3-radius-xs: 4px;
   --m3-radius-sm: 8px;
   --m3-radius-md: 12px;
@@ -110,12 +110,7 @@
   min-height: 0;
 }
 
-/* When both panels are open, kanban sits left of the goal panel (offset set in JS). */
-body.gp-dual-panels-goals-open #gp-kanban-panel.mytasks-sidebar.open {
-  right: calc(var(--gp-kanban-panel-right, 56px) + var(--gp-dual-goal-offset, 0px));
-}
-
-#gp-sidebar-rail {
+#gp-kanban-sidebar-rail {
   position: fixed;
   z-index: 2147483645;
   display: flex;
@@ -947,9 +942,8 @@ body.gp-sidebar-open .mytasks-native-tasks-layout .mytasks-kanban__board {
 .mytasks-kanban .mk-column {
   display: flex;
   flex-direction: column;
-  flex: 1 1 280px;
-  min-width: 280px;
-  max-width: 480px;
+  flex: 0 0 260px;
+  width: 260px;
   height: 100%;
   min-height: 100%;
   align-self: stretch;
@@ -6001,3 +5995,9 @@ body.gp-sidebar-open .gp-mt-layer {
   --gp-cal-pill-bg: color-mix(in srgb, var(--gp-cal-pill-fg, #5f6368) 16%, #ffffff);
 }
 
+
+
+/* When both panels are open, kanban sits left of the goal panel (offset set in JS). */
+body.gp-dual-panels-goals-open #gp-kanban-panel.mytasks-sidebar.open {
+  right: calc(var(--gp-kanban-panel-right, 56px) + var(--gp-dual-goal-offset, 0px));
+}

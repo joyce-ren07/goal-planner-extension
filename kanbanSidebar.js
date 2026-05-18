@@ -1043,7 +1043,7 @@
     }
 
     const candidates = [...document.querySelectorAll('[role="main"], main')]
-      .filter((el) => !el.closest('.mytasks-sidebar, .mytasks-native-tasks-layout, #gp-kanban-panel'))
+      .filter((el) => !el.closest('.mytasks-sidebar, .mytasks-native-tasks-layout, #gp-kanban-panel, #gp-panel'))
       .filter((el) => {
         const rect = el.getBoundingClientRect();
         return rect.width >= 280 && rect.height >= 200;
@@ -4745,15 +4745,27 @@
     return kanbanStateCache;
   }
 
+  function kanbanStateHasTasks(state) {
+    if (!state?.columns) return false;
+    return KANBAN_COLUMN_DEFS.some(({ id }) => getCardsForColumn(state, id).length > 0);
+  }
+
   async function loadKanbanState() {
     const stored = await readSidebarStorage([KANBAN_STORAGE_KEY]);
     const chromeState = stored[KANBAN_STORAGE_KEY];
     const lsFilters = readFiltersFromLocalStorage();
+    const defaults = getDefaultKanbanState();
+    const base = chromeState && kanbanStateHasTasks(chromeState) ? chromeState : defaults;
 
     kanbanStateCache = normalizeKanbanState({
-      ...(chromeState || getDefaultKanbanState()),
+      ...defaults,
+      ...base,
+      columns: {
+        ...defaults.columns,
+        ...(base.columns || {}),
+      },
       filters: {
-        ...(chromeState?.filters || getDefaultKanbanFilters()),
+        ...(base.filters || getDefaultKanbanFilters()),
         ...(lsFilters || {}),
       },
     });
@@ -8258,7 +8270,7 @@
 
   function isExtensionTasksControl(el) {
     return Boolean(
-      el?.closest('#gp-kanban-panel, .mytasks-sidebar, #gp-kanban-sidebar-btn, .gp-kanban-sidebar-btn-shell, #gp-sidebar-rail')
+      el?.closest('#gp-kanban-panel, .mytasks-sidebar, #gp-kanban-sidebar-btn, .gp-kanban-sidebar-btn-shell, #gp-kanban-sidebar-rail')
       || /\bmy tasks\b/i.test(getElementLabel(el)),
     );
   }
@@ -8328,7 +8340,7 @@
 
   function isTasksSurfaceVisible(el) {
     if (!el || !isVisibleElement(el)) return false;
-    if (el.closest('#gp-kanban-panel, .mytasks-sidebar')) return false;
+    if (el.closest('#gp-kanban-panel, #gp-panel, .mytasks-sidebar')) return false;
 
     const calendarMain = getCalendarMainEl();
     if (calendarMain && (el === calendarMain || el.contains(calendarMain))) return false;
@@ -8441,7 +8453,7 @@
   function isNativeTasksManagedElement(el) {
     if (!(el instanceof Element)) return false;
     return Boolean(
-      el.closest('.mytasks-kanban, .mytasks-native-tasks-nav, .mytasks-native-tasks-layout, #gp-kanban-panel, .mytasks-sidebar'),
+      el.closest('.mytasks-kanban, .mytasks-native-tasks-nav, .mytasks-native-tasks-layout, #gp-kanban-panel, #gp-panel, .mytasks-sidebar'),
     );
   }
 
@@ -9043,7 +9055,7 @@
   }
 
   async function injectKanbanIntoNativeTasksPanel(host) {
-    if (!host || host.closest('#gp-kanban-panel, .mytasks-sidebar')) return;
+    if (!host || host.closest('#gp-kanban-panel, #gp-panel, .mytasks-sidebar')) return;
 
     ensureNativeTasksLayout(host);
     ensureNativeTasksNavShell(host);
@@ -10112,14 +10124,15 @@
 
   async function bootstrapCalendarTasksUi() {
     primeKanbanFiltersFromLocalStorage();
+    await maybeClearKanbanBoardStorageOnce();
     ensureGlobalTaskModals();
     setupNativeTasksFrameBridge();
     mountSidebar();
     setupCalendarDueFolderRefreshListeners();
+    await ensurePaletteCaches();
+    setupRailObserver();
     setupNativeTasksKanbanObserver();
     setupCalendarWeekTaskOverlay();
-    await maybeClearKanbanBoardStorageOnce();
-    await ensurePaletteCaches();
     void syncTaskViewsFromStorage();
   }
 
