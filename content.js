@@ -4813,9 +4813,19 @@
   /** In-place refresh — never tear down a mounted block that is still in the open inspector. */
   function gpGdStabilizeMountedDetailBlock(ext, dialogShell, hit) {
     if (!(ext instanceof HTMLElement) || !ext.isConnected) return false;
-    if (dialogShell instanceof HTMLElement) {
-      gpGdAlignInjectedBlockToCard(ext, dialogShell);
-      gpGdAlignMarkFooterToCard(dialogShell);
+    const card =
+      dialogShell instanceof HTMLElement
+        ? gpGdResolveInspectorCardRoot(dialogShell, ext.dataset.gpGoalId || '')
+        : null;
+    if (dialogShell instanceof HTMLElement && card instanceof HTMLElement) {
+      const blockOk = gpGdIsGoalBlockWellPlaced(ext, dialogShell, false);
+      const footerOk = gpGdIsMarkFooterWellPlaced(__gpGdMarkFooterEl, card);
+      if (!gpGdLayoutLocked() || !blockOk) {
+        gpGdAlignInjectedBlockToCard(ext, dialogShell);
+      }
+      if (!gpGdLayoutLocked() || !footerOk) {
+        gpGdAlignMarkFooterToCard(dialogShell);
+      }
     }
     const sessDone =
       hit?.session?.completed ??
@@ -4823,14 +4833,9 @@
     if (hit?.goal) {
       gpGdRefreshDetailSubtasks(ext, hit);
     }
-    const card =
-      dialogShell instanceof HTMLElement
-        ? gpGdResolveInspectorCardRoot(dialogShell, ext.dataset.gpGoalId || '')
-        : null;
     if (card instanceof HTMLElement && gpGdIsValidEventDetailCardRoot(card, dialogShell)) {
       if (!gpGdGetDetailMarkCompleteBtn()) {
         gpGdMountMarkCompleteFooter(gpGdBuildMarkCompleteButton(!!sessDone), card);
-        if (dialogShell instanceof HTMLElement) gpGdAlignMarkFooterToCard(dialogShell);
       } else {
         gpGdSyncMarkCompleteButton(!!sessDone);
       }
