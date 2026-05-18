@@ -4354,6 +4354,7 @@
     // Show the screen immediately with skeleton cards (one per selected day)
     showScreen('suggestions');
     resetPrefTimeInput();
+    loadColorLabelsIntoState(state.selectedColorLabelId);
     const sessionCount = Math.max(1, r.days.length);
     renderSkeletons(sessionCount);
 
