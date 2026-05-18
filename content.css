@@ -1137,6 +1137,27 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
+.gp-color-chip-remove {
+  display: none;
+  width: 18px; height: 18px;
+  margin-left: 2px; margin-right: -6px;
+  border-radius: 50%;
+  align-items: center; justify-content: center;
+  color: #5f6368; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.gp-color-chip:hover .gp-color-chip-remove,
+.gp-color-chip.selected .gp-color-chip-remove {
+  display: inline-flex;
+}
+.gp-color-chip-remove:hover {
+  background: rgba(60, 64, 67, 0.12);
+  color: #202124;
+}
+.gp-color-chip-remove .gp-ms-icon {
+  font-size: 14px;
+  font-variation-settings: 'opsz' 20, 'wght' 500, 'FILL' 0, 'GRAD' 0;
+}
 .gp-color-chip-add {
   width: 32px; height: 32px; padding: 0;
   border-radius: 50%;
@@ -1146,6 +1167,11 @@
   transition: background 0.12s;
 }
 .gp-color-chip-add:hover { background: #f1f3f4; }
+.gp-color-chip-add:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: #fff;
+}
 .gp-color-chip-add .gp-ms-icon {
   font-size: 18px;
   font-variation-settings: 'opsz' 20, 'wght' 400, 'FILL' 0, 'GRAD' 0;
