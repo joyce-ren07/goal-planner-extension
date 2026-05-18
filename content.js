@@ -5060,10 +5060,10 @@
     input?.addEventListener('blur', () => { commit(); });
   }
 
-  async function handleColorSwatchClick(colorId, dotHex) {
+  async function handleColorSwatchClick(colorId, hex) {
     const sel = findColorLabelById(state.selectedColorLabelId);
     if (!sel) return;
-    sel.color = dotHex;
+    sel.color = hex;
     sel.colorId = colorId;
     await saveColorLabels(state.colorLabels);
     renderColorLabelsSection();
