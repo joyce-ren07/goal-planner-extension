@@ -5422,7 +5422,7 @@
     );
     if (!legacy) return false;
     const hints = (hintList || []).filter((h) => h != null && h !== '');
-    if (!hints.length) return true;
+    if (!hints.length) return false;
     const owner = legacyGoalIdForPlannerEventCandidates(legacyGoals, ...hints);
     return owner !== '' && String(owner) === gid;
   }
