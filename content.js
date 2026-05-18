@@ -5488,6 +5488,16 @@
     _gpGdPinnedSlotIdx = Number.isFinite(slotN) && slotN >= 0 ? slotN : -1;
     _gpGdPinnedHints = hints;
     _gpGdPinnedAt = Date.now();
+    void getGoals().then((goals) => {
+      if (_gpGdPinnedGoalId) return;
+      const row = findLegacyGoalForGoalChip(chip, goals);
+      if (row?.id != null && row.id !== '') {
+        _gpGdPinnedGoalId = String(row.id);
+        return;
+      }
+      const fromHints = legacyGoalIdForPlannerEventCandidates(goals, ...hints);
+      if (fromHints) _gpGdPinnedGoalId = fromHints;
+    });
     if (_gpGdPinnedGoalId) {
       void (async () => {
         try {
