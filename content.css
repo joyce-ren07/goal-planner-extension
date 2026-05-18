@@ -1103,6 +1103,93 @@
 /* Suggestions list container */
 #gp-suggestions-list { display: flex; flex-direction: column; }
 
+/* ── Color labels picker (GCal "Your color labels" design) ── */
+.gp-color-labels {
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+.gp-color-chips {
+  display: flex; flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.gp-color-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 14px 0 10px;
+  border-radius: 16px;
+  background: #fff; border: 1px solid #dadce0;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  font-size: 13px; font-weight: 400; color: #3c4043;
+  cursor: pointer; user-select: none;
+  box-sizing: border-box;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.gp-color-chip:hover { background: #f8f9fa; }
+.gp-color-chip.selected {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 1px #1a73e8;
+}
+.gp-color-chip-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gp-color-chip-add {
+  width: 32px; height: 32px; padding: 0;
+  border-radius: 50%;
+  background: #fff; border: 1px solid #dadce0;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #5f6368;
+  transition: background 0.12s;
+}
+.gp-color-chip-add:hover { background: #f1f3f4; }
+.gp-color-chip-add .gp-ms-icon {
+  font-size: 18px;
+  font-variation-settings: 'opsz' 20, 'wght' 400, 'FILL' 0, 'GRAD' 0;
+}
+.gp-color-swatches {
+  display: flex; flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.gp-color-swatch {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  cursor: pointer; padding: 0; border: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform 0.12s;
+}
+.gp-color-swatch:hover { transform: scale(1.08); }
+.gp-color-swatch .gp-color-swatch-check {
+  display: none;
+  color: #fff;
+  font-size: 14px;
+  font-variation-settings: 'opsz' 20, 'wght' 700, 'FILL' 1, 'GRAD' 0;
+}
+.gp-color-swatch.selected .gp-color-swatch-check { display: inline-flex; }
+
+/* ── Add-label inline input (replaces "+" chip while creating) ── */
+.gp-color-chip-add-input {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 10px;
+  border-radius: 16px;
+  background: #fff; border: 1px solid #1a73e8;
+  box-shadow: 0 0 0 1px #1a73e8;
+  box-sizing: border-box;
+}
+.gp-color-chip-add-input .gp-color-chip-dot {
+  background: #5484ed;
+}
+.gp-color-chip-add-input input {
+  border: none; outline: none; background: transparent;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
+  font-size: 13px; font-weight: 400; color: #3c4043;
+  width: 100px; padding: 0;
+}
+
 /* ── Toast (GCal native snackbar) ── */
 .gp-toast {
   display: none;
