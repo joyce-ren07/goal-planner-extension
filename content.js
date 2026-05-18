@@ -1697,14 +1697,34 @@
     return null;
   }
 
+  /** True when My goals was inserted below Booking pages (stale mount order). */
+  function gpGoalsSidebarNeedsReposition(scrollEl, root) {
+    if (!(scrollEl instanceof HTMLElement) || !(root instanceof HTMLElement)) return false;
+    if (root.parentElement !== scrollEl) return true;
+    const booking = findSidebarSectionTopBlock(scrollEl, /Booking pages|Booking insights?/i);
+    if (!booking) return false;
+    return !!(root.compareDocumentPosition(booking) & Node.DOCUMENT_POSITION_PRECEDING);
+  }
+
+  /** Stack order: … → Meet with → My goals → Booking pages → … */
   function insertGoalsSectionIntoSidebarScroll(scrollEl, root) {
     const booking = findSidebarSectionTopBlock(scrollEl, /Booking pages|Booking insights?/i);
-    const other = findSidebarSectionTopBlock(scrollEl, /Other calendars/i);
-    const after = booking || other;
-    if (after && after.parentElement === scrollEl) {
-      if (after.nextElementSibling) scrollEl.insertBefore(root, after.nextElementSibling);
+    if (booking && booking.parentElement === scrollEl) {
+      scrollEl.insertBefore(root, booking);
+      return;
+    }
+    const meetWith = findSidebarSectionTopBlock(scrollEl, /Meet with/i);
+    if (meetWith && meetWith.parentElement === scrollEl) {
+      if (meetWith.nextElementSibling) scrollEl.insertBefore(root, meetWith.nextElementSibling);
       else scrollEl.appendChild(root);
-    } else scrollEl.appendChild(root);
+      return;
+    }
+    const other = findSidebarSectionTopBlock(scrollEl, /Other calendars/i);
+    if (other && other.parentElement === scrollEl) {
+      scrollEl.insertBefore(root, other);
+      return;
+    }
+    scrollEl.appendChild(root);
   }
 
   /** Labels for native accordion section headers (Calendar locale / naming). */
