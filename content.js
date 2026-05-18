@@ -1361,7 +1361,7 @@
           </div>
           <div class="gp-action-group" style="margin-top:12px;">
             <button class="gp-btn-primary gp-btn-full gp-btn-calendar" id="gp-confirm-add">Create goal</button>
-          </motion-replacement>
+          </div>
         </div>
 
       </div>`;
