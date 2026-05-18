@@ -1731,6 +1731,7 @@
   const NATIVE_SIDEBAR_SECTION_LABEL_RES = [
     /^My calendars$/i,
     /^Other calendars$/i,
+    /meet\s*with/i,
     /booking\s*pages/i,
     /booking\s*insights?/i,
     /time\s*insights?/i,
