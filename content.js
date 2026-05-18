@@ -2079,10 +2079,7 @@
     const border = accent;
     const text = rgbToHex(goalSessionTextRgbForFill(accentRgb, fillRgb));
     const badgeBg = accent;
-    const badgeFg =
-      contrastRatioRgb({ r: 255, g: 255, b: 255 }, accentRgb) >= 3
-        ? '#ffffff'
-        : text;
+    const badgeFg = '#ffffff';
     const doneFillRgb = blendRgbTowardWhite(accentRgb, 0.22);
     const doneBorderRgb = blendRgbTowardWhite(accentRgb, 0.42);
     const theme = {
