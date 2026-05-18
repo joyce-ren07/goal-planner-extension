@@ -1498,8 +1498,10 @@
     });
 
     accordion.addEventListener('click', (event) => {
-      const trigger = event.target.closest('.gp-filter-chip-menu-btn');
-      if (!trigger || !accordion.contains(trigger)) return;
+      const chip = event.target.closest('.gp-filter-chip');
+      if (!chip || !accordion.contains(chip)) return;
+      const trigger = chip.querySelector('.gp-filter-chip-menu-btn');
+      if (!trigger || trigger.disabled || chip.closest('.gp-task-row--departing')) return;
 
       event.preventDefault();
       event.stopPropagation();
@@ -1508,7 +1510,7 @@
 
     panel.addEventListener('click', (event) => {
       if (!isStatusMenuOpen()) return;
-      if (menu.contains(event.target) || event.target.closest('.gp-filter-chip-menu-btn')) return;
+      if (menu.contains(event.target) || event.target.closest('.gp-filter-chip')) return;
       closeStatusMenu();
     });
 
