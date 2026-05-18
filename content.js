@@ -9244,7 +9244,7 @@
 
   function initDatePicker() {
     const chip    = document.getElementById('gp-end-date-chip');
-    const popover = document.getElementById('gp-date-popover');
+    const popover = ensureGpDatePopoverOnBody();
     const MONTHS  = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
     let calY, calM;
