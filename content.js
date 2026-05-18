@@ -13,6 +13,8 @@
   };
   let gpSidebarInsetReflowTimer = null;
   const MAIN_MARGIN_TRANSITION = 'margin-right 0.2s ease';
+  const GP_SIDEBAR_OPEN_ANIM_MS = 280;
+  let gpDeferCalendarOverlayUntil = 0;
   const TASK_COMPLETE_ANIM_MS = 1200;
   const TASK_STATUSES = {
     planned: {
@@ -1082,7 +1084,9 @@
           window.innerWidth - mainRect.right - PANEL_WIDTH_PX - PANEL_CALENDAR_GAP_PX,
         );
         const anchoredNearRail = railInset + PANEL_RAIL_GAP_PX;
-        panelRight = Math.min(flushRight, anchoredNearRail);
+        panelRight = flushRight > 0
+          ? Math.min(flushRight, anchoredNearRail)
+          : anchoredNearRail;
       }
     }
 
@@ -1114,11 +1118,7 @@
   }
 
   function applyGpSidebarTaskSurfaceInsets() {
-    /* Reserve space for the fixed extension panel on the native Tasks shell so the
-       Kanban column strip is narrower than the board content and `.mytasks-kanban__board`
-       can scroll horizontally (Calendar main margin alone does not always apply). */
     const layoutInsetRight = `${PANEL_WIDTH_PX + PANEL_CALENDAR_GAP_PX}px`;
-    /* Cap Kanban width when Calendar main margin does not shrink the flex row (Tasks rail). */
     const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px - ${PANEL_CALENDAR_GAP_PX}px - var(--gp-panel-rail-gap, 4px) - var(--gp-panel-rail-inset, 56px)))`;
 
     document.querySelectorAll('.mytasks-native-tasks-layout').forEach((el) => {
@@ -4599,10 +4599,11 @@
       const inner = folder?.querySelector('.gp-task-folder-panel-inner');
       if (!inner) return;
 
-      inner.innerHTML = '';
+      const fragment = document.createDocumentFragment();
       (buckets[folderKey] || []).forEach(({ task, columnId }) => {
-        inner.appendChild(renderSidebarTaskRow(task, columnId, state.tags));
+        fragment.appendChild(renderSidebarTaskRow(task, columnId, state.tags));
       });
+      inner.replaceChildren(fragment);
     });
 
     syncFolderCounts(accordion);
@@ -4634,11 +4635,15 @@
 
   function refreshLinkedTaskViews(state, options = {}) {
     const normalized = normalizeKanbanState(state || kanbanStateCache || getDefaultKanbanState());
-    scheduleCalendarWeekTaskOverlayRefresh(normalized);
+    if (!options.sidebarOnly) {
+      scheduleCalendarWeekTaskOverlayRefresh(normalized);
+    }
     const panel = document.getElementById('gp-panel');
     if (panel && !isSidebarTitleEditActive() && !options.skipSidebarRender) {
       renderSidebarTasks(panel, normalized);
     }
+
+    if (options.sidebarOnly) return;
 
     const filterNav = document.querySelector('.mytasks-filter-nav');
     if (filterNav) {
@@ -4676,9 +4681,9 @@
     });
   }
 
-  async function syncTaskViewsFromStorage() {
+  async function syncTaskViewsFromStorage(options = {}) {
     const state = await loadKanbanState();
-    refreshLinkedTaskViews(state);
+    refreshLinkedTaskViews(state, options);
     return state;
   }
 
@@ -9422,6 +9427,7 @@
   }
 
   function openPanel() {
+    gpDeferCalendarOverlayUntil = Date.now() + GP_SIDEBAR_OPEN_ANIM_MS;
     const panel = mountSidebar();
     void syncTaskViewsFromStorage();
     panel.classList.add('open');
@@ -9988,13 +9994,22 @@
   }
 
   function scheduleCalendarWeekTaskOverlayRefresh(state) {
-    if (gpCalOverlayCtx.refreshTimer) {
-      window.clearTimeout(gpCalOverlayCtx.refreshTimer);
+    const deferMs = gpDeferCalendarOverlayUntil - Date.now();
+    const runRefresh = () => {
+      if (gpCalOverlayCtx.refreshTimer) {
+        window.clearTimeout(gpCalOverlayCtx.refreshTimer);
+      }
+      gpCalOverlayCtx.refreshTimer = window.setTimeout(() => {
+        gpCalOverlayCtx.refreshTimer = null;
+        void refreshCalendarWeekTaskOverlay(state);
+      }, 80);
+    };
+
+    if (deferMs > 0) {
+      window.setTimeout(runRefresh, deferMs);
+      return;
     }
-    gpCalOverlayCtx.refreshTimer = window.setTimeout(() => {
-      gpCalOverlayCtx.refreshTimer = null;
-      void refreshCalendarWeekTaskOverlay(state);
-    }, 80);
+    runRefresh();
   }
 
   function handleCalendarWeekOverlayClick(event) {

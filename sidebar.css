@@ -28,6 +28,10 @@
   --gp-sidebar-due-text-inset-x: 8px;
 }
 
+#gp-panel.mytasks-sidebar .gp-card {
+  contain: layout style paint;
+}
+
 #gp-panel.mytasks-sidebar {
   --m3-surface: #ffffff;
   --m3-on-surface: #1d1b20;
@@ -798,9 +802,7 @@
   border: 0;
 }
 
-/* When sidebar is open: reserve horizontal room and allow the flex row to shrink
-   so the Kanban board can scroll under the fixed extension panel (see content.js
-   applyGpSidebarTaskSurfaceInsets padding on this layout). */
+/* When sidebar is open: allow the flex row to shrink (room comes from Calendar main padding). */
 body.gp-sidebar-open .mytasks-native-tasks-layout {
   min-width: 0;
 }
