@@ -10341,6 +10341,17 @@
         if (changes.gp_goals) {
           const next = changes.gp_goals.newValue;
           _gpGoalsCache = Array.isArray(next) ? next : _gpGoalsCache || [];
+          const goals = _gpGoalsCache || [];
+          document.querySelectorAll('[data-eventchip].ext-goal-chip').forEach((chip) => {
+            if (!(chip instanceof HTMLElement)) return;
+            const goalId = chip.dataset.gpGoalId;
+            const goal = goalId
+              ? goals.find((g) => String(g.id) === String(goalId))
+              : findLegacyGoalForGoalChip(chip, goals);
+            if (!goal) return;
+            const done = chip.classList.contains('ext-goal-completed');
+            applyGoalChipTheme(chip, getGoalChipAccentColor(goal), done);
+          });
         }
       });
     }
