@@ -1109,8 +1109,19 @@
   }
 
   function applyGpSidebarTaskSurfaceInsets() {
+    /* Reserve space for the fixed extension panel on the native Tasks shell so the
+       Kanban column strip is narrower than the board content and `.mytasks-kanban__board`
+       can scroll horizontally (Calendar main margin alone does not always apply). */
+    const layoutInsetRight = `${PANEL_WIDTH_PX + PANEL_CALENDAR_GAP_PX}px`;
     /* Cap Kanban width when Calendar main margin does not shrink the flex row (Tasks rail). */
     const kanbanMaxWidth = `min(100%, calc(100vw - ${PANEL_WIDTH_PX}px - ${PANEL_CALENDAR_GAP_PX}px - var(--gp-panel-rail-gap, 4px) - var(--gp-panel-rail-inset, 56px)))`;
+
+    document.querySelectorAll('.mytasks-native-tasks-layout').forEach((el) => {
+      if (el.closest('#gp-panel')) return;
+      el.setAttribute(GP_SIDEBAR_INSET_ATTR, 'layout');
+      el.style.setProperty('padding-right', layoutInsetRight, 'important');
+      el.style.setProperty('box-sizing', 'border-box', 'important');
+    });
 
     document.querySelectorAll('.mytasks-kanban').forEach((kanban) => {
       if (kanban.closest('#gp-panel')) return;
@@ -2234,6 +2245,28 @@
     });
   }
 
+  function positionMkDueTimePop(pop, btn) {
+    if (!pop || !btn) return;
+    const r = btn.getBoundingClientRect();
+    const w = 132;
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    const list = pop.querySelector('.gp-inline-schedule-time-list');
+    const listH = list ? Math.min(list.scrollHeight + 16, 280) : 240;
+    const spaceBelow = window.innerHeight - r.bottom - 8;
+    const spaceAbove = r.top - 8;
+    let top = r.bottom + 4;
+    if (spaceBelow < listH && spaceAbove > spaceBelow) {
+      top = Math.max(8, r.top - listH - 4);
+    }
+    pop.style.position = 'fixed';
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+    pop.style.width = `${w}px`;
+    pop.style.right = 'auto';
+    pop.style.bottom = 'auto';
+    pop.style.transform = 'none';
+  }
+
   function positionMkDueTimeDropdown(timeDropdown, timeLink) {
     if (!timeDropdown || !timeLink) return;
 
@@ -2296,16 +2329,24 @@
     const scheduleEl = target.scheduleEl;
     const dateOpen = Boolean(target.dateDropdownOpen);
     const timeOpen = Boolean(target.timeDropdownOpen);
+    const timePopField = target.timePopField;
     const anchorLink = dateOpen
       ? scheduleEl.querySelector('.gp-inline-schedule-date-link')
-      : timeOpen
-        ? scheduleEl.querySelector('.gp-inline-schedule-time-link')
-        : null;
+      : timePopField
+        ? scheduleEl.querySelector(`.gp-inline-schedule-time-btn[data-time-field="${timePopField}"]`)
+        : timeOpen
+          ? scheduleEl.querySelector('.gp-inline-schedule-time-link')
+          : null;
     if (!anchorLink) return;
 
     const dropdown = dateOpen
       ? queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal')
-      : queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
+      : timePopField
+        ? queryMkDueSchedulePart(
+          scheduleEl,
+          `.gp-inline-schedule-time-pop[data-time-field="${timePopField}"]`,
+        )
+        : queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
     if (!dropdown || dropdown.hidden) return;
 
     const padding = 12;
@@ -2343,6 +2384,14 @@
           const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
           const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
           if (cal && dateLink) positionMkDueDateDropdown(cal, dateLink);
+        } else if (gpMkDueEditorTarget.timePopField) {
+          const field = gpMkDueEditorTarget.timePopField;
+          const pop = queryMkDueSchedulePart(
+            scheduleEl,
+            `.gp-inline-schedule-time-pop[data-time-field="${field}"]`,
+          );
+          const btn = scheduleEl.querySelector(`.gp-inline-schedule-time-btn[data-time-field="${field}"]`);
+          if (pop && btn) positionMkDueTimePop(pop, btn);
         } else if (gpMkDueEditorTarget.timeDropdownOpen) {
           const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
           const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
@@ -2369,19 +2418,29 @@
       restoreMkDueDropdownFromPortal(cal, 'calMount');
     }
 
-    if (target.timeDropdownOpen && timeDropdown && timeLink) {
-      timeDropdown.classList.toggle(
-        'gp-inline-schedule-time-dropdown--sidebar',
-        isMkDueEditorInSidebar(),
-      );
+    if (scheduleEl.querySelector('.gp-inline-schedule-time-pop')) {
+      ['start', 'end'].forEach((field) => {
+        const pop = queryMkDueSchedulePart(
+          scheduleEl,
+          `.gp-inline-schedule-time-pop[data-time-field="${field}"]`,
+        );
+        const btn = scheduleEl.querySelector(`.gp-inline-schedule-time-btn[data-time-field="${field}"]`);
+        const mountKey = `${field}TimePopMount`;
+        if (target.timePopField === field && pop && btn) {
+          mountMkDueDropdownToPortal(pop, mountKey);
+          positionMkDueTimePop(pop, btn);
+        } else if (pop) {
+          restoreMkDueDropdownFromPortal(pop, mountKey);
+        }
+      });
+    } else if (target.timeDropdownOpen && timeDropdown && timeLink) {
       mountMkDueDropdownToPortal(timeDropdown, 'timeMount');
       positionMkDueTimeDropdown(timeDropdown, timeLink);
     } else if (timeDropdown) {
-      timeDropdown.classList.remove('gp-inline-schedule-time-dropdown--sidebar');
       restoreMkDueDropdownFromPortal(timeDropdown, 'timeMount');
     }
 
-    if (target.dateDropdownOpen || target.timeDropdownOpen) {
+    if (target.dateDropdownOpen || target.timeDropdownOpen || target.timePopField) {
       queueMkDueDropdownScrollAdjust();
     }
   }
@@ -2412,20 +2471,41 @@
 
   function formatInlineScheduleTimeLabel(draft) {
     if (!draft || draft.allDay) return 'All day';
-    const a = formatTimeCompact12(normalizeDueHm(draft.dueTimeStart)) || '6:30pm';
-    const b = formatTimeCompact12(normalizeDueHm(draft.dueTimeEnd)) || '7:30pm';
+    const layout = getDraftTimeLayout(draft);
+    const start = formatTimeCompact12(normalizeDueHm(draft.dueTimeStart));
+    const end = formatTimeCompact12(normalizeDueHm(draft.dueTimeEnd));
+    if (layout === 'single') return start || end || '6:30pm';
+    const a = start || '6:30pm';
+    const b = end || '7:30pm';
     return `${a}–${b}`;
   }
 
+  function getDraftTimeLayout(draft) {
+    if (!draft || draft.allDay) return 'all-day';
+    const hasStart = Boolean(normalizeDueHm(draft.dueTimeStart));
+    const hasEnd = Boolean(normalizeDueHm(draft.dueTimeEnd));
+    if (hasStart && hasEnd) return 'range';
+    if (hasStart || hasEnd) return 'single';
+    return 'all-day';
+  }
+
+  function getSingleTimeField(draft) {
+    if (normalizeDueHm(draft?.dueTimeStart)) return 'start';
+    if (normalizeDueHm(draft?.dueTimeEnd)) return 'end';
+    return 'start';
+  }
+
   function dueDraftFromTask(task) {
-    const hasTimes = Boolean(task?.dueTimeStart || task?.dueTimeEnd);
+    const hasStart = Boolean(task?.dueTimeStart);
+    const hasEnd = Boolean(task?.dueTimeEnd);
+    const hasTimes = hasStart || hasEnd;
     const dueDate = task?.dueDate
       || formatDueDateIso(parseTaskDueDate(task?.due))
       || formatDueDateIso(new Date());
     return {
       dueDate,
-      dueTimeStart: normalizeDueHm(task?.dueTimeStart) || '18:30',
-      dueTimeEnd: normalizeDueHm(task?.dueTimeEnd) || '19:30',
+      dueTimeStart: normalizeDueHm(task?.dueTimeStart) || '',
+      dueTimeEnd: normalizeDueHm(task?.dueTimeEnd) || '',
       allDay: task?.allDay === true || !hasTimes,
     };
   }
@@ -2440,46 +2520,115 @@
     const hasTimes = Boolean(dueTimeStart || dueTimeEnd);
     return {
       dueDate,
-      dueTimeStart: dueTimeStart || '18:30',
-      dueTimeEnd: dueTimeEnd || '19:30',
+      dueTimeStart,
+      dueTimeEnd,
       allDay: host.dataset.allDay === 'true' || !hasTimes,
     };
+  }
+
+  function syncSidebarScheduleTimeUi(scheduleEl, draft) {
+    const layout = getDraftTimeLayout(draft);
+    const timeRow = scheduleEl.querySelector('.gp-inline-schedule-time-row');
+    const toEl = scheduleEl.querySelector('.gp-inline-schedule-time-to');
+    const startSlot = scheduleEl.querySelector('.gp-inline-schedule-time-slot[data-time-field="start"]');
+    const endSlot = scheduleEl.querySelector('.gp-inline-schedule-time-slot[data-time-field="end"]');
+    const startBtn = startSlot?.querySelector('.gp-inline-schedule-time-btn');
+    const endBtn = endSlot?.querySelector('.gp-inline-schedule-time-btn');
+
+    if (timeRow) timeRow.hidden = layout === 'all-day';
+
+    const showStart = layout === 'range' || (layout === 'single' && getSingleTimeField(draft) === 'start');
+    const showEnd = layout === 'range' || (layout === 'single' && getSingleTimeField(draft) === 'end');
+
+    if (startSlot) startSlot.hidden = !showStart;
+    if (endSlot) endSlot.hidden = !showEnd;
+    if (toEl) toEl.hidden = layout !== 'range';
+
+    if (startBtn) {
+      startBtn.textContent = formatTimeCompact12(normalizeDueHm(draft.dueTimeStart)) || '6:30pm';
+    }
+    if (endBtn) {
+      endBtn.textContent = formatTimeCompact12(normalizeDueHm(draft.dueTimeEnd)) || '7:30pm';
+    }
   }
 
   function syncScheduleElFromDraft(scheduleEl, draft) {
     if (!scheduleEl || !draft) return;
     const dateLabel = scheduleEl.querySelector('.gp-inline-schedule-date-label');
     if (dateLabel) dateLabel.textContent = formatInlineScheduleDateLabel(draft.dueDate);
-    const timeLabel = scheduleEl.querySelector('.gp-inline-schedule-time-label');
-    if (timeLabel) timeLabel.textContent = formatInlineScheduleTimeLabel(draft);
     const allday = scheduleEl.querySelector('.gp-inline-schedule-allday');
     if (allday) allday.checked = Boolean(draft.allDay);
-    scheduleEl.classList.toggle('is-all-day', Boolean(draft.allDay));
+
+    const layout = getDraftTimeLayout(draft);
+    scheduleEl.classList.toggle('is-all-day', layout === 'all-day');
+    scheduleEl.classList.toggle('is-single-time', layout === 'single');
+    scheduleEl.classList.toggle('is-range-time', layout === 'range');
+
+    if (scheduleEl.classList.contains('gp-inline-schedule--sidebar')) {
+      syncSidebarScheduleTimeUi(scheduleEl, draft);
+      const sumLabel = scheduleEl.querySelector(
+        '.gp-inline-schedule-time-summary .gp-inline-schedule-time-label',
+      );
+      if (sumLabel) sumLabel.textContent = formatInlineScheduleTimeLabel(draft);
+      return;
+    }
+
+    const timeLabel = scheduleEl.querySelector('.gp-inline-schedule-time-label');
+    if (timeLabel) timeLabel.textContent = formatInlineScheduleTimeLabel(draft);
   }
 
-  function mountDueScheduleInAnchor(anchor, task, isSidebar) {
+  function hasStackedDueTimeSummary(scheduleEl) {
+    return Boolean(scheduleEl?.querySelector('.gp-inline-schedule-time-summary'));
+  }
+
+  function mountDueScheduleInAnchor(anchor, task) {
     if (!anchor) return null;
     let scheduleEl = anchor.querySelector('.gp-inline-schedule');
     if (!scheduleEl) {
-      scheduleEl = createInlineScheduleEditor(isSidebar);
+      scheduleEl = createSidebarInlineScheduleEditor();
       anchor.textContent = '';
       anchor.classList.add('has-inline-schedule');
       anchor.appendChild(scheduleEl);
-    } else if (isSidebar) {
+    } else {
+      if (!scheduleEl.querySelector('.gp-inline-schedule-time-row')) {
+        const parent = scheduleEl.parentElement;
+        const upgraded = createSidebarInlineScheduleEditor();
+        parent.replaceChild(upgraded, scheduleEl);
+        scheduleEl = upgraded;
+      }
       scheduleEl.classList.add('gp-inline-schedule--sidebar');
     }
     syncScheduleElFromDraft(scheduleEl, dueDraftFromTask(task));
     return scheduleEl;
   }
 
-  function createInlineScheduleEditor(isSidebar) {
-    const wrap = document.createElement('div');
-    wrap.className = 'gp-inline-schedule';
-    if (isSidebar) wrap.classList.add('gp-inline-schedule--sidebar');
+  function buildInlineScheduleTimeSlot(field, ariaLabel) {
+    const slot = document.createElement('span');
+    slot.className = 'gp-inline-schedule-time-slot';
+    slot.dataset.timeField = field;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gp-inline-schedule-time-btn';
+    btn.dataset.timeField = field;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-label', ariaLabel);
+    const pop = document.createElement('div');
+    pop.className = 'gp-inline-schedule-time-pop gp-inline-schedule-dropdown';
+    pop.dataset.timeField = field;
+    pop.hidden = true;
+    pop.setAttribute('role', 'listbox');
+    const list = document.createElement('div');
+    list.className = 'gp-ct-time-list gp-inline-schedule-time-list';
+    list.dataset.timeField = field;
+    fillInlineTimeList(list);
+    pop.appendChild(list);
+    slot.appendChild(btn);
+    slot.appendChild(pop);
+    return { slot, btn, pop, list };
+  }
 
-    const links = document.createElement('div');
-    links.className = 'gp-inline-schedule-links';
-
+  function buildInlineScheduleDateWrap() {
     const dateWrap = document.createElement('span');
     dateWrap.className = 'gp-inline-schedule-date-wrap';
     const dateLink = document.createElement('button');
@@ -2535,49 +2684,42 @@
     calPop.appendChild(grid);
     dateWrap.appendChild(dateLink);
     dateWrap.appendChild(calPop);
+    return dateWrap;
+  }
 
-    const sep = document.createElement('span');
-    sep.className = 'gp-inline-schedule-sep';
-    sep.setAttribute('aria-hidden', 'true');
-    sep.textContent = isSidebar ? '' : ' ';
+  function createSidebarInlineScheduleEditor() {
+    const wrap = document.createElement('div');
+    wrap.className = 'gp-inline-schedule gp-inline-schedule--sidebar';
+
+    const links = document.createElement('div');
+    links.className = 'gp-inline-schedule-links';
+
+    const dateWrap = buildInlineScheduleDateWrap();
 
     const timeWrap = document.createElement('span');
     timeWrap.className = 'gp-inline-schedule-time-wrap';
-    const timeLink = document.createElement('button');
-    timeLink.type = 'button';
-    timeLink.className = 'gp-inline-schedule-time-link';
-    timeLink.setAttribute('aria-expanded', 'false');
-    timeLink.setAttribute('aria-haspopup', 'dialog');
-    timeLink.setAttribute('aria-label', 'Due time');
-    const timeLabel = document.createElement('span');
-    timeLabel.className = 'gp-inline-schedule-time-label';
-    timeLink.appendChild(timeLabel);
 
-    const timeDropdown = document.createElement('div');
-    timeDropdown.className = 'gp-inline-schedule-time-dropdown gp-inline-schedule-dropdown';
-    timeDropdown.hidden = true;
-    timeDropdown.setAttribute('role', 'dialog');
-    timeDropdown.setAttribute('aria-label', 'Choose time');
+    const timeSummaryLink = document.createElement('button');
+    timeSummaryLink.type = 'button';
+    timeSummaryLink.className = 'gp-inline-schedule-time-link gp-inline-schedule-time-summary';
+    timeSummaryLink.setAttribute('aria-expanded', 'false');
+    timeSummaryLink.setAttribute('aria-haspopup', 'dialog');
+    timeSummaryLink.setAttribute('aria-label', 'Due time');
+    const timeSummaryLabel = document.createElement('span');
+    timeSummaryLabel.className = 'gp-inline-schedule-time-label';
+    timeSummaryLink.appendChild(timeSummaryLabel);
 
-    ['start', 'end'].forEach((field) => {
-      const section = document.createElement('div');
-      section.className = 'gp-inline-schedule-time-section';
-      section.setAttribute('role', 'group');
-      const sectionLabel = document.createElement('span');
-      sectionLabel.className = 'gp-inline-schedule-time-section-label';
-      const labelId = `gp-inline-schedule-time-${field}-label`;
-      sectionLabel.id = labelId;
-      sectionLabel.textContent = field === 'start' ? 'Start time' : 'End time';
-      section.setAttribute('aria-labelledby', labelId);
-      const list = document.createElement('div');
-      list.className = 'gp-ct-time-list gp-inline-schedule-time-list';
-      list.dataset.timeField = field;
-      list.setAttribute('role', 'listbox');
-      fillInlineTimeList(list);
-      section.appendChild(sectionLabel);
-      section.appendChild(list);
-      timeDropdown.appendChild(section);
-    });
+    const timeRow = document.createElement('div');
+    timeRow.className = 'gp-inline-schedule-time-row';
+    const startSlot = buildInlineScheduleTimeSlot('start', 'Start time');
+    const toEl = document.createElement('span');
+    toEl.className = 'gp-inline-schedule-time-to';
+    toEl.setAttribute('aria-hidden', 'true');
+    toEl.textContent = 'to';
+    const endSlot = buildInlineScheduleTimeSlot('end', 'End time');
+    timeRow.appendChild(startSlot.slot);
+    timeRow.appendChild(toEl);
+    timeRow.appendChild(endSlot.slot);
 
     const alldayLabel = document.createElement('label');
     alldayLabel.className = 'gp-inline-schedule-allday-row';
@@ -2588,13 +2730,12 @@
     alldayText.textContent = 'All day';
     alldayLabel.appendChild(alldayCb);
     alldayLabel.appendChild(alldayText);
-    timeDropdown.appendChild(alldayLabel);
 
-    timeWrap.appendChild(timeLink);
-    timeWrap.appendChild(timeDropdown);
+    timeWrap.appendChild(timeSummaryLink);
+    timeWrap.appendChild(timeRow);
+    timeWrap.appendChild(alldayLabel);
 
     links.appendChild(dateWrap);
-    links.appendChild(sep);
     links.appendChild(timeWrap);
     wrap.appendChild(links);
     return wrap;
@@ -2606,6 +2747,8 @@
     if (!scheduleEl || !target) return;
     const dateOpen = Boolean(target.dateDropdownOpen);
     const timeOpen = Boolean(target.timeDropdownOpen);
+    const timePopField = target.timePopField;
+    const stackedDueUi = hasStackedDueTimeSummary(scheduleEl);
     const cal = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-cal');
     const dateLink = scheduleEl.querySelector('.gp-inline-schedule-date-link');
     const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
@@ -2623,7 +2766,29 @@
       dateLink.classList.toggle('is-open', dateOpen);
       dateLink.setAttribute('aria-expanded', dateOpen ? 'true' : 'false');
     }
-    if (timeDropdown) {
+    if (stackedDueUi) {
+      ['start', 'end'].forEach((field) => {
+        const pop = queryMkDueSchedulePart(
+          scheduleEl,
+          `.gp-inline-schedule-time-pop[data-time-field="${field}"]`,
+        );
+        const btn = scheduleEl.querySelector(`.gp-inline-schedule-time-btn[data-time-field="${field}"]`);
+        const open = timePopField === field;
+        if (pop) {
+          if (open) {
+            pop.hidden = false;
+            pop.removeAttribute('hidden');
+          } else {
+            pop.hidden = true;
+          }
+          pop.classList.toggle('is-open', open);
+        }
+        if (btn) {
+          btn.classList.toggle('is-open', open);
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+      });
+    } else if (timeDropdown) {
       if (timeOpen) {
         timeDropdown.hidden = false;
         timeDropdown.removeAttribute('hidden');
@@ -2633,23 +2798,32 @@
       timeDropdown.classList.toggle('is-open', timeOpen);
     }
     if (timeLink) {
-      timeLink.classList.toggle('is-open', timeOpen);
-      timeLink.setAttribute('aria-expanded', timeOpen ? 'true' : 'false');
+      const timeLinkOpen = stackedDueUi && timeLink.classList.contains('gp-inline-schedule-time-summary')
+        ? Boolean(timePopField)
+        : timeOpen;
+      timeLink.classList.toggle('is-open', timeLinkOpen);
+      timeLink.setAttribute('aria-expanded', timeLinkOpen ? 'true' : 'false');
     }
     scheduleEl.classList.toggle('is-date-dropdown-open', dateOpen);
-    scheduleEl.classList.toggle('is-time-dropdown-open', timeOpen);
-    const allDay = Boolean(gpMkDueEditorDraft?.allDay);
-    if (timeLink) timeLink.hidden = false;
-    scheduleEl.classList.toggle('is-all-day', allDay);
+    scheduleEl.classList.toggle(
+      'is-time-dropdown-open',
+      stackedDueUi ? Boolean(timePopField) : timeOpen,
+    );
+    if (gpMkDueEditorDraft) {
+      syncScheduleElFromDraft(scheduleEl, gpMkDueEditorDraft);
+    }
     syncMkDueDropdownPortal();
   }
 
   function closeInlineScheduleDropdowns(scheduleEl) {
+    const se = scheduleEl || getActiveInlineSchedule();
+    se?.classList.remove('is-time-edit-open');
     if (gpMkDueEditorTarget) {
       gpMkDueEditorTarget.dateDropdownOpen = false;
       gpMkDueEditorTarget.timeDropdownOpen = false;
+      gpMkDueEditorTarget.timePopField = null;
     }
-    if (scheduleEl || getActiveInlineSchedule()) applyMkDueDropdownUi();
+    if (se || getActiveInlineSchedule()) applyMkDueDropdownUi();
   }
 
   function closeMkDueEditor() {
@@ -2661,6 +2835,13 @@
     const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
     if (cal) restoreMkDueDropdownFromPortal(cal, 'calMount');
     if (timeDropdown) restoreMkDueDropdownFromPortal(timeDropdown, 'timeMount');
+    ['start', 'end'].forEach((field) => {
+      const pop = queryMkDueSchedulePart(
+        scheduleEl,
+        `.gp-inline-schedule-time-pop[data-time-field="${field}"]`,
+      );
+      if (pop) restoreMkDueDropdownFromPortal(pop, `${field}TimePopMount`);
+    });
     if (scheduleEl && gpMkDueEditorDraft) {
       syncScheduleElFromDraft(scheduleEl, gpMkDueEditorDraft);
     }
@@ -2776,24 +2957,50 @@
     }
   }
 
-  function scrollMkDueTimeListsToDraft() {
+  function scrollMkDueTimeListsToDraft(field) {
     const scheduleEl = getActiveInlineSchedule();
     const draft = gpMkDueEditorDraft;
     if (!scheduleEl || !draft || draft.allDay) return;
-    const startHm = normalizeDueHm(draft.dueTimeStart) || '18:30';
-    const endHm = normalizeDueHm(draft.dueTimeEnd) || '19:30';
-    highlightMkDueTimeListSelection(scheduleEl, 'start', startHm);
-    highlightMkDueTimeListSelection(scheduleEl, 'end', endHm);
-    requestAnimationFrame(() => {
-      scrollMkDueTimeListToHm(scheduleEl, 'start', startHm);
-      scrollMkDueTimeListToHm(scheduleEl, 'end', endHm);
+    const layout = getDraftTimeLayout(draft);
+    const fields = field
+      ? [field]
+      : layout === 'range'
+        ? ['start', 'end']
+        : [getSingleTimeField(draft)];
+    fields.forEach((f) => {
+      const hm = normalizeDueHm(f === 'end' ? draft.dueTimeEnd : draft.dueTimeStart)
+        || (f === 'end' ? '19:30' : '18:30');
+      highlightMkDueTimeListSelection(scheduleEl, f, hm);
+      requestAnimationFrame(() => scrollMkDueTimeListToHm(scheduleEl, f, hm));
     });
+  }
+
+  function openMkDueTimePop(field) {
+    const target = gpMkDueEditorTarget;
+    if (!target || !field) return;
+    const se = target.scheduleEl || getActiveInlineSchedule();
+    if (se?.querySelector('.gp-inline-schedule-time-summary')) {
+      se.classList.add('is-time-edit-open');
+    }
+    target.dateDropdownOpen = false;
+    target.timeDropdownOpen = false;
+    const opening = target.timePopField !== field;
+    target.timePopField = opening ? field : null;
+    applyMkDueDropdownUi();
+    if (opening) {
+      requestAnimationFrame(() => {
+        scrollMkDueTimeListsToDraft(field);
+        queueMkDueDropdownScrollAdjust();
+      });
+    }
   }
 
   function openMkDueDateDropdown() {
     const target = gpMkDueEditorTarget;
     if (!target) return;
+    target.scheduleEl?.classList.remove('is-time-edit-open');
     target.timeDropdownOpen = false;
+    target.timePopField = null;
     const opening = !target.dateDropdownOpen;
     target.dateDropdownOpen = opening;
     applyMkDueDropdownUi();
@@ -2808,7 +3015,9 @@
   function openMkDueTimeDropdown() {
     const target = gpMkDueEditorTarget;
     if (!target) return;
+    target.scheduleEl?.classList.remove('is-time-edit-open');
     target.dateDropdownOpen = false;
+    target.timePopField = null;
     const opening = !target.timeDropdownOpen;
     target.timeDropdownOpen = opening;
     applyMkDueDropdownUi();
@@ -2843,6 +3052,7 @@
         scheduleEl: sched,
         dateDropdownOpen: false,
         timeDropdownOpen: false,
+        timePopField: null,
       };
       gpMkDueEditorDraft = dueDraftFromHost(host);
       anchor.classList.add('is-schedule-active');
@@ -2855,7 +3065,9 @@
   function setMkDueDateDropdownOpen(open) {
     const target = gpMkDueEditorTarget;
     if (!target) return;
+    target.scheduleEl?.classList.remove('is-time-edit-open');
     target.timeDropdownOpen = false;
+    target.timePopField = null;
     target.dateDropdownOpen = open;
     applyMkDueDropdownUi();
     if (open) {
@@ -2885,7 +3097,9 @@
   function setMkDueTimeDropdownOpen(open) {
     const target = gpMkDueEditorTarget;
     if (!target) return;
+    target.scheduleEl?.classList.remove('is-time-edit-open');
     target.dateDropdownOpen = false;
+    target.timePopField = null;
     target.timeDropdownOpen = open;
     applyMkDueDropdownUi();
     if (open) {
@@ -2969,8 +3183,9 @@
       const taskId = host?.dataset.cardId || host?.dataset.taskId;
       const onDateLink = e.target.closest('.gp-inline-schedule-date-link');
       const onTimeLink = e.target.closest('.gp-inline-schedule-time-link');
+      const onTimeBtn = e.target.closest('.gp-inline-schedule-time-btn');
 
-      if ((onDateLink || onTimeLink) && dueBtn && taskId) {
+      if ((onDateLink || onTimeLink || onTimeBtn) && dueBtn && taskId) {
         e.preventDefault();
         e.stopPropagation();
         if (!ensureMkDueEditorSync(dueBtn, taskId, scheduleEl)) return;
@@ -2978,6 +3193,19 @@
         if (!target) return;
         if (onDateLink) {
           openMkDueDateDropdown();
+        } else if (e.target.closest('.gp-inline-schedule-time-summary')) {
+          const draft = gpMkDueEditorDraft;
+          if (draft && !draft.allDay) {
+            const layout = getDraftTimeLayout(draft);
+            const field = layout === 'single' ? getSingleTimeField(draft) : 'start';
+            openMkDueTimePop(field);
+          } else {
+            scheduleEl.classList.add('is-time-edit-open');
+            syncMkDueEditorUi();
+            applyMkDueDropdownUi();
+          }
+        } else if (onTimeBtn?.dataset?.timeField) {
+          openMkDueTimePop(onTimeBtn.dataset.timeField);
         } else {
           openMkDueTimeDropdown();
         }
@@ -2986,7 +3214,9 @@
 
       const inMkDuePortal = Boolean(e.target.closest('#gp-mk-due-portal'));
       if (!inMkDuePortal && scheduleEl !== gpMkDueEditorTarget?.scheduleEl) return;
-      if (inMkDuePortal && !gpMkDueEditorTarget?.dateDropdownOpen && !gpMkDueEditorTarget?.timeDropdownOpen) {
+      const targetState = gpMkDueEditorTarget;
+      if (inMkDuePortal && !targetState?.dateDropdownOpen
+        && !targetState?.timeDropdownOpen && !targetState?.timePopField) {
         return;
       }
 
@@ -3047,6 +3277,7 @@
         highlightMkDueTimeListSelection(scheduleEl, timeField, hm);
         if (gpMkDueEditorTarget) {
           gpMkDueEditorTarget.timeDropdownOpen = false;
+          gpMkDueEditorTarget.timePopField = null;
           applyMkDueDropdownUi();
         }
         void commitMkDueEditorDraft();
@@ -3070,7 +3301,15 @@
         if (cal && dateLink) positionMkDueDateDropdown(cal, dateLink);
       }
 
-      if (gpMkDueEditorTarget.timeDropdownOpen) {
+      if (gpMkDueEditorTarget.timePopField) {
+        const field = gpMkDueEditorTarget.timePopField;
+        const pop = queryMkDueSchedulePart(
+          scheduleEl,
+          `.gp-inline-schedule-time-pop[data-time-field="${field}"]`,
+        );
+        const btn = scheduleEl.querySelector(`.gp-inline-schedule-time-btn[data-time-field="${field}"]`);
+        if (pop && btn) positionMkDueTimePop(pop, btn);
+      } else if (gpMkDueEditorTarget.timeDropdownOpen) {
         const timeDropdown = queryMkDueSchedulePart(scheduleEl, '.gp-inline-schedule-time-dropdown');
         const timeLink = scheduleEl.querySelector('.gp-inline-schedule-time-link');
         if (timeDropdown && timeLink) positionMkDueTimeDropdown(timeDropdown, timeLink);
@@ -3086,7 +3325,18 @@
       const inPortal = Boolean(e.target.closest('#gp-mk-due-portal'));
       if (!inSchedule && !inPortal) return;
       if (!gpMkDueEditorDraft) return;
-      gpMkDueEditorDraft.allDay = Boolean(e.target.checked);
+      const checked = Boolean(e.target.checked);
+      gpMkDueEditorDraft.allDay = checked;
+      if (!checked) {
+        const layout = getDraftTimeLayout(gpMkDueEditorDraft);
+        if (layout === 'all-day') {
+          gpMkDueEditorDraft.dueTimeStart = gpMkDueEditorDraft.dueTimeStart || '18:30';
+          gpMkDueEditorDraft.dueTimeEnd = gpMkDueEditorDraft.dueTimeEnd || '19:30';
+        }
+      } else {
+        gpMkDueEditorDraft.dueTimeStart = '';
+        gpMkDueEditorDraft.dueTimeEnd = '';
+      }
       syncMkDueEditorUi();
       void commitMkDueEditorDraft();
     });
@@ -3677,7 +3927,7 @@
 
     const subtitle = document.createElement('span');
     subtitle.className = 'gp-task-subtitle gp-task-due-btn';
-    mountDueScheduleInAnchor(subtitle, task, true);
+    mountDueScheduleInAnchor(subtitle, task);
 
     text.appendChild(title);
     text.appendChild(subtitle);
@@ -4046,7 +4296,7 @@
 
     const due = document.createElement('div');
     due.className = 'mk-card-due mk-card-due-btn';
-    mountDueScheduleInAnchor(due, task, false);
+    mountDueScheduleInAnchor(due, task);
 
     top.appendChild(header);
     top.appendChild(due);
@@ -5695,7 +5945,9 @@
       if (cal && !cal.hidden) positionCreateTaskCalendar();
       const timePop = document.getElementById('gp-ct-time-pop');
       if (timePop && !timePop.hidden) positionCreateTaskTimePop();
-      if (gpMkDueEditorTarget?.dateDropdownOpen || gpMkDueEditorTarget?.timeDropdownOpen) {
+      if (gpMkDueEditorTarget?.dateDropdownOpen
+        || gpMkDueEditorTarget?.timeDropdownOpen
+        || gpMkDueEditorTarget?.timePopField) {
         syncMkDueDropdownPortal();
       }
     });
@@ -5898,13 +6150,18 @@
         return;
       }
       if (gpMkDueEditorTarget?.scheduleEl) {
-        const { dateDropdownOpen, timeDropdownOpen, scheduleEl } = gpMkDueEditorTarget;
+        const {
+          dateDropdownOpen,
+          timeDropdownOpen,
+          timePopField,
+          scheduleEl,
+        } = gpMkDueEditorTarget;
         if (dateDropdownOpen) {
           closeMkDueDateDropdown(true);
           e.preventDefault();
           return;
         }
-        if (timeDropdownOpen) {
+        if (timeDropdownOpen || timePopField) {
           closeInlineScheduleDropdowns(scheduleEl);
           e.preventDefault();
           return;
