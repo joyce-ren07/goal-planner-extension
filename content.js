@@ -7210,9 +7210,11 @@
 
     cardShell.addEventListener('keydown', (event) => {
       if (!gpTaskDetailOpenCtx || event.key !== 'Enter' || event.shiftKey) return;
+      const input = event.target.closest('.gp-task-detail-subtask-input');
+      if (!input) return;
       event.preventDefault();
       event.stopPropagation();
-      void saveTaskDetailPopup();
+      addTaskDetailSubtaskRow();
     }, { signal });
   }
 
