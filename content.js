@@ -1975,6 +1975,12 @@
     };
   }
 
+  function hexToRgba(hex, alpha) {
+    const rgb = parseHexToRgb(hex);
+    const a = Math.max(0, Math.min(1, alpha));
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${a})`;
+  }
+
   function rgbToHex(rgb) {
     const c = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
     return `#${c(rgb.r)}${c(rgb.g)}${c(rgb.b)}`;
