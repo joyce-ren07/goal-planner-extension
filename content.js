@@ -1933,11 +1933,9 @@
     return _gcalPaletteHexCache.has(hexNorm);
   }
 
-  /** Card chrome: use planner `goal.color`; never infer from `colorId` / GCal lavender-blue. */
+  /** Card chrome: use planner `goal.color` (same source as calendar session blocks). */
   function getGoalDisplayColor(legacyGoal) {
-    const n = normalizePlannerGoalHex(legacyGoal?.color);
-    if (n && !isLikelyGcalDefaultGoalColor(n)) return n;
-    return GP_GOAL_DEFAULT_UI_COLOR;
+    return getGoalChipAccentColor(legacyGoal);
   }
 
   /** Blend a hex goal color toward white (avoids color-mix / CSP issues in injected styles). */
