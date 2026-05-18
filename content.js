@@ -5033,7 +5033,7 @@
     const wrap = document.createElement('span');
     wrap.className = 'gp-color-chip-add-input';
     wrap.innerHTML =
-      '<span class="gp-color-chip-dot" style="background:#5484ed"></span>' +
+      '<span class="gp-color-chip-dot" style="background:#3f51b5"></span>' +
       '<input type="text" maxlength="40" placeholder="Label name" autocomplete="off" />';
     chipsEl.replaceChild(wrap, addBtn);
     const input = wrap.querySelector('input');
