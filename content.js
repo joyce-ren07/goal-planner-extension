@@ -5283,8 +5283,9 @@
       }
       window.clearTimeout(_gpGdPinWatchDebounce);
       _gpGdPinWatchDebounce = window.setTimeout(() => {
+        if (__gpGdBlockEl?.isConnected && gpGdIsGoalBlockVisible(__gpGdBlockEl)) return;
         gpGdRunDetailHydratePass();
-      }, 100);
+      }, 280);
     });
     try {
       _gpGdPinWatchMo.observe(document.documentElement || document.body, {
