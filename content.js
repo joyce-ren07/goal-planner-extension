@@ -10523,8 +10523,8 @@
       chip.appendChild(root);
 
       boundChipHeight(chip);
+      applyGoalChipTheme(chip, accent, isDone);
 
-      const ec = chip.closest('[data-eventid]');
       requestAnimationFrame(() => {
         syncExtGoalTimeFromContainer(chip);
       });
