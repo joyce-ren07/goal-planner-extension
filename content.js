@@ -1091,7 +1091,7 @@
   function mountRailButtonFallback(btn) {
     let wrap = document.getElementById('gp-rail-fallback');
     if (!wrap) {
-      wrap = document.createElement('motion-replacement');
+      wrap = document.createElement('div');
       wrap.id = 'gp-rail-fallback';
       document.body.appendChild(wrap);
     }
