@@ -976,8 +976,8 @@
     const root = getCalendarPushRoot();
     if (!(root instanceof HTMLElement)) return;
 
-    const amount = open ? getGoalPanelPushWidthPx() : 0;
-    const trans = `max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
+    const amount = open ? getCalendarPushInsetPx() : 0;
+    const trans = `margin-right ${GP_PUSH_EASING}, max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
 
     if (open) {
       if (!_gpCalendarPushSnapshot || _gpCalendarPushSnapshot.el !== root) {
@@ -992,9 +992,10 @@
       }
       root.style.transition = trans;
       root.style.boxSizing = root.style.boxSizing || 'border-box';
-      const narrow = `calc(100% - ${amount}px)`;
-      root.style.maxWidth = narrow;
-      root.style.width = narrow;
+      // GCal-style: shrink the main column from the right so the grid stays in the visible lane.
+      root.style.marginRight = `${amount}px`;
+      root.style.maxWidth = `calc(100% - ${amount}px)`;
+      root.style.width = 'auto';
       return;
     }
 
