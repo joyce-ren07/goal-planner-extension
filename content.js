@@ -1549,6 +1549,7 @@
         if (!id) return;
         state.selectedColorLabelId = id;
         renderColorLabelsSection();
+        scheduleGhostPreviewRefreshDebounced();
       });
     }
     const swRoot = document.getElementById('gp-color-swatches');
