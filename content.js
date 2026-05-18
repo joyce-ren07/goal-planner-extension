@@ -1549,6 +1549,7 @@
         if (!id) return;
         state.selectedColorLabelId = id;
         renderColorLabelsSection();
+        refreshGoalSessionBlocksForPickerColor();
         scheduleGhostPreviewRefreshDebounced();
       });
     }
