@@ -10,6 +10,22 @@
   position: relative; z-index: 10000;
   pointer-events: auto;
 }
+
+/* In native GCal right rail stack (above Tips) — not a fixed overlay */
+#gp-rail-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+#gp-rail-slot #gp-sidebar-btn {
+  position: static;
+  z-index: auto;
+}
 #gp-sidebar-btn:hover { background: #e8edf6; }
 #gp-sidebar-btn.active { background: #d3e3fd; }
 #gp-sidebar-btn .material-symbols-outlined { font-size: 20px; color: #444746; }
