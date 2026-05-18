@@ -77,21 +77,37 @@ void maybeResetKanbanBoardForBuild().catch((error) => {
   console.error('Kanban reset failed.', error);
 });
 
-async function ensureKanbanContentScript(tabId) {
-  try {
-    await chrome.tabs.sendMessage(tabId, { type: 'PING_SIDEBAR' });
-    return;
-  } catch {
-    // Tabs opened before install may not have the content script yet.
+async function waitForKanbanReady(tabId, attempts = 25, delayMs = 60) {
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const response = await chrome.tabs.sendMessage(tabId, { type: 'PING_SIDEBAR' });
+      if (response?.ready) return true;
+    } catch {
+      // Content script still starting.
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ['TaskDeleteConfirm.js', 'TaskDetailPopup.js', 'kanbanSidebar.js'],
-  });
-  await chrome.scripting.insertCSS({
-    target: { tabId },
-    files: ['sidebar.css'],
-  });
+  return false;
+}
+
+async function ensureKanbanContentScript(tabId) {
+  const ready = await waitForKanbanReady(tabId, 1, 0);
+  if (ready) return;
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['TaskDeleteConfirm.js', 'TaskDetailPopup.js', 'kanbanSidebar.js'],
+    });
+    await chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ['sidebar.css'],
+    });
+  } catch {
+    // Scripts may already be present via manifest content_scripts.
+  }
+
+  await waitForKanbanReady(tabId);
 }
 
 async function toggleKanbanSidebar(tab) {

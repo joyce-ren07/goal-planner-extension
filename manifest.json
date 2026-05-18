@@ -26,10 +26,13 @@
       "js": [
         "goalModel.js",
         "goalCalendarSync.js",
+        "TaskDeleteConfirm.js",
+        "TaskDetailPopup.js",
         "content.js",
-        "panelCoordinator.js"
+        "panelCoordinator.js",
+        "kanbanSidebar.js"
       ],
-      "css": ["content.css"],
+      "css": ["content.css", "sidebar.css"],
       "run_at": "document_idle"
     },
     {

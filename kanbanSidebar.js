@@ -9460,6 +9460,7 @@
     });
     syncGpSidebarLayout();
     syncRailButtonState();
+    ensureNativeTasksPanelForKanban();
     return true;
   }
 
@@ -10089,22 +10090,36 @@
     scheduleCalendarWeekTaskOverlayRefresh();
   }
 
+  function ensureNativeTasksPanelForKanban() {
+    if (findVisibleGoogleTasksPanel()) {
+      scheduleNativeTasksKanbanSync();
+      return;
+    }
+
+    const tasksControl = findActiveGoogleTasksRailControl()
+      || [...document.querySelectorAll('button, [role="button"], div[role="button"]')]
+        .find(isGoogleTasksRailControl);
+
+    if (tasksControl && !isTasksRailControlActive(tasksControl)) {
+      tasksControl.click();
+      window.setTimeout(scheduleNativeTasksKanbanSync, 300);
+      window.setTimeout(scheduleNativeTasksKanbanSync, 1000);
+      return;
+    }
+
+    scheduleNativeTasksKanbanSync();
+  }
+
   async function bootstrapCalendarTasksUi() {
     primeKanbanFiltersFromLocalStorage();
-    await maybeClearKanbanBoardStorageOnce();
     ensureGlobalTaskModals();
     setupNativeTasksFrameBridge();
     mountSidebar();
     setupCalendarDueFolderRefreshListeners();
-    await ensurePaletteCaches();
-    // setupRailObserver intentionally disabled in the integrated build:
-    // the kanban sidebar is opened via the extension's toolbar icon
-    // (chrome.action.onClicked -> TOGGLE_SIDEBAR), so we no longer need
-    // a rail button. Leaving it on competes with the Goal Planner rail
-    // button — both observers re-mount on every body mutation, causing
-    // the buttons to flicker/fly across the rail.
     setupNativeTasksKanbanObserver();
     setupCalendarWeekTaskOverlay();
+    await maybeClearKanbanBoardStorageOnce();
+    await ensurePaletteCaches();
     void syncTaskViewsFromStorage();
   }
 
