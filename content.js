@@ -2107,12 +2107,14 @@
       badgeBg,
       badgeFg,
       fillDone: rgbToHex(doneFillRgb),
+      fillRgbaDone: hexToRgba(doneBorder, 0.12),
       borderDone: doneBorder,
       textDone: doneText,
       badgeBgDone: doneBorder,
     };
     if (isDone) {
       theme.fill = theme.fillDone;
+      theme.fillRgba = theme.fillRgbaDone;
       theme.border = theme.borderDone;
       theme.text = theme.textDone;
       theme.badgeBg = theme.badgeBgDone;
@@ -2122,7 +2124,8 @@
 
   function applyGoalChipTheme(chip, accentHex, isDone) {
     if (!(chip instanceof HTMLElement)) return;
-    const theme = buildGoalSessionChipTheme(accentHex, isDone);
+    const accentNorm = normalizePlannerGoalHex(accentHex) || GP_GOAL_DEFAULT_UI_COLOR;
+    const theme = buildGoalSessionChipTheme(accentNorm, isDone);
     const targets = [chip];
     const ec = chip.closest('[data-eventid]');
     if (ec instanceof HTMLElement) targets.push(ec);
