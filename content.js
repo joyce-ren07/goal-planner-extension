@@ -964,7 +964,7 @@
     if (!(root instanceof HTMLElement)) return;
 
     const amount = open ? getGoalPanelPushWidthPx() : 0;
-    const trans = `margin-right ${GP_PUSH_EASING}, max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
+    const trans = `max-width ${GP_PUSH_EASING}, width ${GP_PUSH_EASING}`;
 
     if (open) {
       if (!_gpCalendarPushSnapshot || _gpCalendarPushSnapshot.el !== root) {
@@ -979,9 +979,9 @@
       }
       root.style.transition = trans;
       root.style.boxSizing = root.style.boxSizing || 'border-box';
-      root.style.marginRight = `${amount}px`;
-      root.style.maxWidth = `calc(100% - ${amount}px)`;
-      root.style.width = `calc(100% - ${amount}px)`;
+      const narrow = `calc(100% - ${amount}px)`;
+      root.style.maxWidth = narrow;
+      root.style.width = narrow;
       return;
     }
 
