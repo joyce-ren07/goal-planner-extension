@@ -770,6 +770,8 @@
       const nameEl = ghost.querySelector('.goal-ghost-event-name');
       if (nameEl && nameEl.textContent !== goalLabel) nameEl.textContent = goalLabel;
 
+      applyGhostEventTheme(ghost, getActiveGoalCreationAccentColor());
+
       ghost.style.left = `${L.contentLeft}px`;
       ghost.style.top = `${L.absTop}px`;
       ghost.style.width = `${L.width}px`;
