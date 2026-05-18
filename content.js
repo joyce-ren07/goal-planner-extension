@@ -899,6 +899,13 @@
     return GP_PANEL_W;
   }
 
+  /** Total right inset: Goal Planner panel + GCal icon rail (matches panel `right` offset). */
+  function getCalendarPushInsetPx() {
+    const panel = document.getElementById('gp-panel');
+    if (!panel?.classList.contains('open')) return 0;
+    return getGoalPanelPushWidthPx() + getGCalRailWidth();
+  }
+
   function getCalendarPushRoot() {
     if (cachedCalendarPushRoot && document.contains(cachedCalendarPushRoot)) {
       return cachedCalendarPushRoot;
