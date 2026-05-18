@@ -4651,6 +4651,7 @@
   // ── Recurrence overlay ──
   function openRecurrence() {
     closeDropdowns();
+    ensureGpDatePopoverOnBody();
     document.getElementById('gp-recurrence-overlay').classList.add('open');
     scheduleGhostPreviewRefreshDebounced();
   }
