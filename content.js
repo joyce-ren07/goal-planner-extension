@@ -1191,12 +1191,7 @@
       wrap.id = 'gp-rail-fallback';
       document.body.appendChild(wrap);
     }
-    // Only show the wrap if there's actually a rail to anchor against.
-    // positionRailFallback would otherwise immediately hide it again when
-    // no rail is present (e.g. GCal Tasks view), causing a visible flicker.
-    const hasRail = !!findRailByStructure();
-    const desiredDisplay = hasRail ? 'flex' : 'none';
-    if (wrap.style.display !== desiredDisplay) wrap.style.display = desiredDisplay;
+    if (wrap.style.display !== 'flex') wrap.style.display = 'flex';
     if (btn.parentElement !== wrap) wrap.replaceChildren(btn);
     positionRailFallback();
   }
@@ -1251,13 +1246,13 @@
         `position:fixed;right:${rightPx}px;top:${topPx}px;width:${r.width}px;z-index:10000;` +
         'display:flex;flex-direction:column;align-items:center;padding:0;pointer-events:none;';
     } else {
-      // No rail in the current view (e.g. GCal Tasks view, settings, etc.).
-      // Hide the fallback entirely instead of positioning it relative to the
-      // header — the button has no business floating in a non-calendar view,
-      // and chasing a moving header makes the button visibly jump as other
-      // scripts (like shannon's kanban) reflow the page.
-      if (wrap.style.display !== 'none') wrap.style.display = 'none';
-      return;
+      // No rail in the current view (e.g. GCal Tasks view). Use viewport-
+      // anchored constants so the button has a stable, predictable home
+      // instead of chasing a moving header. The values are deliberately not
+      // read from the live DOM so other scripts' reflows can't move us.
+      desiredCss =
+        'position:fixed;right:8px;top:80px;width:48px;z-index:10000;' +
+        'display:flex;flex-direction:column;align-items:center;padding:0;pointer-events:none;';
     }
     // Idempotency: skip the style write if the cssText is already correct.
     // Setting style.cssText is an attribute change, but the broader concern
