@@ -879,6 +879,36 @@
     });
   }
 
+  /** Element we shrink when #gp-panel opens (prefer GCal `[role="main"]`, like native Tasks). */
+  let cachedCalendarPushRoot = null;
+  /** @type {{ el: HTMLElement, marginRight: string, maxWidth: string, width: string, transition: string, boxSizing: string } | null} */
+  let _gpCalendarPushSnapshot = null;
+
+  function getGoalPanelPushWidthPx() {
+    const panel = document.getElementById('gp-panel');
+    if (panel?.classList.contains('open')) {
+      const w = Math.round(panel.getBoundingClientRect().width);
+      if (w >= 200 && w <= 640) return w;
+    }
+    return GP_PANEL_W;
+  }
+
+  function getCalendarPushRoot() {
+    if (cachedCalendarPushRoot && document.contains(cachedCalendarPushRoot)) {
+      return cachedCalendarPushRoot;
+    }
+    const main = document.querySelector('[role="main"]');
+    if (main instanceof HTMLElement && !main.closest('#gp-panel')) {
+      const r = main.getBoundingClientRect();
+      if (r.width >= window.innerWidth * 0.3 && r.height >= 180) {
+        cachedCalendarPushRoot = main;
+        return main;
+      }
+    }
+    cachedCalendarPushRoot = getCalendarMainEl();
+    return cachedCalendarPushRoot;
+  }
+
   /** Main calendar region that natively shrinks when Tasks/Notes opens — push layout, not overlay. */
   let cachedCalendarMainEl = null;
   function getCalendarMainEl() {
