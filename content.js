@@ -2097,10 +2097,11 @@
     const doneBorder = rgbToHex(doneAccentRgb);
     let doneText = doneBorder;
     if (contrastRatioRgb(doneAccentRgb, doneFillRgb) < 4.5) {
-      doneText = darkenHexHslLightness(doneBorder, 0.8);
+      doneText = darkenHexHslLightness(doneBorder, 0.75);
     }
     const theme = {
       fill,
+      fillRgba: hexToRgba(accent, 0.12),
       border,
       text,
       badgeBg,
