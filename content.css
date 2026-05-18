@@ -1136,6 +1136,7 @@
 .gp-toast-message {
   flex: 1;
   padding: 14px 0;
+  text-align: center;
 }
 .gp-toast-close {
   flex-shrink: 0;
