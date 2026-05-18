@@ -1107,10 +1107,12 @@
 .gp-toast {
   display: none;
   position: fixed;
-  left: 16px;
+  left: 50%;
   bottom: 16px;
+  transform: translateX(-50%);
   z-index: 10001;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   max-width: min(568px, calc(100vw - 32px));
   min-height: 48px;
