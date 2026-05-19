@@ -967,32 +967,30 @@
   border-radius: 4px;
   padding: 4px 8px 4px 10px;
   border: none;
-  outline: 1px dashed rgba(211, 86, 75, 0.38);
-  outline-offset: 0px;
-  border-left: 4px solid rgba(211, 86, 75, 0.55);
-  background: rgba(255, 215, 211, 0.42);
-  box-shadow:
-    inset 1px 0 0 rgba(255, 255, 255, 0.25),
-    0 1px 2px rgba(31, 31, 31, 0.06),
-    0 0 0 0.5px rgba(211, 86, 75, 0.08);
+  outline: 2px dashed rgba(95, 99, 104, 0.45);
+  outline-offset: -1px;
+  border-left: 3px dashed rgba(95, 99, 104, 0.55);
+  background: rgba(241, 243, 244, 0.55);
+  box-shadow: none;
   isolation: isolate;
-  opacity: 0.92;
+  opacity: 0.62;
   /* Position via left/top inside #gp-ghost-preview-root (content coords — scrolls with GCal shell) */
   transition:
     opacity 0.15s cubic-bezier(0.2, 0, 0, 1),
     transform 0.14s cubic-bezier(0.2, 0, 0, 1);
 }
 .goal-ghost-event[data-gp-ghost-ephemeral='true'] {
-  opacity: 0.88;
-  background: rgba(255, 215, 211, 0.36);
-  border-left-color: rgba(211, 86, 75, 0.48);
-  outline-color: rgba(211, 86, 75, 0.32);
+  opacity: 0.52;
+  background: rgba(241, 243, 244, 0.42);
+  border-left-color: rgba(95, 99, 104, 0.42);
+  outline-color: rgba(95, 99, 104, 0.38);
 }
 .goal-ghost-event.gp-ghost-new-mount {
   opacity: 0;
 }
 .goal-ghost-event[data-gp-ghost-ephemeral='true'] .goal-ghost-event-name {
-  color: rgba(211, 86, 75, 0.78);
+  color: rgba(95, 99, 104, 0.72);
+  font-style: italic;
 }
 
 .goal-ghost-event.gp-ghost-tip-active::after {
@@ -1023,7 +1021,7 @@
   line-height: 16px;
   letter-spacing: normal;
   -webkit-font-smoothing: antialiased;
-  color: rgba(211, 86, 75, 0.88);
+  color: rgba(95, 99, 104, 0.82);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
