@@ -8270,7 +8270,7 @@
 
   function isExtensionTasksControl(el) {
     return Boolean(
-      el?.closest('#gp-kanban-panel, .mytasks-sidebar, #gp-kanban-sidebar-btn, .gp-kanban-sidebar-btn-shell, #gp-kanban-sidebar-rail')
+      el?.closest('#gp-kanban-panel, #gp-panel, .mytasks-sidebar, #gp-kanban-sidebar-btn, .gp-kanban-sidebar-btn-shell, #gp-kanban-sidebar-rail')
       || /\bmy tasks\b/i.test(getElementLabel(el)),
     );
   }

@@ -42,7 +42,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // kanban state on install when the build marker changes.
 // ============================================================================
 const FORCE_CLEAR_KANBAN_MARKER = 'gpForceClearKanbanBoard';
-const KANBAN_RESET_BUILD = '20260514-sync';
+const KANBAN_RESET_BUILD = '20260518-shannon-sync';
 
 function isCalendarTab(url) {
   return typeof url === 'string' && url.startsWith('https://calendar.google.com');

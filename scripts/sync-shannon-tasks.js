@@ -81,3 +81,6 @@ body.gp-dual-panels-goals-open #gp-kanban-panel.mytasks-sidebar.open {
 fs.writeFileSync(require('path').join(root, 'kanbanSidebar.js'), out);
 fs.writeFileSync(require('path').join(root, 'sidebar.css'), cssOut);
 console.log('Synced kanbanSidebar.js (%d lines) and sidebar.css from shannon', out.split('\n').length);
+console.log(
+  'Re-apply together dual-panel hooks in kanbanSidebar.js if needed (goal offset, gp:sync-calendar-push, demo kanban seed).',
+);
