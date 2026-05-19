@@ -217,6 +217,71 @@
   }
 
   /** gp_chip_done keys are often strings; calEventIds may be stored as numbers — avoid strict key misses. */
+  function chipDoneKeyMatchesCalEventId(calId, chipKey) {
+    if (!calId || chipKey == null || chipKey === '') return false;
+    var a = String(calId);
+    var b = String(chipKey);
+    if (a === b) return true;
+    var dec = b;
+    try {
+      dec = decodeURIComponent(String(b).replace(/\+/g, ' '));
+    } catch (_) {
+      dec = b;
+    }
+    if (a === dec) return true;
+    if (b.indexOf(a + '_') === 0 || dec.indexOf(a + '_') === 0) return true;
+    if (a.indexOf(b + '_') === 0) return true;
+    var aSeg = a.split('_')[0];
+    var bSeg = b.split('_')[0];
+    var decSeg = dec.split('_')[0];
+    if (aSeg.length >= 8 && (aSeg === bSeg || aSeg === decSeg)) return true;
+    return false;
+  }
+
+  /**
+   * Count completed session instances (recurring instance keys), not just master calEventIds.
+   * Avoids double-counting mirror keys (DOM id + API id for the same checkbox toggle).
+   */
+  function countCompletedInstancesForGoal(calEventIds, chipDoneMap) {
+    var ids = Array.isArray(calEventIds)
+      ? calEventIds.map(String).filter(Boolean)
+      : [];
+    if (!ids.length || !chipDoneMap) return 0;
+    var keys = Object.keys(chipDoneMap).filter(function (k) {
+      return chipDoneMap[k];
+    });
+    var instanceKeys = [];
+    var masterOnly = [];
+    for (var ki = 0; ki < keys.length; ki++) {
+      var k = keys[ki];
+      var matchedId = '';
+      var isInstance = false;
+      for (var ii = 0; ii < ids.length; ii++) {
+        if (chipDoneKeyMatchesCalEventId(ids[ii], k)) {
+          matchedId = ids[ii];
+          isInstance = k !== ids[ii] && (k.indexOf(ids[ii] + '_') === 0);
+          break;
+        }
+      }
+      if (!matchedId) continue;
+      if (isInstance) instanceKeys.push(k);
+      else masterOnly.push({ key: k, matchedId: matchedId });
+    }
+    var count = instanceKeys.length;
+    for (var mi = 0; mi < masterOnly.length; mi++) {
+      var mo = masterOnly[mi];
+      var hasInstance = false;
+      for (var ij = 0; ij < instanceKeys.length; ij++) {
+        if (chipDoneKeyMatchesCalEventId(mo.matchedId, instanceKeys[ij])) {
+          hasInstance = true;
+          break;
+        }
+      }
+      if (!hasInstance) count++;
+    }
+    return count;
+  }
+
   function lookupChipDone(doneMap, eventId) {
     if (!doneMap || eventId == null || eventId === '') return false;
     if (doneMap[eventId] || doneMap[String(eventId)]) return true;
@@ -243,20 +308,30 @@
     return false;
   }
 
-  function computeProgressPct(goal) {
+  function computeProgressPct(goal, chipDoneMap) {
     var sessions = goal.sessions || [];
-    var done = sessions.filter(function (s) { return s.completed; }).length;
     var total =
       typeof goal.totalSessions === 'number' && goal.totalSessions > 0
         ? goal.totalSessions
         : sessions.length;
     if (!total) return 0;
+    var done = 0;
+    if (chipDoneMap && sessions.length) {
+      var ids = sessions.map(function (s) {
+        return s.eventId;
+      });
+      done = countCompletedInstancesForGoal(ids, chipDoneMap);
+    } else {
+      done = sessions.filter(function (s) {
+        return s.completed;
+      }).length;
+    }
     return clampPct((done / total) * 100);
   }
 
-  function recomputeAllProgress(state) {
+  function recomputeAllProgress(state, chipDoneMap) {
     state.goals.forEach(function (g) {
-      g.progressPct = computeProgressPct(g);
+      g.progressPct = computeProgressPct(g, chipDoneMap);
     });
     return state;
   }
@@ -384,7 +459,7 @@
       });
     });
 
-    return recomputeAllProgress(state);
+    return recomputeAllProgress(state, doneMap);
   }
 
   /**
@@ -461,7 +536,7 @@
     });
     var out = Object.assign({}, prevState);
     out.goals = nextGoals;
-    return recomputeAllProgress(out);
+    return recomputeAllProgress(out, chipDone);
   }
 
   function loadUnifiedState() {
@@ -499,6 +574,8 @@
     MODEL_VERSION: MODEL_VERSION,
     createEmptyState: createEmptyState,
     computeProgressPct: computeProgressPct,
+    countCompletedInstancesForGoal: countCompletedInstancesForGoal,
+    chipDoneKeyMatchesCalEventId: chipDoneKeyMatchesCalEventId,
     computeTotalRecurringSessions: computeTotalRecurringSessions,
     deriveGoalStartDateYmd: deriveGoalStartDateYmd,
     resolveGoalTotalSessions: resolveGoalTotalSessions,

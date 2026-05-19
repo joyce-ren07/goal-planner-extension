@@ -55,6 +55,9 @@
   // ── Original suggestions (before any preferred-time override) ──
   let _originalSuggestions = [];
 
+  /** Cached freeBusy ranges from the latest suggestion preview or commit validation. */
+  let _gpLastBusySlots = [];
+
   // ── Grid metrics cache — shared by ghost-event renderer and resize handler ──
   let _gridMetricsCache = null;
   let _gridMetricsCacheTime = 0;
@@ -223,8 +226,9 @@
   async function computePreviewSuggestions(r) {
     try {
       const token = await getAuthToken();
-      const busySlots = await fetchBusySlots(token);
-      return generateSmartSuggestions(r, busySlots);
+      const norm = normalizeRecurrenceShape(r, { preserveTime: true });
+      const busySlots = await fetchBusySlots(token, norm);
+      return generateSmartSuggestions(norm, busySlots);
     } catch (e) {
       console.warn('GoalPlanner: freebusy unavailable, using preferred time.', e);
       return generateFallbackSuggestions(r);
@@ -528,9 +532,7 @@
           const mk = col.date.getFullYear() * 12 + col.date.getMonth();
           if (every > 1 && ((mk - mkA) % every) !== 0) return;
         }
-        const start = new Date(col.date);
-        start.setHours(hourAdj, min, 0, 0);
-        const end = new Date(start.getTime() + sessionMins * 60000);
+        const { start, end } = buildSessionRangeOnDay(col.date, hourAdj, min, sessionMins);
         out.push({
           isoStart: start.toISOString(),
           isoEnd: end.toISOString(),
@@ -546,9 +548,7 @@
         if (endCap && dt.getTime() > endCap.getTime()) return;
         const dd = Math.round((dt.getTime() - anchor) / 86400000);
         if (every > 1 && dd % every !== 0) return;
-        const start = new Date(col.date);
-        start.setHours(hourAdj, min, 0, 0);
-        const end = new Date(start.getTime() + sessionMins * 60000);
+        const { start, end } = buildSessionRangeOnDay(col.date, hourAdj, min, sessionMins);
         out.push({
           isoStart: start.toISOString(),
           isoEnd: end.toISOString(),
@@ -700,10 +700,21 @@
     /** Single layout read burst before patching preview DOM. */
     const contRect = scrollCont.getBoundingClientRect();
 
+    const sessionMinsForGhost = Math.max(
+      15,
+      Number(state.recurrence?.sessionMins) || 60
+    );
+    const conflictSafeSessions = resolveGhostSessionsAvoidingConflicts(
+      sessions,
+      scrollCont
+    );
+
     const layouts = [];
-    for (const session of sessions) {
-      const start = new Date(session.isoStart);
-      const end = new Date(session.isoEnd);
+    for (const session of conflictSafeSessions) {
+      const ranged = sessionRangeFromIsoStart(session.isoStart, sessionMinsForGhost);
+      if (!ranged) continue;
+      const start = ranged.start;
+      const end = ranged.end;
 
       const col = dayColumns.find(
         (c) =>
@@ -770,7 +781,7 @@
       const nameEl = ghost.querySelector('.goal-ghost-event-name');
       if (nameEl && nameEl.textContent !== goalLabel) nameEl.textContent = goalLabel;
 
-      applyGhostEventTheme(ghost, getActiveGoalCreationAccentColor());
+      applyGhostEventTheme(ghost);
 
       ghost.style.left = `${L.contentLeft}px`;
       ghost.style.top = `${L.absTop}px`;
@@ -2257,7 +2268,7 @@
       if (circle) circle.innerHTML = goalCheckboxSvg(accent, isDone);
     }
     document.querySelectorAll('.goal-ghost-event[data-gp-ghost-preview]').forEach((ghost) => {
-      applyGhostEventTheme(ghost, accent);
+      applyGhostEventTheme(ghost);
     });
   }
 
@@ -2277,21 +2288,14 @@
     }
   }
 
-  function applyGhostEventTheme(ghost, accentHex) {
+  function applyGhostEventTheme(ghost) {
     if (!(ghost instanceof HTMLElement)) return;
-    const theme = buildGoalSessionChipTheme(accentHex, false);
-    const accentRgb = parseHexToRgb(theme.border);
-    const fillRgb = parseHexToRgb(theme.fill);
-    ghost.style.setProperty('--gp-chip-fill', theme.fill);
-    ghost.style.setProperty('--gp-chip-accent', theme.border);
-    ghost.style.setProperty('--gp-chip-text', theme.text);
-    ghost.style.setProperty('background', theme.fill, 'important');
-    ghost.style.setProperty('border-left', `4px solid ${theme.border}`, 'important');
-    ghost.style.outline = `1px dashed rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.38)`;
-    ghost.style.boxShadow =
-      `inset 1px 0 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(31, 31, 31, 0.06), 0 0 0 0.5px rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.08)`;
+    ghost.style.removeProperty('background');
+    ghost.style.removeProperty('border-left');
+    ghost.style.removeProperty('outline');
+    ghost.style.removeProperty('box-shadow');
     const nameEl = ghost.querySelector('.goal-ghost-event-name');
-    if (nameEl) nameEl.style.color = `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.88)`;
+    if (nameEl) nameEl.style.removeProperty('color');
   }
 
   function goalCheckboxSvg(accentHex, isDone) {
@@ -3224,7 +3228,7 @@
     return map.get(goalId) ?? map.get(String(goalId));
   }
 
-  function goalSidebarCardSigs(g, legacyById) {
+  function goalSidebarCardSigs(g, legacyById, chipDoneMap) {
     const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
@@ -3232,7 +3236,11 @@
       color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
     };
     const displayColor = getGoalDisplayColor(colorSource);
-    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(
+      g,
+      legacyRow,
+      chipDoneMap
+    );
     const struct = `${g.id}|${total}|${String(g.title || '')}|${displayColor}`;
     const prog = `${completed}|${pctClamped}`;
     return { struct, prog };
@@ -3247,14 +3255,23 @@
       '<span class="gcal-ext-goal-session-pct"></span>';
   }
 
-  function computeGoalSidebarNumbers(g) {
+  function computeGoalSidebarNumbers(g, legacyRow, chipDoneMap) {
     const sessions = g.sessions || [];
     const slotCount = sessions.length;
     const total =
       typeof g.totalSessions === 'number' && g.totalSessions > 0
         ? g.totalSessions
         : slotCount;
-    const completed = slotCount ? sessions.filter((s) => !!s.completed).length : 0;
+    const Model = globalThis.GoalPlannerModel;
+    let completed = 0;
+    if (chipDoneMap && Model?.countCompletedInstancesForGoal) {
+      const ids =
+        legacyRow?.calEventIds ||
+        sessions.map((s) => s.eventId).filter(Boolean);
+      completed = Model.countCompletedInstancesForGoal(ids, chipDoneMap);
+    } else {
+      completed = slotCount ? sessions.filter((s) => !!s.completed).length : 0;
+    }
     const pctClamped =
       total > 0
         ? Math.max(0, Math.min(100, Math.round((completed / total) * 100)))
@@ -3264,14 +3281,18 @@
     return { total, completed, pctClamped };
   }
 
-  function buildSidebarGoalCardElement(g, legacyById) {
+  function buildSidebarGoalCardElement(g, legacyById, chipDoneMap) {
     const legacy = legacyByIdLookup(legacyById, g.id);
     const legacyRow = legacy || {};
     const colorSource = {
       ...legacyRow,
       color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
     };
-    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(
+      g,
+      legacyRow,
+      chipDoneMap
+    );
     const displayColor = getGoalDisplayColor(colorSource);
     const name = escapeHtmlGp(g.title || 'Untitled goal');
     const card = document.createElement('div');
@@ -3296,8 +3317,8 @@
       `<span class="gcal-ext-goal-session-pct"></span>` +
       `</div>`;
     card.style.setProperty('--gp-card-bg-hover', hexToTint(displayColor, 0.18));
-    paintSidebarGoalProgressOnCard(card, g, legacyById);
-    const { struct, prog } = goalSidebarCardSigs(g, legacyById);
+    paintSidebarGoalProgressOnCard(card, g, legacyById, chipDoneMap);
+    const { struct, prog } = goalSidebarCardSigs(g, legacyById, chipDoneMap);
     card.dataset.gpSidebarStructSig = struct;
     card.dataset.gpSidebarProgSig = prog;
     card.addEventListener('click', () => handleGoalCardClick(g.id));
@@ -3491,13 +3512,13 @@
    * Paint progress on the visible track (gradient) + fill width + session text.
    * Track gradient survives GCal !important fill rules and zero-width fill edge cases.
    */
-  function paintSidebarGoalProgressOnCard(card, g, legacyById) {
+  function paintSidebarGoalProgressOnCard(card, g, legacyById, chipDoneMap) {
     if (!card || !g) return null;
-    const numbers = computeGoalSidebarNumbers(g);
+    const legacy = legacyByIdLookup(legacyById, g.id) || {};
+    const numbers = computeGoalSidebarNumbers(g, legacy, chipDoneMap);
     const { total, completed, pctClamped } = numbers;
     const pct = Math.max(0, Math.min(100, pctClamped));
     const widthAssign = `${pct}%`;
-    const legacy = legacyByIdLookup(legacyById, g.id) || {};
     const colorSource = {
       ...legacy,
       color: legacy.color != null && legacy.color !== '' ? legacy.color : g.color,
@@ -3541,10 +3562,15 @@
   }
 
   /** Session completion / progress only: same card node, progress fill width + session count/pct spans. */
-  function patchSidebarGoalCardProgressOnly(card, g, traceId, legacyById) {
+  function patchSidebarGoalCardProgressOnly(card, g, traceId, legacyById, chipDoneMap) {
     if (!card || !g) return null;
     const before = inspectSidebarGoalCardDom(card);
-    const painted = paintSidebarGoalProgressOnCard(card, g, legacyById || new Map());
+    const painted = paintSidebarGoalProgressOnCard(
+      card,
+      g,
+      legacyById || new Map(),
+      chipDoneMap
+    );
 
     if (GP_MY_GOALS_SIDEBAR_FORCE_VISUAL_TEST && painted?.trackEl) {
       painted.trackEl.style.setProperty(
@@ -3689,10 +3715,10 @@
     };
   }
 
-  function refreshSidebarGoalsSigDataset(goals, legacyById, root) {
+  function refreshSidebarGoalsSigDataset(goals, legacyById, root, chipDoneMap) {
     const sigJoined = goals
       .map((g) => {
-        const p = goalSidebarCardSigs(g, legacyById);
+        const p = goalSidebarCardSigs(g, legacyById, chipDoneMap);
         return `${p.struct}|${p.prog}`;
       })
       .join('||');
@@ -3745,6 +3771,16 @@
     }
     if (!idsToPatch.length) return;
 
+    let chipDoneForPatch = meta?.chipDoneOverride || null;
+    if (!chipDoneForPatch) {
+      try {
+        const legacyRowsForDone = [...legacyById.values()];
+        chipDoneForPatch = await loadMergedChipDoneForSidebar(legacyRowsForDone);
+      } catch (_) {
+        chipDoneForPatch = {};
+      }
+    }
+
     const traceId = `gp-patch-${++_gpSidebarPatchTraceSeq}-${Date.now()}`;
     gpMyGoalsSidebarDiag('patch flow start', { traceId, reason: meta?.reason, goalIds: idsToPatch });
 
@@ -3752,7 +3788,8 @@
       const g = goals.find((x) => String(x.id) === gid);
       if (!g) continue;
 
-      const numbers = computeGoalSidebarNumbers(g);
+      const lgRow = legacyById.get(gid) || legacyById.get(String(gid));
+      const numbers = computeGoalSidebarNumbers(g, lgRow, chipDoneForPatch);
       const snap = goalUnifiedProgressSnapshot(g);
       const diffEntry = (meta?.progressDiffs || []).find((d) => d.goalId === gid);
       gpMyGoalsSidebarDiag('1 state before DOM', {
@@ -3803,8 +3840,13 @@
         );
       }
 
-      const patchReport = patchSidebarGoalCardProgressOnly(cardToPatch, g, traceId, legacyById);
-      const lgRow = legacyById.get(gid) || legacyById.get(String(gid));
+      const patchReport = patchSidebarGoalCardProgressOnly(
+        cardToPatch,
+        g,
+        traceId,
+        legacyById,
+        chipDoneForPatch
+      );
       const slotArr =
         meta?.slotPackOverride?.[gid] ??
         meta?.slotPackOverride?.[String(gid)] ??
@@ -3825,7 +3867,7 @@
           chipTruthyKeys: chipTruthy.length,
         }
       );
-      const pair = goalSidebarCardSigs(g, legacyById);
+      const pair = goalSidebarCardSigs(g, legacyById, chipDoneForPatch);
       cardToPatch.dataset.gpSidebarStructSig = pair.struct;
       cardToPatch.dataset.gpSidebarProgSig = pair.prog;
 
@@ -3864,12 +3906,17 @@
       });
     }
     const sigRoot = document.getElementById('gp-gcal-sidebar-goals-root');
-    refreshSidebarGoalsSigDataset(goals, legacyById, sigRoot);
+    refreshSidebarGoalsSigDataset(goals, legacyById, sigRoot, chipDoneForPatch);
   }
 
-  function updateSidebarGoalCardElement(card, g, legacyById) {
+  function updateSidebarGoalCardElement(card, g, legacyById, chipDoneMap) {
     if (!card || !g) return;
-    const { total, completed, pctClamped } = computeGoalSidebarNumbers(g);
+    const legacyRow = legacyByIdLookup(legacyById, g.id) || {};
+    const { total, completed, pctClamped } = computeGoalSidebarNumbers(
+      g,
+      legacyRow,
+      chipDoneMap
+    );
     const plainTitle = String(g.title || 'Untitled goal').trim();
     card.setAttribute(
       'aria-label',
@@ -3881,15 +3928,13 @@
     ensureSidebarGoalSessionsSpans(sessWrap);
     const countSpan = sessWrap?.querySelector('.gcal-ext-goal-session-count');
     const pctSpan = sessWrap?.querySelector('.gcal-ext-goal-session-pct');
-    const legacy = legacyByIdLookup(legacyById, g.id);
-    const legacyRow = legacy || {};
     const colorSource = {
       ...legacyRow,
       color: legacyRow.color != null && legacyRow.color !== '' ? legacyRow.color : g.color,
     };
     const displayColor = getGoalDisplayColor(colorSource);
     card.style.setProperty('--gp-card-bg-hover', hexToTint(displayColor, 0.18));
-    paintSidebarGoalProgressOnCard(card, g, legacyById);
+    paintSidebarGoalProgressOnCard(card, g, legacyById, chipDoneMap);
   }
 
   /**
@@ -3897,22 +3942,22 @@
    * @param {boolean} [force] When true (e.g. calendar session checkbox → sidebar), repaint progress even if sigs already match (avoids stale DOM vs dataset).
    * @returns {boolean} true if this card’s DOM was updated
    */
-  function syncSingleSidebarGoalCard(card, g, legacyById, force) {
+  function syncSingleSidebarGoalCard(card, g, legacyById, force, chipDoneMap) {
     if (goalPlannerModelAvailable()) {
-      patchSidebarGoalCardProgressOnly(card, g, null, legacyById);
-      const pair = goalSidebarCardSigs(g, legacyById);
+      patchSidebarGoalCardProgressOnly(card, g, null, legacyById, chipDoneMap);
+      const pair = goalSidebarCardSigs(g, legacyById, chipDoneMap);
       card.dataset.gpSidebarStructSig = pair.struct;
       card.dataset.gpSidebarProgSig = pair.prog;
       return true;
     }
-    const pair = goalSidebarCardSigs(g, legacyById);
+    const pair = goalSidebarCardSigs(g, legacyById, chipDoneMap);
     const prevS = card.dataset.gpSidebarStructSig;
     const prevP = card.dataset.gpSidebarProgSig;
     if (!force && prevS === pair.struct && prevP === pair.prog) return false;
     if (prevS === pair.struct && prevP !== pair.prog) {
-      patchSidebarGoalCardProgressOnly(card, g);
+      patchSidebarGoalCardProgressOnly(card, g, null, legacyById, chipDoneMap);
     } else {
-      updateSidebarGoalCardElement(card, g, legacyById);
+      updateSidebarGoalCardElement(card, g, legacyById, chipDoneMap);
     }
     card.dataset.gpSidebarStructSig = pair.struct;
     card.dataset.gpSidebarProgSig = pair.prog;
@@ -3941,6 +3986,14 @@
     const legacyRows = Array.isArray(legacyRowsRaw) ? legacyRowsRaw : [];
     const legacyById =
       legacyByIdCache || new Map(legacyRows.map((gk) => [gk.id, gk]));
+    let chipDoneMap = meta?.chipDoneOverride || null;
+    if (!chipDoneMap) {
+      try {
+        chipDoneMap = await loadMergedChipDoneForSidebar(legacyRows);
+      } catch (_) {
+        chipDoneMap = {};
+      }
+    }
     const goals = Array.isArray(state?.goals) ? state.goals : [];
 
     root.hidden = false;
@@ -3954,7 +4007,7 @@
 
     const sigJoined = goals
       .map((g) => {
-        const p = goalSidebarCardSigs(g, legacyById);
+        const p = goalSidebarCardSigs(g, legacyById, chipDoneMap);
         return `${p.struct}|${p.prog}`;
       })
       .join('||');
@@ -3973,7 +4026,7 @@
     if (needFullRebuild) {
       container.innerHTML = '';
       for (const g of goals) {
-        container.appendChild(buildSidebarGoalCardElement(g, legacyById));
+        container.appendChild(buildSidebarGoalCardElement(g, legacyById, chipDoneMap));
       }
       root.dataset.gpSidebarGoalsSig = sigJoined;
       return;
@@ -3987,7 +4040,7 @@
 
     if (sigJoined !== root.dataset.gpSidebarGoalsSig) {
       for (let i = 0; i < goals.length; i++) {
-        syncSingleSidebarGoalCard(existingCards[i], goals[i], legacyById);
+        syncSingleSidebarGoalCard(existingCards[i], goals[i], legacyById, false, chipDoneMap);
       }
       root.dataset.gpSidebarGoalsSig = sigJoined;
     }
@@ -3998,7 +4051,7 @@
       const targets = narrowId ? goals.filter((g) => String(g.id) === narrowId) : goals;
       for (const g of targets) {
         const card = findSidebarGoalCardById(container, g.id);
-        if (card) syncSingleSidebarGoalCard(card, g, legacyById, true);
+        if (card) syncSingleSidebarGoalCard(card, g, legacyById, true, chipDoneMap);
       }
       root.dataset.gpSidebarGoalsSig = sigJoined;
     }
@@ -4499,8 +4552,8 @@
     document.getElementById('gp-goal-title').value = goal.title;
 
     if (goal.recurrence) {
-      state.recurrence = { ...goal.recurrence };
-      populateRecurrenceForm(goal.recurrence);
+      state.recurrence = normalizeRecurrenceShape(goal.recurrence, { preserveTime: true });
+      populateRecurrenceForm(state.recurrence);
     } else {
       state.recurrence = null;
     }
@@ -4669,7 +4722,14 @@
     const endDate = document.getElementById('gp-end-date').value;
     const occurrences = parseInt(document.getElementById('gp-occurrences').value) || 13;
 
-    state.recurrence = { every, period, days, sessionMins, ends: endsVal, endDate, occurrences };
+    const prefTime =
+      prefTimeFromInputHMOrNull() ||
+      state.recurrence?.time ||
+      '09:00';
+    state.recurrence = normalizeRecurrenceShape(
+      { every, period, days, sessionMins, ends: endsVal, endDate, occurrences, time: prefTime },
+      { preserveTime: true, fallbackTime: prefTime }
+    );
 
     // Update summary pill
     const dayNames = { SU:'Sun', MO:'Mon', TU:'Tue', WE:'Wed', TH:'Thu', FR:'Fri', SA:'Sat' };
@@ -4696,11 +4756,18 @@
     state.goalTitle = document.getElementById('gp-goal-title').value.trim();
 
     if (!state.recurrence) {
-      state.recurrence = {
-        every: 1, period: 'week', days: ['MO','WE','FR'],
-        sessionMins: 60, ends: 'on',
-        endDate: defaultEndDate(), occurrences: 13,
-      };
+      state.recurrence = normalizeRecurrenceShape({
+        every: 1,
+        period: 'week',
+        days: ['MO', 'WE', 'FR'],
+        sessionMins: 60,
+        ends: 'on',
+        endDate: defaultEndDate(),
+        occurrences: 13,
+        time: '09:00',
+      });
+    } else {
+      state.recurrence = normalizeRecurrenceShape(state.recurrence, { preserveTime: true });
     }
 
     const r = state.recurrence;
@@ -4820,16 +4887,221 @@
     if (endsEl) endsEl.querySelector('.gp-confirm-chip-label').textContent = endsLabel;
   }
 
+  // ── Session scheduling helpers (same-day clamp + conflict detection) ──
+
+  function endOfLocalDay(d) {
+    const x = new Date(d);
+    x.setHours(23, 59, 0, 0);
+    return x;
+  }
+
+  /** Hard stop at 11:59 PM local on the start day — never bleed into the next calendar day. */
+  function clampSessionEndToSameDay(start, end) {
+    const cap = endOfLocalDay(start);
+    return end > cap ? cap : end;
+  }
+
+  function buildSessionRangeOnDay(day, hour, minute, sessionMins) {
+    const start = new Date(day);
+    start.setHours(hour, minute, 0, 0);
+    let end = new Date(start.getTime() + sessionMins * 60000);
+    end = clampSessionEndToSameDay(start, end);
+    return { start, end };
+  }
+
+  function sessionRangeFromIsoStart(isoStart, sessionMins) {
+    const start = new Date(isoStart);
+    if (!Number.isFinite(start.getTime())) return null;
+    let end = new Date(start.getTime() + sessionMins * 60000);
+    end = clampSessionEndToSameDay(start, end);
+    return {
+      start,
+      end,
+      isoStart: start.toISOString(),
+      isoEnd: end.toISOString(),
+    };
+  }
+
+  function suggestionFromRange(start, end) {
+    return {
+      date: formatDayDate(start),
+      startTime: formatTime(start),
+      endTime: formatTime(end),
+      isoStart: start.toISOString(),
+      isoEnd: end.toISOString(),
+    };
+  }
+
+  function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && aEnd > bStart;
+  }
+
+  function rangesOverlapAny(start, end, ranges) {
+    return (ranges || []).some((r) => rangesOverlap(start, end, r.start, r.end));
+  }
+
+  function busySlotsOnDay(day, busySlots) {
+    return (busySlots || []).filter((slot) => {
+      const s = new Date(slot.start);
+      return (
+        s.getFullYear() === day.getFullYear() &&
+        s.getMonth() === day.getMonth() &&
+        s.getDate() === day.getDate()
+      );
+    });
+  }
+
+  function busyRangesOnDay(day, busySlots) {
+    return busySlotsOnDay(day, busySlots).map((slot) => ({
+      start: new Date(slot.start),
+      end: new Date(slot.end),
+    }));
+  }
+
+  function normalizeRecurrenceShape(r, opts) {
+    opts = opts || {};
+    const prev = opts.preserveTime && r?.time ? r.time : null;
+    const period = r?.period === 'day' || r?.period === 'month' ? r.period : 'week';
+    let days = Array.isArray(r?.days) ? r.days.filter(Boolean) : [];
+    if (!days.length) {
+      days = period === 'day' ? ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] : ['MO'];
+    }
+    const endsVal = r?.ends === 'after' || r?.ends === 'never' ? r.ends : 'on';
+    const sessionMins = Math.max(15, parseInt(r?.sessionMins, 10) || 60);
+    const every = Math.max(1, parseInt(r?.every, 10) || 1);
+    const occurrences = Math.max(1, parseInt(r?.occurrences, 10) || 13);
+    const endDate =
+      endsVal === 'on' ? String(r?.endDate || defaultEndDate()) : '';
+    const pref =
+      prev ||
+      (typeof opts.fallbackTime === 'string' && opts.fallbackTime) ||
+      '09:00';
+    return {
+      every,
+      period,
+      days,
+      sessionMins,
+      ends: endsVal,
+      endDate,
+      occurrences,
+      time: pref,
+    };
+  }
+
+  function findNextOpenSlotOnDay(day, sessionMins, occupied, preferredStarts) {
+    const dayEndMins = 23 * 60 + 59;
+    const starts = preferredStarts || [
+      { h: 9, m: 0 },
+      { h: 14, m: 0 },
+      { h: 19, m: 0 },
+    ];
+    const tryMins = new Set();
+    for (const ps of starts) tryMins.add(ps.h * 60 + ps.m);
+    for (let m = 8 * 60; m <= 21 * 60 - sessionMins; m += 30) tryMins.add(m);
+
+    const sorted = [...tryMins].sort((a, b) => a - b);
+    for (const totalMins of sorted) {
+      if (totalMins + sessionMins > dayEndMins) continue;
+      const { start, end } = buildSessionRangeOnDay(
+        day,
+        Math.floor(totalMins / 60),
+        totalMins % 60,
+        sessionMins
+      );
+      if (!rangesOverlapAny(start, end, occupied)) return { start, end };
+    }
+    return null;
+  }
+
+  /** DOM geometry for real GCal events on visible day columns (excludes ghost preview). */
+  function collectDomOccupiedRanges(scrollCont, dayColumns, hourPositions, absYAtHour0, pxPerHour) {
+    if (!scrollCont || !dayColumns.length || pxPerHour <= 0) return [];
+    const contRect = scrollCont.getBoundingClientRect();
+    const out = [];
+    scrollCont.querySelectorAll('[data-eventid]').forEach((ec) => {
+      if (ec.closest('#gp-ghost-preview-host, .goal-ghost-event, #gp-panel')) return;
+      const er = ec.getBoundingClientRect();
+      const centerX = er.left + er.width / 2;
+      const col = dayColumns.find(
+        (c) => centerX >= c.left && centerX <= c.left + c.width
+      );
+      if (!col) return;
+      const absTop = er.top - contRect.top + scrollCont.scrollTop;
+      const rawStartMins = ((absTop - absYAtHour0) / pxPerHour) * 60;
+      const rawDur = (er.height / pxPerHour) * 60;
+      const start = new Date(col.date);
+      start.setHours(0, 0, 0, 0);
+      const snapped = Math.max(0, Math.round(rawStartMins / 15) * 15);
+      start.setMinutes(snapped);
+      let end = new Date(start.getTime() + Math.max(15, Math.round(rawDur / 15) * 15) * 60000);
+      end = clampSessionEndToSameDay(start, end);
+      out.push({ start, end });
+    });
+    return out;
+  }
+
+  function resolveGhostSessionsAvoidingConflicts(sessions, scrollCont) {
+    if (!sessions?.length || !scrollCont) return sessions || [];
+    const hourPositions = findHourAbsolutePositions(scrollCont);
+    if (hourPositions.length < 2) return sessions;
+    hourPositions.sort((a, b) => a.hour - b.hour);
+    const first = hourPositions[0];
+    const last = hourPositions[hourPositions.length - 1];
+    const pxPerHour = (last.absY - first.absY) / (last.hour - first.hour);
+    if (pxPerHour <= 0) return sessions;
+    const absYAtHour0 = first.absY - first.hour * pxPerHour;
+    const dayColumns = filterGhostPreviewDayColumns(scrollCont, findDayColumnPositions());
+    const domBusy = collectDomOccupiedRanges(
+      scrollCont,
+      dayColumns,
+      hourPositions,
+      absYAtHour0,
+      pxPerHour
+    );
+    const sessionMins = Math.max(
+      15,
+      Number(state.recurrence?.sessionMins) || 60
+    );
+    const placed = [];
+    const adjusted = [];
+
+    for (const session of sessions) {
+      const base = sessionRangeFromIsoStart(session.isoStart, sessionMins);
+      if (!base) continue;
+      let start = base.start;
+      let end = base.end;
+      const day = new Date(start);
+      day.setHours(0, 0, 0, 0);
+      const occupied = [
+        ...domBusy,
+        ...busyRangesOnDay(day, _gpLastBusySlots),
+        ...placed,
+      ];
+      if (rangesOverlapAny(start, end, occupied)) {
+        const open = findNextOpenSlotOnDay(day, sessionMins, occupied, [
+          { h: start.getHours(), m: start.getMinutes() },
+          { h: 9, m: 0 },
+          { h: 14, m: 0 },
+          { h: 19, m: 0 },
+        ]);
+        if (!open) continue;
+        start = open.start;
+        end = open.end;
+      }
+      placed.push({ start, end });
+      adjusted.push(suggestionFromRange(start, end));
+    }
+    return adjusted;
+  }
+
   // ── FreeBusy fetch ──
-  async function fetchBusySlots(token) {
-    const now = new Date();
-    const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  async function fetchBusySlotsForRange(token, timeMin, timeMax) {
     const resp = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        timeMin: now.toISOString(),
-        timeMax: weekOut.toISOString(),
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
         items: [{ id: 'primary' }],
       }),
     });
@@ -4837,32 +5109,49 @@
     return (data.calendars && data.calendars.primary && data.calendars.primary.busy) || [];
   }
 
+  async function fetchBusySlots(token, recurrence) {
+    const now = new Date();
+    let horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const rec = recurrence || state.recurrence;
+    if (rec?.ends === 'on' && rec.endDate) {
+      const endCap = new Date(`${rec.endDate}T23:59:59`);
+      if (Number.isFinite(endCap.getTime()) && endCap > now) horizon = endCap;
+    }
+    const busy = await fetchBusySlotsForRange(token, now, horizon);
+    _gpLastBusySlots = busy;
+    return busy;
+  }
+
   function overlapsWithBusy(start, end, busySlots) {
-    return busySlots.some(slot => {
-      const bStart = new Date(slot.start);
-      const bEnd   = new Date(slot.end);
-      return start < bEnd && end > bStart;
-    });
+    return rangesOverlapAny(start, end, busyRangesOnDay(start, busySlots));
   }
 
   // ── Smart suggestions using freebusy data ──
   // Returns exactly N sessions: one per selected day-of-week (first upcoming occurrence).
   // Preferred times: 9 AM → 2 PM → 7 PM → any free block 8am–9pm.
   function generateSmartSuggestions(r, busySlots) {
-    const dayMap = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 };
-    const targetDays = r.days.map(d => dayMap[d]);
-    const sessionMins = r.sessionMins || 60;
+    const norm = normalizeRecurrenceShape(r, { preserveTime: true });
+    const dayMap = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const targetDays =
+      norm.period === 'day'
+        ? [0, 1, 2, 3, 4, 5, 6]
+        : norm.days.map((d) => dayMap[d]).filter((n) => Number.isFinite(n));
+    const sessionMins = norm.sessionMins || 60;
+    const [prefH, prefM] = (norm.time || '09:00').split(':').map(Number);
     const preferredStarts = [
-      { h: 9,  m: 0 },
+      { h: Number.isFinite(prefH) ? prefH : 9, m: Number.isFinite(prefM) ? prefM : 0 },
+      { h: 9, m: 0 },
       { h: 14, m: 0 },
       { h: 19, m: 0 },
     ];
 
     const sessions = [];
+    const placed = [];
     const now = new Date();
     const seenDows = new Set();
+    const needCount = Math.max(1, targetDays.length);
 
-    for (let i = 1; i <= 14 && seenDows.size < targetDays.length; i++) {
+    for (let i = 1; i <= 14 && seenDows.size < needCount; i++) {
       const day = new Date(now);
       day.setDate(now.getDate() + i);
       const dow = day.getDay();
@@ -4870,44 +5159,14 @@
       if (!targetDays.includes(dow) || seenDows.has(dow)) continue;
       seenDows.add(dow);
 
-      // Busy slots that fall on this calendar date
-      const dayBusy = busySlots.filter(slot => {
-        const s = new Date(slot.start);
-        return s.getFullYear() === day.getFullYear()
-            && s.getMonth()    === day.getMonth()
-            && s.getDate()     === day.getDate();
-      });
-
-      let bestSlot = null;
-
-      // Try preferred windows first
-      for (const ps of preferredStarts) {
-        const start = new Date(day);
-        start.setHours(ps.h, ps.m, 0, 0);
-        const end = new Date(start);
-        end.setMinutes(end.getMinutes() + sessionMins);
-        if (!overlapsWithBusy(start, end, dayBusy)) { bestSlot = { start, end }; break; }
-      }
-
-      // Fallback: sweep 8 AM – 9 PM in 30-min steps
-      if (!bestSlot) {
-        for (let m = 8 * 60; m <= 21 * 60 - sessionMins; m += 30) {
-          const start = new Date(day);
-          start.setHours(Math.floor(m / 60), m % 60, 0, 0);
-          const end = new Date(start);
-          end.setMinutes(end.getMinutes() + sessionMins);
-          if (!overlapsWithBusy(start, end, dayBusy)) { bestSlot = { start, end }; break; }
-        }
-      }
-
+      const occupied = [
+        ...busyRangesOnDay(day, busySlots),
+        ...placed,
+      ];
+      const bestSlot = findNextOpenSlotOnDay(day, sessionMins, occupied, preferredStarts);
       if (bestSlot) {
-        sessions.push({
-          date: formatDayDate(bestSlot.start),
-          startTime: formatTime(bestSlot.start),
-          endTime:   formatTime(bestSlot.end),
-          isoStart:  bestSlot.start.toISOString(),
-          isoEnd:    bestSlot.end.toISOString(),
-        });
+        placed.push({ start: bestSlot.start, end: bestSlot.end });
+        sessions.push(suggestionFromRange(bestSlot.start, bestSlot.end));
       }
     }
     return sessions;
@@ -4916,16 +5175,22 @@
   // ── Fallback suggestions using the user's preferred time (no API) ──
   // Returns exactly N sessions: one per selected day-of-week (first upcoming occurrence).
   function generateFallbackSuggestions(r) {
-    const dayMap = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 };
-    const targetDays = r.days.map(d => dayMap[d]);
-    const [hour, min] = (r.time || '09:00').split(':').map(Number);
-    const sessionMins = r.sessionMins || 60;
+    const norm = normalizeRecurrenceShape(r, { preserveTime: true });
+    const dayMap = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const targetDays =
+      norm.period === 'day'
+        ? [0, 1, 2, 3, 4, 5, 6]
+        : norm.days.map((d) => dayMap[d]).filter((n) => Number.isFinite(n));
+    const [hour, min] = (norm.time || '09:00').split(':').map(Number);
+    const sessionMins = norm.sessionMins || 60;
 
     const sessions = [];
+    const placed = [];
     const now = new Date();
     const seenDows = new Set();
+    const needCount = Math.max(1, targetDays.length);
 
-    for (let i = 1; i <= 14 && seenDows.size < targetDays.length; i++) {
+    for (let i = 1; i <= 14 && seenDows.size < needCount; i++) {
       const day = new Date(now);
       day.setDate(now.getDate() + i);
       const dow = day.getDay();
@@ -4933,18 +5198,19 @@
       if (!targetDays.includes(dow) || seenDows.has(dow)) continue;
       seenDows.add(dow);
 
-      const start = new Date(day);
-      start.setHours(hour, min, 0, 0);
-      const end = new Date(start);
-      end.setMinutes(end.getMinutes() + sessionMins);
-
-      sessions.push({
-        date: formatDayDate(start),
-        startTime: formatTime(start),
-        endTime:   formatTime(end),
-        isoStart:  start.toISOString(),
-        isoEnd:    end.toISOString(),
-      });
+      const occupied = [...placed];
+      let { start, end } = buildSessionRangeOnDay(day, hour, min, sessionMins);
+      if (rangesOverlapAny(start, end, occupied)) {
+        const open = findNextOpenSlotOnDay(day, sessionMins, occupied, [
+          { h: hour, m: min },
+          { h: 9, m: 0 },
+        ]);
+        if (!open) continue;
+        start = open.start;
+        end = open.end;
+      }
+      placed.push({ start, end });
+      sessions.push(suggestionFromRange(start, end));
     }
     return sessions;
   }
@@ -4989,11 +5255,18 @@
   function applyStandardTime(h, min) {
     if (!state.suggestions.length) return;
     const sessionMins = (state.recurrence && state.recurrence.sessionMins) || 60;
-    state.suggestions = state.suggestions.map(s => {
+    state.suggestions = state.suggestions.map((s) => {
       const start = new Date(s.isoStart);
       start.setHours(h, min, 0, 0);
-      const end = new Date(start.getTime() + sessionMins * 60000);
-      return { ...s, startTime: formatTime(start), endTime: formatTime(end), isoStart: start.toISOString(), isoEnd: end.toISOString() };
+      const ranged = sessionRangeFromIsoStart(start.toISOString(), sessionMins);
+      if (!ranged) return s;
+      return {
+        ...s,
+        startTime: formatTime(ranged.start),
+        endTime: formatTime(ranged.end),
+        isoStart: ranged.isoStart,
+        isoEnd: ranged.isoEnd,
+      };
     });
     renderSuggestions();
   }
@@ -5038,19 +5311,22 @@
     );
   }
 
-  /** Split "ends after N sessions" across one recurring master per weekday. */
-  function recurrenceCountPerSeries(rec) {
+  /** Distribute "ends after N sessions" across one recurring master per weekday without over-shooting. */
+  function recurrenceCountPerSeries(rec, seriesIndex) {
     const total = parseInt(rec.occurrences, 10);
     if (!Number.isFinite(total) || total < 1) return 1;
     const nDays = Math.max(1, (rec.days && rec.days.length) || 1);
-    return Math.max(1, Math.ceil(total / nDays));
+    const idx = Number.isFinite(seriesIndex) && seriesIndex >= 0 ? seriesIndex : 0;
+    const base = Math.floor(total / nDays);
+    const rem = total % nDays;
+    return Math.max(1, base + (idx < rem ? 1 : 0));
   }
 
   /**
    * One RRULE per session slot (preview suggestions = first week only; GCal expands future weeks).
    * MWF → three weekly masters (BYDAY=MO, BYDAY=WE, BYDAY=FR), not client-side ghost injection.
    */
-  function buildRecurrenceRrulesForSession(rec, isoStart) {
+  function buildRecurrenceRrulesForSession(rec, isoStart, seriesIndex) {
     if (!rec || !isoStart) return [];
     const parts = [];
     const freq =
@@ -5066,9 +5342,40 @@
       const until = formatRruleUntilUtc(rec.endDate);
       if (until) parts.push(`UNTIL=${until}`);
     } else if (rec.ends === 'after') {
-      parts.push(`COUNT=${recurrenceCountPerSeries(rec)}`);
+      parts.push(`COUNT=${recurrenceCountPerSeries(rec, seriesIndex)}`);
     }
     return [`RRULE:${parts.join(';')}`];
+  }
+
+  /** Re-validate in-memory suggestions against live calendar busy data before POST. */
+  async function ensureSuggestionsConflictFree(token, recurrence, suggestions) {
+    const norm = normalizeRecurrenceShape(recurrence, { preserveTime: true });
+    const busySlots = await fetchBusySlots(token, norm);
+    const sessionMins = norm.sessionMins || 60;
+    const placed = [];
+    const out = [];
+    for (const s of suggestions || []) {
+      const ranged = sessionRangeFromIsoStart(s.isoStart, sessionMins);
+      if (!ranged) continue;
+      const day = new Date(ranged.start);
+      day.setHours(0, 0, 0, 0);
+      const occupied = [...busyRangesOnDay(day, busySlots), ...placed];
+      let start = ranged.start;
+      let end = ranged.end;
+      if (rangesOverlapAny(start, end, occupied)) {
+        const open = findNextOpenSlotOnDay(day, sessionMins, occupied, [
+          { h: start.getHours(), m: start.getMinutes() },
+          { h: 9, m: 0 },
+          { h: 14, m: 0 },
+        ]);
+        if (!open) continue;
+        start = open.start;
+        end = open.end;
+      }
+      placed.push({ start, end });
+      out.push(suggestionFromRange(start, end));
+    }
+    return out;
   }
 
   // ── Confirm + add to Calendar (handles both create and edit modes) ──
@@ -5101,7 +5408,33 @@
         }
       }
 
-      const r = state.recurrence;
+      const r = normalizeRecurrenceShape(state.recurrence, {
+        preserveTime: true,
+        fallbackTime: prefTimeFromInputHMOrNull() || state.recurrence?.time || '09:00',
+      });
+      state.recurrence = r;
+
+      let suggestionsToPost = (state.suggestions || [])
+        .map((s) => {
+          const ranged = sessionRangeFromIsoStart(
+            s.isoStart,
+            r.sessionMins || 60
+          );
+          return ranged ? suggestionFromRange(ranged.start, ranged.end) : null;
+        })
+        .filter(Boolean);
+
+      suggestionsToPost = await ensureSuggestionsConflictFree(
+        token,
+        r,
+        suggestionsToPost
+      );
+
+      if (!suggestionsToPost.length) {
+        throw new Error(
+          'No open time slots found on your calendar for these sessions. Adjust recurrence or remove conflicting events, then try again.'
+        );
+      }
 
       async function postCalendarEvent(eventBody) {
         let resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
@@ -5131,7 +5464,8 @@
 
       // One recurring master per suggestion slot; GCal expands instances across future weeks.
       const eventIds = [];
-      for (const s of state.suggestions) {
+      for (let si = 0; si < suggestionsToPost.length; si++) {
+        const s = suggestionsToPost[si];
         const eventBody = {
           summary: `🎯 ${state.goalTitle}`,
           description: `Goal Planner session for: "${state.goalTitle}"`,
@@ -5139,7 +5473,7 @@
           end: { dateTime: s.isoEnd, timeZone: tz },
           colorId: goalColorId,
         };
-        const rrules = buildRecurrenceRrulesForSession(r, s.isoStart);
+        const rrules = buildRecurrenceRrulesForSession(r, s.isoStart, si);
         if (rrules.length) eventBody.recurrence = rrules;
 
         const data = await postCalendarEvent(eventBody);
@@ -5149,7 +5483,7 @@
       const dayStr = r.days.map(d => dayNames[d]).join(', ');
       const schedLabel = r.every === 1 ? `Weekly on ${dayStr}` : `Every ${r.every} ${r.period}s`;
       const startDate =
-        earliestSuggestionStartYmd(state.suggestions) ||
+        earliestSuggestionStartYmd(suggestionsToPost) ||
         ymdFromIsoStart(new Date().toISOString());
       const Model = globalThis.GoalPlannerModel;
       const totalSessions = Model?.resolveGoalTotalSessions
@@ -5157,11 +5491,11 @@
             recurrence: r,
             endDate: r.endDate || '',
             startDate,
-            sessionAnchors: state.suggestions.map((sug, i) => ({
+            sessionAnchors: suggestionsToPost.map((sug, i) => ({
               eventId: '',
               isoStart: sug?.isoStart || '',
             })),
-            calEventIds: state.suggestions.map(() => 'pending'),
+            calEventIds: suggestionsToPost.map(() => 'pending'),
           })
         : getPreviewTotalSessions();
 
@@ -5171,7 +5505,7 @@
         if (idx !== -1) {
           const sessionAnchors = [];
           for (let i = 0; i < eventIds.length; i++) {
-            const sug = state.suggestions[i];
+            const sug = suggestionsToPost[i];
             if (sug?.isoStart && eventIds[i]) {
               sessionAnchors.push({ eventId: eventIds[i], isoStart: sug.isoStart });
             }
@@ -5194,7 +5528,7 @@
       } else {
         const sessionAnchors = [];
         for (let i = 0; i < eventIds.length; i++) {
-          const sug = state.suggestions[i];
+          const sug = suggestionsToPost[i];
           if (sug?.isoStart && eventIds[i]) {
             sessionAnchors.push({ eventId: eventIds[i], isoStart: sug.isoStart });
           }

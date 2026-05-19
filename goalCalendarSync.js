@@ -78,6 +78,16 @@
     start.setHours(Math.floor(totalMins / 60), totalMins % 60, 0, 0);
 
     var end = new Date(start.getTime() + durationMins * 60000);
+    var dayCap = new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      start.getDate(),
+      23,
+      59,
+      0,
+      0
+    );
+    if (end > dayCap) end = dayCap;
 
     return {
       eventId: eventId,
